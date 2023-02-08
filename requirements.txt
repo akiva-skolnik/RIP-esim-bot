@@ -1,0 +1,4 @@
+pytz
+lxml
+aiohttp
+gspread_asyncio
