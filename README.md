@@ -1,0 +1,1 @@
+The purpose of this project is to maintain the database for the [RIP-esim](https://github.com/akiva0003/RIP-esim-bot) bot and make some information accessible to users through Google spreadsheets.
