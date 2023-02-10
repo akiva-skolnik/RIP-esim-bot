@@ -48,14 +48,15 @@ def get_creds():
 
 agcm = gspread_asyncio.AsyncioGspreadClientManager(get_creds)
 
-async def spreadsheets(SPREADSHEET_ID: str, RANGE_NAME: str, values: list = None, delete: bool = False) -> None:
+async def spreadsheets(SPREADSHEET_ID: str, RANGE_NAME: str, columns:str = "!A:Z",
+                       values: list = None, delete: bool = False) -> None:
     """Update spreadsheets"""
     agc = await agcm.authorize()
     ss = await agc.open_by_key(SPREADSHEET_ID)
     if delete:
         await ss.values_clear(RANGE_NAME + '!A:Z')
         await asyncio.sleep(0.5)
-    await ss.values_update(RANGE_NAME + '!A:Z', params={'valueInputOption': 'USER_ENTERED'}, body={'values': values})
+    await ss.values_update(RANGE_NAME + columns, params={'valueInputOption': 'USER_ENTERED'}, body={'values': values})
 
 
 def get_countries(server: str, country: int = 0, index: int = -1) -> Union[str, dict]:

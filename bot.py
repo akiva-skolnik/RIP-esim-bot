@@ -18,7 +18,6 @@ PRODUCT_SHEET = "17y8qEU4aHQRTXKdnlM278z3SDzY16bmxMwrZ0RKWcEI"
 servers: dict = {
     "sigma": "1SuHcJLqS-nSAzprs7kGsrrcuNLOdXsPRaDVQbkvpxZc",
     "unica": "1PvjB3E-7A4cYAUmczJ1HNDOUAQAUnFzjSkCu-dJuVL0",
-    "epica": "1E-XBigr_MHcZAa2HFJJ2N3HoD4YHE_Ul7BrFY3qJx9I",
     "luxia": "1mx_JkHVnTVikNdTSxhvfFh4Pzuepp9ZGakCAtxnGxyY",
     "suna": "1imlsoLdaEb45NnJGmo5T7mQxsjzzTGbrkvqfcR8pMlE",
     "alpha": "1KqxbZ9LqS191wRf1VGLNl-aw6UId9kmUE0k7NfKQdI4",
@@ -153,7 +152,7 @@ async def update_buffs(server: str) -> None:
                                      "Debuff Ends", "Till Status Change"] + [x.title() for x in elixirs]}
             values.update(dict(sorted(data.items(), key=lambda x: (x[1][1], x[0]))))
             data.clear()
-            await spreadsheets(servers[server], "buffs",
+            await spreadsheets(servers[server], "buffs", "!A1:M200",
                                [([v[0], k] + v[1:12]) if k != "Last update:" else [k] + v for k, v in values.items()],
                                delete=True)
             await replace_one("buffs", server, values)
@@ -173,7 +172,6 @@ async def update_time(server: str) -> None:
     first_date = {
         "primera": ["Minutes online (since 10/12/20)", "09/12/2020", "10/12/2020"],
         "luxia": ["Minutes online (since day 1)", "10/02/2022", "11/02/2022"],
-        "epica": ["Minutes online (since day 1)", "06/10/2022", "07/10/2022"],
         "unica": ["Minutes online (since day 1)", "01/12/2022", "02/12/2022"],
         "sigma": ["Minutes online (since day 1)", "27/01/2023", "28/01/2023"]}
     headers = ["Link", "Nick", "Citizenship",
@@ -214,7 +212,7 @@ async def update_time(server: str) -> None:
             data["_headers"] = headers[1:]
             await replace_one("time_online", server, data)
             del data["_headers"]
-            await spreadsheets(servers[server], "Time online",
+            await spreadsheets(servers[server], "Time online", "!A1:G1000",
                                [headers] + [[f"{url}profile.html?id={k}"] + v for k, v in data.items()][:999])
             data.clear()
         except Exception as e:
@@ -276,8 +274,8 @@ async def mm():
         values[1:] = sorted(values[1:])
         if len(values) > 1:
             try:
-                await spreadsheets(SPREADSHEET_ID=PRODUCT_SHEET, RANGE_NAME="Monetary Market", values=values,
-                                   delete=True)
+                await spreadsheets(PRODUCT_SHEET, "Monetary Market", "!A1:K200", values,
+                                   True)
             except Exception as e:
                 if len(str(e)) < 1000:
                     traceback.print_exc()
@@ -331,7 +329,7 @@ async def price(server: str) -> None:
             countries_cc.clear()
             occupants.clear()
             db_mm.clear()
-            if server not in ('epica', 'unica', 'sigma'):
+            if server not in ('unica', 'sigma'):
                 this_month = "01-" + datetime.now().astimezone(pytz.timezone('Europe/Berlin')).strftime("%m-%Y")
             else:
                 this_month = datetime.now().astimezone(pytz.timezone('Europe/Berlin')).strftime("%d-%m-%Y")
@@ -384,8 +382,8 @@ async def price(server: str) -> None:
                             new_values.append([""] + row)
                     if len(new_values) > 1:
                         new_values.append(["", "-", "-", "-"])
-                await spreadsheets(SPREADSHEET_ID=PRODUCT_SHEET, RANGE_NAME=server, values=new_values,
-                                   delete=True)
+                await spreadsheets(PRODUCT_SHEET, server, "!A1:G300", new_values,
+                                   True)
             else:  # error
                 continue
             results.clear()
