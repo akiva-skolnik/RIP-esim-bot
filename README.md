@@ -9,4 +9,6 @@ https://discordapp.com/api/oauth2/authorize?client_id=542220847491055647&permiss
 ## Support Server
 https://discord.com/invite/q96wSd6
 
-(For the list of commands, type `/`)
+(For the list of commands, type `/`)  
+
+Some commands in this project rely on https://github.com/akiva0003/update_db/ to be up and running.

@@ -83,7 +83,6 @@ class MyClient(Bot):
             "secura": ["10en9SJVsIQz7uGhbXwb9GInnOdcDuE4p7L93un0q6xw", 1876322398, 1265748453],
             "suna": ["1imlsoLdaEb45NnJGmo5T7mQxsjzzTGbrkvqfcR8pMlE", 2061648609, 0],
             "alpha": ["1KqxbZ9LqS191wRf1VGLNl-aw6UId9kmUE0k7NfKQdI4", 1445005647, 0],
-            "epica": ["1E-XBigr_MHcZAa2HFJJ2N3HoD4YHE_Ul7BrFY3qJx9I", 1876322398, 1265748453],
             "unica": ["1PvjB3E-7A4cYAUmczJ1HNDOUAQAUnFzjSkCu-dJuVL0", 1876322398, 1265748453],
             "sigma": ["1SuHcJLqS-nSAzprs7kGsrrcuNLOdXsPRaDVQbkvpxZc", 1876322398, 1265748453]
         }
@@ -94,7 +93,7 @@ class MyClient(Bot):
         self.date_format = "%d-%m-%Y %H:%M:%S"
 
         self.all_servers = ['primera', 'secura', 'suna', 'alpha', 'luxia',
-                            'epica', 'unica', 'sigma']
+                            'unica', 'sigma']
 
         self.products = ["iron", "grain", "oil", "stone", "wood", "diamonds",
                         "weapon", "house", "gift", "food", "ticket", "defense_system", "hospital",
