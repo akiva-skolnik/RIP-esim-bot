@@ -315,20 +315,20 @@ async def price(server: str) -> None:
                         products.append(product)
                         i += 1
 
-                prices = [float(x) for x in tree.xpath("//tr[position()>1]//td[4]/b/text()")][0::2]
+                raw_prices = [float(x) for x in tree.xpath("//tr[position()>1]//td[4]/b/text()")][0::2]
                 cc = [x.strip() for x in tree.xpath("//tr[position()>1]//td[4]/text()") if x.strip()][0::2]
                 stock = tree.xpath("//tr[position()>1]//td[3]/text()")
-                if not prices:  # temp, new style in some servers.
-                    prices = tree.xpath("//*[@class='productMarketOffer']//b/text()")[::2]
+                if not raw_prices:  # temp, new style in some servers.
+                    raw_prices = tree.xpath("//*[@class='productMarketOffer']//b/text()")[::2]
                     cc = [x.strip() for x in tree.xpath("//*[@class='price']/div/text()") if x.strip()][::3]
                     stock = tree.xpath("//*[@class='quantity']/text()")
-                for product, cc, price, stock in zip(products, cc, prices, stock):
+                for product, cc, price, stock in zip(products, cc, raw_prices, stock):
                     country = countries_cc[cc.lower()]
                     if country in occupants:
                         if product not in offers:
                             offers[product] = {}
                         if country not in offers[product]:
-                            offers[product][country] = {"price": round(db_mm.get(str(country), 0) * price, 4),
+                            offers[product][country] = {"price": round(db_mm.get(str(country), 0) * float(price), 4),
                                                         "stock": int(stock.strip())}
 
             countries_cc.clear()
