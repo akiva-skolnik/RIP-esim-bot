@@ -17,7 +17,6 @@ class Listener(Cog):
     def __init__(self, bot):
         self.bot = bot
         self.bot.tree.on_error = self.on_app_command_error
-        self.commands_count = {}
 
     @Cog.listener()
     async def on_app_command_completion(self, interaction: Interaction, command: Command):
@@ -43,14 +42,13 @@ class Listener(Cog):
             channel = await category.create_text_channel(name=channel_name)
             await channel.send(msg)
 
-        if not self.commands_count:
-            self.commands_count = await utils.find_one("collection", "commands count")
-        if str(command.name) not in self.commands_count:
-            self.commands_count[str(command.name)] = 0
-        self.commands_count[str(command.name)] += 1
+        # update commands count
+        commands_count = await utils.find_one("collection", "commands count")
+        if str(command.name) not in commands_count:
+            commands_count[str(command.name)] = 0
+        commands_count[str(command.name)] += 1
 
-        await utils.replace_one("collection", "commands count", dict(sorted(
-            self.commands_count.items(), key=lambda kv: kv[1], reverse=True)))
+        await utils.replace_one("collection", "commands count", commands_count)
 
     @Cog.listener()
     async def on_app_command_error(self, interaction: Interaction, error: AppCommandError):
