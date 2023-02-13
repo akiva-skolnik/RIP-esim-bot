@@ -372,7 +372,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 interaction, "`real_time` is a premium parameter! If you wish to use it, along with many other premium commands, please visit https://www.buymeacoffee.com/RipEsim"
                              "\n\nOtherwise, try again, but this time with `real_time=False`")
             return
-
+        await interaction.response.defer()
         if not quality:
             quality = 5
         base_url = f'https://{server}.e-sim.org/'
@@ -387,7 +387,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 if await utils.is_premium_level_1(interaction, False):
                     tree = await utils.get_locked_content(
                         f'{base_url}productMarket.html?resource={item}&countryId=-1&quality={quality}')
-                    market_is_not_empty = tree.xpath("//tr[2]//td[3]")
+                    market_is_not_empty = tree.xpath("//tr[position()>1]//td[3]/text()") or \
+                                          tree.xpath("//*[@class='quantity']/text()")
                     if market_is_not_empty:
                         real_time = True
 
@@ -415,8 +416,6 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                         real_time = True
 
         if real_time:
-            await interaction.response.defer()
-            func = interaction.followup.send
             occupants = {i['occupantId'] for i in await utils.get_content(f'{base_url}apiMap.html')}
             link = f'{base_url}productMarket.html?resource={item}&countryId=-1&quality={quality}'
             last_page = await utils.last_page(link, func=utils.get_locked_content)
@@ -426,14 +425,19 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 tree = await utils.get_locked_content(link + f'&page={page}')
                 raw_price = [float(x) for x in tree.xpath("//tr[position()>1]//td[4]/b/text()")][::2]
                 cc = [x.strip() for x in tree.xpath("//tr[position()>1]//td[4]/text()") if x.strip()][::2]
-                stock = [int(x.strip()) for x in tree.xpath("//tr[position()>1]//td[3]/text()")]
+                stock = tree.xpath("//tr[position()>1]//td[3]/text()")
+                if not raw_price:  # temp, new style in some servers.
+                    raw_price = tree.xpath("//*[@class='productMarketOffer']//b/text()")[::2]
+                    cc = [x.strip() for x in tree.xpath("//*[@class='price']/div/text()") if x.strip()][::3]
+                    stock = tree.xpath("//*[@class='quantity']/text()")
                 for cc, raw_price, stock in zip(cc, raw_price, stock):
                     country_id = currency_names[cc.lower()]
                     if country_id not in final and country_id in occupants:
                         tree = await utils.get_locked_content(f"{base_url}monetaryMarket.html?buyerCurrencyId={country_id}")
                         mm_ratio = tree.xpath("//tr[2]//td[3]/b/text()") or [0]
                         price = round(float(mm_ratio[0]) * raw_price, 4)
-                        final[country_id] = {"price": price, "stock": stock, "country": self.bot.countries[country_id]}
+                        final[country_id] = {"price": price, "stock": int(stock.strip()),
+                                             "country": self.bot.countries[country_id]}
                 await utils.custom_delay(interaction)
             occupants.clear()
 
@@ -462,8 +466,6 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                     embed.set_footer(text="(Top 5 offers)")
             else:
                 embed.add_field(name="Error", value="No offers found in the market.")
-        else:
-            func = interaction.response.send_message
 
         if optimal_price > 0:
             name_for_db = f"{server} {product_name}"
@@ -520,9 +522,9 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             output_buffer = await self.bot.loop.run_in_executor(None, x, db_dict)
             file = File(fp=output_buffer, filename=f"{interaction.id}.png")
             embed.set_thumbnail(url=f"attachment://{interaction.id}.png")
-            await func(message, file=file, embed=await utils.convert_embed(interaction, embed))
+            await utils.custom_followup(interaction, message, file=file, embed=await utils.convert_embed(interaction, embed))
         else:
-            await func(message, embed=await utils.convert_embed(interaction, embed))
+            await utils.custom_followup(interaction, message, embed=await utils.convert_embed(interaction, embed))
 
     @command()
     @check(utils.is_premium_level_1)
