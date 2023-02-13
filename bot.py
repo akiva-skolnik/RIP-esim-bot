@@ -303,20 +303,25 @@ async def price(server: str) -> None:
                 await asyncio.sleep(0.37)
                 if page != 1:
                     tree = await func(f'{url}productMarket.html?countryId=-1&page={page}')
-                products = tree.xpath('//*[@id="productMarketItems"]//tr//td[1]//img[1]/@src')
-                for index, product in enumerate(products):
-                    product = product.split("/")[-1].split(".png")[0]
-                    quality = tree.xpath(f'//*[@id="productMarketItems"]//tr[{index + 2}]//td[1]//img[2]/@src')
-                    if "Defense System" in product:
-                        product = product.replace("Defense System", "Defense_System")
-                    if quality:
-                        products[index] = f'{quality[0].split("/")[-1].split(".png")[0].upper()[1]} {product}'
+                raw_products = tree.xpath('//*[@id="productMarketItems"]//tr//td[1]//img[1]/@src') or \
+                               tree.xpath("//*[@class='product']//div//img/@src")
+                products = []
+                i = -1
+                for product in raw_products:
+                    product = product.replace("_", " ").split("/")[-1].split(".png")[0]
+                    if product.startswith("q") and len(product) == 2:
+                        products[i] = product.upper() + " " + products[i]
                     else:
-                      products[index] = product
+                        products.append(product)
+                        i += 1
 
                 prices = [float(x) for x in tree.xpath("//tr[position()>1]//td[4]/b/text()")][0::2]
                 cc = [x.strip() for x in tree.xpath("//tr[position()>1]//td[4]/text()") if x.strip()][0::2]
                 stock = tree.xpath("//tr[position()>1]//td[3]/text()")
+                if not prices:  # temp, new style in some servers.
+                    prices = tree.xpath("//*[@class='productMarketOffer']//b/text()")[::2]
+                    cc = [x.strip() for x in tree.xpath("//*[@class='price']/div/text()") if x.strip()][::3]
+                    stock = tree.xpath("//*[@class='quantity']/text()")
                 for product, cc, price, stock in zip(products, cc, prices, stock):
                     country = countries_cc[cc.lower()]
                     if country in occupants:
@@ -336,8 +341,7 @@ async def price(server: str) -> None:
             now = datetime.now().astimezone(pytz.timezone('Europe/Berlin')).strftime("%d-%m-%Y %H:%M:%S")
             results: dict = {}
             for product, DICT in offers.items():
-                if len(product.split()[0]) == 1:
-                    product = "Q" + product
+                if len(product.split()[0]) == 2:
                     quality = product.split()[0].replace("Q", "")
                     product_type = product.split()[1]
                 else:
