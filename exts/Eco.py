@@ -417,12 +417,11 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
 
         if real_time:
             occupants = {i['occupantId'] for i in await utils.get_content(f'{base_url}apiMap.html')}
-            link = f'{base_url}productMarket.html?resource={item}&countryId=-1&quality={quality}'
-            last_page = await utils.last_page(link, func=utils.get_locked_content)
             currency_names = {v: k for k, v in utils.get_countries(server, index=2).items()}
             final = {}
-            for page in range(1, last_page):
-                tree = await utils.get_locked_content(link + f'&page={page}')
+            for page in range(1, 10):  # the last page is unknown
+                tree = await utils.get_locked_content(
+                    f'{base_url}productMarket.html?resource={item}&countryId=-1&quality={quality}&page={page}')
                 raw_prices = tree.xpath("//tr[position()>1]//td[4]/b/text()")[::2]
                 cc = [x.strip() for x in tree.xpath("//tr[position()>1]//td[4]/text()") if x.strip()][::2]
                 stock = tree.xpath("//tr[position()>1]//td[3]/text()")
@@ -430,6 +429,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                     raw_prices = tree.xpath("//*[@class='productMarketOffer']//b/text()")[::2]
                     cc = [x.strip() for x in tree.xpath("//*[@class='price']/div/text()") if x.strip()][::3]
                     stock = tree.xpath("//*[@class='quantity']/text()")
+                if len(raw_prices) < 15:  # last page
+                    break
                 for cc, raw_price, stock in zip(cc, raw_prices, stock):
                     country_id = currency_names[cc.lower()]
                     if country_id not in final and country_id in occupants:
