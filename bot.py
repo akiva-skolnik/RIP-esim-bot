@@ -293,18 +293,12 @@ async def price(server: str) -> None:
         try:
             countries_cc: dict = {v: k for k, v in get_countries(server, index=2).items()}
             occupants: set = {i['occupantId'] for i in await get_content(f'{url}apiMap.html')}
-            func = get_locked_content
-            tree = await func(f'{url}productMarket.html?countryId=-1')
-            last = tree.xpath("//ul[@id='pagination-digg']//li[last()-1]//@href") or ['page=1']
-            last = last[0].split('page=', 1)[1]
             offers: dict = {}
             db_mm: dict = await find_one("mm", server)
-            for page in range(1, int(last) + 1):
-                await asyncio.sleep(0.37)
-                if page != 1:
-                    tree = await func(f'{url}productMarket.html?countryId=-1&page={page}')
-                raw_products = tree.xpath('//*[@id="productMarketItems"]//tr//td[1]//img[1]/@src') or \
-                               tree.xpath("//*[@class='product']//div//img/@src")
+            for page in range(1, 100):  # the last page is unknown
+                tree = await get_locked_content(f'{url}productMarket.html?countryId=-1&page={page}')
+                raw_products = tree.xpath("//*[@class='productMarketOfferList']//*[@class='product']//div//img/@src") or \
+                               tree.xpath("//*[@id='productMarketItems']//*[@class='product']//div//img/@src")
                 products = []
                 i = -1
                 for product in raw_products:
@@ -322,6 +316,8 @@ async def price(server: str) -> None:
                     raw_prices = tree.xpath("//*[@class='productMarketOffer']//b/text()")[::2]
                     cc = [x.strip() for x in tree.xpath("//*[@class='price']/div/text()") if x.strip()][::3]
                     stock = tree.xpath("//*[@class='quantity']/text()")
+                if len(raw_prices) < 15:  # last page
+                    break
                 for product, cc, price, stock in zip(products, cc, raw_prices, stock):
                     country = countries_cc[cc.lower()]
                     if country in occupants:
@@ -330,7 +326,7 @@ async def price(server: str) -> None:
                         if country not in offers[product]:
                             offers[product][country] = {"price": round(db_mm.get(str(country), 0) * float(price), 4),
                                                         "stock": int(stock.strip())}
-
+                await asyncio.sleep(0.37)
             countries_cc.clear()
             occupants.clear()
             db_mm.clear()
