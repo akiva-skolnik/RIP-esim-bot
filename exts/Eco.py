@@ -423,19 +423,19 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             final = {}
             for page in range(1, last_page):
                 tree = await utils.get_locked_content(link + f'&page={page}')
-                raw_price = [float(x) for x in tree.xpath("//tr[position()>1]//td[4]/b/text()")][::2]
+                raw_prices = tree.xpath("//tr[position()>1]//td[4]/b/text()")[::2]
                 cc = [x.strip() for x in tree.xpath("//tr[position()>1]//td[4]/text()") if x.strip()][::2]
                 stock = tree.xpath("//tr[position()>1]//td[3]/text()")
-                if not raw_price:  # temp, new style in some servers.
-                    raw_price = tree.xpath("//*[@class='productMarketOffer']//b/text()")[::2]
+                if not raw_prices:  # temp, new style in some servers.
+                    raw_prices = tree.xpath("//*[@class='productMarketOffer']//b/text()")[::2]
                     cc = [x.strip() for x in tree.xpath("//*[@class='price']/div/text()") if x.strip()][::3]
                     stock = tree.xpath("//*[@class='quantity']/text()")
-                for cc, raw_price, stock in zip(cc, raw_price, stock):
+                for cc, raw_price, stock in zip(cc, raw_prices, stock):
                     country_id = currency_names[cc.lower()]
                     if country_id not in final and country_id in occupants:
                         tree = await utils.get_locked_content(f"{base_url}monetaryMarket.html?buyerCurrencyId={country_id}")
                         mm_ratio = tree.xpath("//tr[2]//td[3]/b/text()") or [0]
-                        price = round(float(mm_ratio[0]) * raw_price, 4)
+                        price = round(float(mm_ratio[0]) * float(raw_price), 4)
                         final[country_id] = {"price": price, "stock": int(stock.strip()),
                                              "country": self.bot.countries[country_id]}
                 await utils.custom_delay(interaction)
