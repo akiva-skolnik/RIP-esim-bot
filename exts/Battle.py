@@ -99,9 +99,7 @@ class Battle(Cog):
         median = statistics.median(dmg)
         result = [[x[0], x[1], (":low_brightness: " if int(x[-1].replace(",", "")) < median else
                                 ":high_brightness: ") + x[2]] for x in result]
-        # sort by last seen: result = sorted(result, key=lambda x: datetime.strptime(x[1].split(": ")[-1], self.bot.date_format), reverse=True)
-        result = sorted(result, key=lambda x: [int(X) for X in x[-1].split(": ")[-1].split(":")])
-        result = sorted(result, key=lambda x: x[1].split(": ")[0])
+        result = sorted(result, key=lambda x: datetime.strptime(x[-1].split(": ")[-1], "%H:%M:%S"))
         embed = Embed(colour=0x3D85C6,
                       description=f"**Buffed players {country or mu_name}, {server}**\n"
                                   f"{total_buff} :green_circle:, {total_debuff} :red_circle:",

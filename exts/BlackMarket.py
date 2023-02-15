@@ -32,7 +32,8 @@ class BlackMarket(GroupCog, name="black-market"):
         if not product and not equipment:
             by_servers = {}
             for offer_dict in sorted(data.values(), key=lambda y: y["server"]):
-                if (server and server != offer_dict["server"]) or offer_dict.get("buy"):
+                if (server and server != offer_dict["server"]) or (
+                        offer_dict.get("buy") or offer_dict["server"] not in self.bot.all_servers):
                     continue
                 if offer_dict["server"] not in by_servers:
                     by_servers[offer_dict["server"]] = []
@@ -196,7 +197,8 @@ class BlackMarket(GroupCog, name="black-market"):
 
         results = {}
         for offer_id, offer_dict in data.items():
-            if str(user.id) == offer_dict["discord_id"] and (server == offer_dict["server"] or not server):
+            if str(user.id) == offer_dict["discord_id"] and (not server or server == offer_dict["server"]) and (
+                    offer_dict["server"] in self.bot.all_servers):
                 results[offer_id] = offer_dict
         results = sorted(results.items(), key=lambda x: x[1]['server'])
         embed = Embed(colour=0x3D85C6, title=f"{user}'s offers")
