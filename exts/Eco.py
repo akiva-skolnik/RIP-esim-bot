@@ -346,19 +346,19 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
     @command()
     async def price_list(self, interaction: Interaction, server: Transform[str, Server]) -> None:
         """Displays a list of the cheapest prices in the given server"""
+        await interaction.response.defer()
         db_dict = await utils.find_one("price", server)
         embed = Embed(colour=0x3D85C6, title=server,
                       description=f"[All products](https://docs.google.com/spreadsheets/d/17y8qEU4aHQRTXKdnlM278z3SDzY16bmxMwrZ0RKWcEI/edit#gid={product_gids.get(server, '')}),"
                                   f" [API For developers]({self.bot.api}/https:/{server}.e-sim.org/prices.html)")
-        embed.add_field(name="**Cheapest Item**", value="\n".join(
-            [f"**{item.replace('Defense_System', 'DS')}**: {utils.codes(row[0][2])} {row[0][2]}" for
-             item, row in db_dict.items() if item != "Product"]))
-        embed.add_field(name="**Price**",
-                        value="\n".join([f"{row[0][0]}g" for item, row in db_dict.items() if item != "Product"]))
-        embed.add_field(name="**Stock**",
-                        value="\n".join([f"{row[0][1]:,}" for item, row in db_dict.items() if item != "Product"]))
+        headers = ["Cheapest Item", "Price", "Stock"]
+        results = []
+        for item, row in db_dict.items():
+            if item != "Product":
+                results.append([f"**{item.replace('Defense_System', 'DS')}**: {utils.codes(row[0][2])} {row[0][2]}",
+                               f"{row[0][0]}g", f"{row[0][1]:,}"])
         embed.set_footer(text=db_dict["Product"][0][-1])
-        await interaction.response.send_message(embed=await utils.convert_embed(interaction, embed))
+        await utils.send_long_embed(interaction, embed, headers, results)
 
     @checks.dynamic_cooldown(CoolDownModified(5))
     @command()
