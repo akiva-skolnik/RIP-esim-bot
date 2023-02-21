@@ -96,7 +96,7 @@ async def activate_watch_and_ping() -> None:
         channel = bot.get_channel(int(key.split()[0]))
         if channel:
             bot.loop.create_task(ping_func(
-                bot, channel=channel, t=db_dict[key]["t"], server=db_dict[key]["server"],
+                channel=channel, t=db_dict[key]["t"], server=db_dict[key]["server"],
                 ping_id=key, country=db_dict[key]["country"],
                 role=db_dict[key]["role"], author_id=db_dict[key]["author_id"]))
             await asyncio.sleep(10)

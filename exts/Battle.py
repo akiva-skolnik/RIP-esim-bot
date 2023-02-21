@@ -1056,7 +1056,7 @@ class Battle(Cog):
         find_ping[ping_id] = {"t": t, "server": server, "country": country, "role": role,
                               "author_id": str(interaction.user.id)}
         await utils.replace_one("collection", "ping", find_ping)
-        await ping_func(self.bot, interaction.channel, t, server, ping_id, country, role, interaction.user.id)
+        await ping_func(interaction.channel, t, server, ping_id, country, role, interaction.user.id)
 
     @checks.dynamic_cooldown(utils.CoolDownModified(2))
     @command()
@@ -1446,7 +1446,7 @@ async def motivate_func(bot, server: str, data: dict) -> None:
         data = await utils.find_one("collection", "motivate")
 
 
-async def ping_func(bot, channel: TextChannel, t: float, server: str, ping_id: str, country: str,
+async def ping_func(channel: TextChannel, t: float, server: str, ping_id: str, country: str,
                     role: str, author_id: int = 0) -> None:
     """ping func"""
     base_url = f'https://{server}.e-sim.org/'
@@ -1459,7 +1459,7 @@ async def ping_func(bot, channel: TextChannel, t: float, server: str, ping_id: s
             for page in range(1, await utils.last_page(link)):
                 tree = await utils.get_content(link + f'&page={page}')
                 for battle_data in (await utils.battles_data(tree))["battles"]:
-                    if battle_data["battle_id"] not in ids:
+                    if battle_data["battle_id"] not in ids and country in (battle_data['defender']['name'], battle_data['attacker']['name'],):
                         detailed_list.append(battle_data)
                         ids.append(battle_data["battle_id"])
         if not detailed_list:
