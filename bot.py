@@ -5,6 +5,7 @@ import time
 import traceback
 import warnings
 from datetime import datetime, timedelta
+from random import randint
 
 import pytz
 
@@ -23,8 +24,6 @@ servers: dict = {
     "alpha": "1KqxbZ9LqS191wRf1VGLNl-aw6UId9kmUE0k7NfKQdI4",
     "primera": "1laY2aYa5_TcaDPCZ4FrFjZnbvVkxRIrGdm7ZRaO41nY",
     "secura": "10en9SJVsIQz7uGhbXwb9GInnOdcDuE4p7L93un0q6xw"}
-
-
 
 
 async def update_buffs(server: str) -> None:
@@ -152,9 +151,10 @@ async def update_buffs(server: str) -> None:
                                      "Debuff Ends", "Till Status Change"] + [x.title() for x in elixirs]}
             values.update(dict(sorted(data.items(), key=lambda x: (x[1][1], x[0]))))
             data.clear()
-            await spreadsheets(servers[server], "buffs", "!A1:M200",
-                               [([v[0], k] + v[1:12]) if k != "Last update:" else [k] + v for k, v in values.items()],
-                               delete=True)
+            if randint(1, 10) == 1:
+                await spreadsheets(servers[server], "buffs", "!A1:M200",
+                                   [([v[0], k] + v[1:12]) if k != "Last update:" else [k] + v for k, v in values.items()],
+                                   delete=True)
             await replace_one("buffs", server, values)
             values.clear()
         except Exception as e:
@@ -212,8 +212,9 @@ async def update_time(server: str) -> None:
             data["_headers"] = headers[1:]
             await replace_one("time_online", server, data)
             del data["_headers"]
-            await spreadsheets(servers[server], "Time online", "!A1:G1000",
-                               [headers] + [[f"{url}profile.html?id={k}"] + v for k, v in data.items()][:999])
+            if randint(1, 30) == 1:
+                await spreadsheets(servers[server], "Time online", "!A1:G1000",
+                                   [headers] + [[f"{url}profile.html?id={k}"] + v for k, v in data.items()][:999])
             data.clear()
         except Exception as e:
             tb = traceback.format_exc()
@@ -274,8 +275,7 @@ async def mm():
         values[1:] = sorted(values[1:])
         if len(values) > 1:
             try:
-                await spreadsheets(PRODUCT_SHEET, "Monetary Market", "!A1:K200", values,
-                                   True)
+                await spreadsheets(PRODUCT_SHEET, "Monetary Market", "!A1:K200", values, True)
             except Exception as e:
                 if len(str(e)) < 1000:
                     traceback.print_exc()
@@ -382,8 +382,8 @@ async def price(server: str) -> None:
                             new_values.append([""] + row)
                     if len(new_values) > 1:
                         new_values.append(["", "-", "-", "-"])
-                await spreadsheets(PRODUCT_SHEET, server, "!A1:G300", new_values,
-                                   True)
+                if randint(1, 3) == 1:
+                    await spreadsheets(PRODUCT_SHEET, server, "!A1:G300", new_values, True)
             else:  # error
                 continue
             results.clear()
