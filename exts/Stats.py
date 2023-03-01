@@ -254,7 +254,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                 return
 
         correct_battle_types = ['ATTACK', 'CIVIL_WAR', 'COUNTRY_TOURNAMENT', 'CUP_EVENT_BATTLE', 'LEAGUE',
-                                'MILITARY_UNIT_CUP_EVENT_BATTLE', 'PRACTICE_BATTLE', 'RESISTANCE',
+                                'MILITARY_UNIT_CUP_EVENT_BATTLE', 'PRACTICE_BATTLE', 'RESISTANCE', 'DUEL_TOURNAMENT',
                                 'TEAM_NATIONAL_CUP_BATTLE', 'TEAM_TOURNAMENT', 'WORLD_WAR_EVENT_BATTLE']
 
         battle_types = []
@@ -272,6 +272,8 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                 formal_battle_type = 'CUP_EVENT_BATTLE'
             elif formal_battle_type == "mu cup":
                 formal_battle_type = 'MILITARY_UNIT_CUP_EVENT_BATTLE'
+            elif formal_battle_type == "dual":
+                formal_battle_type = 'DUEL_TOURNAMENT'
             battle_types.append(formal_battle_type.strip().upper())
         for x in battle_types:
             if x not in correct_battle_types:

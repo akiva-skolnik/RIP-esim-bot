@@ -1423,7 +1423,11 @@ async def motivate_func(bot, server: str, data: dict) -> None:
     while server in data:
         try:
             tree = await utils.get_content(f'{base_url}newCitizens.html?countryId=0')
-            citizen_id = int(utils.get_ids_from_path(tree, "//tr[2]//td[1]/a")[0])
+            try:
+                citizen_id = int(utils.get_ids_from_path(tree, "//tr[2]//td[1]/a")[0])
+            except IndexError:
+                await sleep(randint(500, 700))
+                continue
             if old_citizen_id and citizen_id != old_citizen_id:
                 embed = Embed(colour=0x3D85C6, title="Citizens Registered In The Last 5 Minutes",
                               url=f'{base_url}newCitizens.html?countryId=0')
