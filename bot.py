@@ -296,7 +296,7 @@ async def price(server: str) -> None:
             offers: dict = {}
             db_mm: dict = await find_one("mm", server)
             for page in range(1, 100):  # the last page is unknown
-                tree = await get_locked_content(f'{url}productMarket.html?countryId=-1&page={page}')
+                tree = await get_content(f'{url}productMarket.html?countryId=-1&page={page}')
                 raw_products = tree.xpath("//*[@class='productMarketOfferList']//*[@class='product']//div//img/@src") or \
                                tree.xpath("//*[@id='productMarketItems']//*[@class='product']//div//img/@src")
                 products = []
@@ -309,13 +309,9 @@ async def price(server: str) -> None:
                         products.append(product)
                         i += 1
 
-                raw_prices = [float(x) for x in tree.xpath("//tr[position()>1]//td[4]/b/text()")][0::2]
-                cc = [x.strip() for x in tree.xpath("//tr[position()>1]//td[4]/text()") if x.strip()][0::2]
-                stock = tree.xpath("//tr[position()>1]//td[3]/text()")
-                if not raw_prices:  # temp, new style in some servers.
-                    raw_prices = tree.xpath("//*[@class='productMarketOffer']//b/text()")[::2]
-                    cc = [x.strip() for x in tree.xpath("//*[@class='price']/div/text()") if x.strip()][::3]
-                    stock = tree.xpath("//*[@class='quantity']/text()")
+                raw_prices = tree.xpath("//*[@class='productMarketOffer']//b/text()")[::2]
+                cc = [x.strip() for x in tree.xpath("//*[@class='price']/div/text()") if x.strip()][::3]
+                stock = [int(x) for x in tree.xpath("//*[@class='quantity']//text()") if x.strip()]
                 if len(raw_prices) < 15:  # last page
                     break
                 for product, cc, price, stock in zip(products, cc, raw_prices, stock):
@@ -325,7 +321,7 @@ async def price(server: str) -> None:
                             offers[product] = {}
                         if country not in offers[product]:
                             offers[product][country] = {"price": round(db_mm.get(str(country), 0) * float(price), 4),
-                                                        "stock": int(stock.strip())}
+                                                        "stock": stock}
                 await asyncio.sleep(0.37)
             countries_cc.clear()
             occupants.clear()
