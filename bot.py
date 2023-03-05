@@ -309,9 +309,13 @@ async def price(server: str) -> None:
                         products.append(product)
                         i += 1
 
-                raw_prices = tree.xpath("//*[@class='productMarketOffer']//b/text()")[::2]
-                cc = [x.strip() for x in tree.xpath("//*[@class='price']/div/text()") if x.strip()][::3]
+                raw_prices = tree.xpath("//*[@class='productMarketOffer']//b/text()")
+                cc = [x.strip() for x in tree.xpath("//*[@class='price']/div/text()") if x.strip()]
                 stock = [int(x) for x in tree.xpath("//*[@class='quantity']//text()") if x.strip()]
+                if len(cc) > len(stock): # old market view
+                    raw_prices = tree.xpath("//*[@class='productMarketOffer']//b/text()")[::2]
+                    cc = [x.strip() for x in tree.xpath("//*[@class='price']/div/text()") if x.strip()][::3]
+
                 if len(raw_prices) < 15:  # last page
                     break
                 for product, cc, price, stock in zip(products, cc, raw_prices, stock):
