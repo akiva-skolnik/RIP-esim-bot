@@ -8,3 +8,4 @@ wolframalpha
 matplotlib
 pytz
 aiosqlite
+pandas

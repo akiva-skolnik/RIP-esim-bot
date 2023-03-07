@@ -223,7 +223,7 @@ class FieldPageSource(menus.ListPageSource):
 
     def __init__(
         self,
-        entries: list[tuple[Any, Any]],
+        entries: list,
         *,
         per_page: int = 12,
         inline: bool = False,
@@ -235,7 +235,7 @@ class FieldPageSource(menus.ListPageSource):
         self.clear_description: bool = clear_description
         self.inline: bool = inline
 
-    async def format_page(self, menu: Pages, page: list[tuple[Any, Any]]) -> discord.Embed:
+    async def format_page(self, menu: Pages, page: list) -> discord.Embed:
         self.embed.clear_fields()
         if self.clear_description:
             self.embed.description = None

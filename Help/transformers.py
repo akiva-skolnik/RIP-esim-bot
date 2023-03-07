@@ -40,7 +40,7 @@ class Country(Transformer):
             return bot.countries[bot.countries_by_name[country.lower()]]
         raise TransformerError(country, self.type, self)
 
-    async def autocomplete(self, interaction: Interaction, value: str, /) -> list[Choice]:
+    async def autocomplete(self, interaction: Interaction, value: str, /) -> list:
         return [Choice(name=k, value=k) for k in sorted(
             bot.countries.values(), key=lambda x: SequenceMatcher(None, x.lower(), value.lower()).ratio(), reverse=True)][:10]
 
