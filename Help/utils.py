@@ -1151,21 +1151,23 @@ async def api_battles(server: str, battle_id: int) -> dict:
         r['totalSecondsRemaining'] = r["hoursRemaining"] * 3600 + r["minutesRemaining"] * 60 + r["secondsRemaining"]
         r['battle_id'] = battle_id
         r = {k: r[k] for k in all_columns}
-        await bot.dbs[server].execute(f"INSERT OR REPLACE INTO apiBattles {tuple(r.keys())} VALUES {tuple(r.values())}")
+        await bot.dbs[server].execute(f"INSERT OR REPLACE INTO apiBattles VALUES (?,?,?,?,?,?,?,?,?,?)", tuple(r[k] for k in all_columns))
         await bot.dbs[server].commit()
     r["last_round_in_db"] = last_round_in_db
     return r
 
 
-async def api_fights(server: str, api: dict, round_id:int = 0, columns: list = None) -> pd.DataFrame:
-    all_columns = ['battle_id', 'round_id', 'damage', 'weapon', 'berserk', 'defenderSide', 'citizenship',
+async def api_fights(server: str, api: dict, round_id:int = 0) -> pd.DataFrame:
+    columns = ['battle_id', 'round_id', 'damage', 'weapon', 'berserk', 'defenderSide', 'citizenship',
                    'citizenId', 'time', 'militaryUnit']
-    if columns is None:
-        columns = all_columns[2:]
     battle_id = api["battle_id"]
     cursor = await bot.dbs[server].execute(f"SELECT {','.join(columns)} FROM apiFights WHERE battle_id = {battle_id}" +
                                            (f" AND round_id = {round_id}" if round_id else ""))
-    df = pd.DataFrame(await cursor.fetchall(), columns=columns)
+    dfs = []
+    values = await cursor.fetchall()
+    if values:
+        dfs.append(pd.DataFrame(values, columns=columns))
+
     current_round, first_round = api["currentRound"], api["last_round_in_db"] + 1
     if 8 in (api['defenderScore'], api['attackerScore']):
         last_round = current_round
@@ -1176,10 +1178,10 @@ async def api_fights(server: str, api: dict, round_id:int = 0, columns: list = N
         if not r:
             continue
         r = [(battle_id, round_id, hit['damage'], hit['weapon'], hit['berserk'], hit['defenderSide'], hit['citizenship'],
-              hit['citizenId'], get_time(hit['time']), hit.get('militaryUnit', 0)) for hit in reversed(r)]
+              hit['citizenId'], hit['time'], hit.get('militaryUnit', 0)) for hit in reversed(r)]
         if round_id != current_round:
-            await bot.dbs[server].executemany(f"INSERT INTO apiFights {tuple(all_columns)} VALUES (?,?,?,?,?,?,?,?,?,?)", r)
-        df = pd.concat([df, pd.DataFrame(r, columns=list(all_columns))], ignore_index=True)
+            await bot.dbs[server].executemany(f"INSERT INTO apiFights {tuple(columns)} VALUES (?,?,?,?,?,?,?,?,?,?)", r)
+        dfs.append(pd.DataFrame(r, columns=columns))
     if first_round < last_round:
         await bot.dbs[server].commit()
-    return df
+    return pd.concat(dfs, ignore_index=True, copy=False)

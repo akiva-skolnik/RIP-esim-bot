@@ -1226,13 +1226,13 @@ class Battle(Cog):
             elif battle_type != api_battles['type']:
                 continue
             dfs.append(await utils.api_fights(server, api_battles))
-        hit_time_df = pd.concat(dfs)
+        hit_time_df = pd.concat(dfs, ignore_index=True, copy=False)
         hit_time_df['hits'] = hit_time_df['berserk'].apply(lambda x: 5 if x else 1)
         for i in range(6):
             hit_time_df[f'Q{i} weps'] = hit_time_df.apply(lambda c: c['hits'] if c['weapon'] == i else 0, axis=1)
 
         output = StringIO()
-        df = hit_time_df.groupby('citizenId', sort=False, as_index=True)[["damage", "hits"] + [f'Q{i} weps' for i in range(6)]].sum()
+        df = hit_time_df.groupby('citizenId', sort=False)[["damage", "hits"] + [f'Q{i} weps' for i in range(6)]].sum()
         df.sort_values("damage", ascending=False, inplace=True)
         df.to_csv(output)
         hit_time_df = hit_time_df[['citizenId', 'damage', 'time']]
