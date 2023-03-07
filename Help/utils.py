@@ -13,6 +13,7 @@ from traceback import format_exception
 from typing import List, Optional, Union
 from warnings import filterwarnings
 
+import pandas as pd
 from discord import ButtonStyle, Embed, File, Interaction, Message, ui
 from discord.app_commands import CheckFailure
 from discord.ext import tasks
@@ -586,7 +587,7 @@ async def custom_delay(interaction: Interaction) -> None:
 async def send_error(interaction: Optional[Interaction], error: Exception, cmd: str = "") -> None:
     """send error"""
     if interaction:
-        data = interaction.data["name"] + " " + ", ".join(
+        data = interaction.data["name"] + " " + "  ".join(
             f"**{x['name']}**: {x.get('value')}" for x in interaction.data.get('options', []))
     else:
         data = cmd
@@ -994,9 +995,15 @@ def get_countries(server: str, country: int = 0, index: int = -1) -> Union[dict,
 def get_time(string: str, floor_to_10: bool = False) -> datetime:
     """get time"""
     try:
-        dt = datetime.strptime(string.strip(), '%d-%m-%Y %H:%M:%S:%f')
-    except Exception:
-        dt = datetime.strptime(string.strip(), '%Y-%m-%d %H:%M:%S:%f')
+        try:
+            dt = datetime.strptime(string.strip(), '%d-%m-%Y %H:%M:%S:%f')
+        except ValueError:
+            dt = datetime.strptime(string.strip(), '%Y-%m-%d %H:%M:%S:%f')
+    except ValueError:
+        try:
+            dt = datetime.strptime(string.strip(), '%Y-%m-%d %H:%M:%S')
+        except ValueError:
+            dt = datetime.strptime(string.strip(), '%Y-%m-%d %H:%M:%S.%f')
     if floor_to_10:
         dt = dt - timedelta(minutes=dt.minute % 10, seconds=dt.second, microseconds=dt.microsecond)
     return dt
@@ -1129,3 +1136,50 @@ async def replace_one(collection: str, _id: str, data: dict) -> None:
     filename = f"../db/{collection}_{_id}.json"
     with open(filename, "w", encoding='utf-8', errors='ignore') as file:
         json.dump(data, file)
+
+
+async def api_battles(server: str, battle_id: int) -> dict:
+    all_columns = ('currentRound', 'attackerScore', 'regionId', 'defenderScore',
+                   'frozen', 'type', 'defenderId', 'attackerId', 'totalSecondsRemaining', 'battle_id')
+    cursor = await bot.dbs[server].execute(f"SELECT * FROM apiBattles WHERE battle_id = {battle_id}")
+    r = await cursor.fetchone()
+    r = dict(zip(all_columns, r)) if r else {}
+    last_round_in_db = r.get('currentRound', 0)
+
+    if not r or 8 not in (r['defenderScore'], r['attackerScore']):
+        r = await get_content(f'https://{server}.e-sim.org/apiBattles.html?battleId={battle_id}')
+        r['totalSecondsRemaining'] = r["hoursRemaining"] * 3600 + r["minutesRemaining"] * 60 + r["secondsRemaining"]
+        r['battle_id'] = battle_id
+        r = {k: r[k] for k in all_columns}
+        await bot.dbs[server].execute(f"INSERT OR REPLACE INTO apiBattles {tuple(r.keys())} VALUES {tuple(r.values())}")
+        await bot.dbs[server].commit()
+    r["last_round_in_db"] = last_round_in_db
+    return r
+
+
+async def api_fights(server: str, api: dict, round_id:int = 0, columns: list = None) -> pd.DataFrame:
+    all_columns = ['battle_id', 'round_id', 'damage', 'weapon', 'berserk', 'defenderSide', 'citizenship',
+                   'citizenId', 'time', 'militaryUnit']
+    if columns is None:
+        columns = all_columns[2:]
+    battle_id = api["battle_id"]
+    cursor = await bot.dbs[server].execute(f"SELECT {','.join(columns)} FROM apiFights WHERE battle_id = {battle_id}" +
+                                           (f" AND round_id = {round_id}" if round_id else ""))
+    df = pd.DataFrame(await cursor.fetchall(), columns=columns)
+    current_round, first_round = api["currentRound"], api["last_round_in_db"] + 1
+    if 8 in (api['defenderScore'], api['attackerScore']):
+        last_round = current_round
+    else:
+        last_round = current_round + 1
+    for round_id in range(first_round, last_round):
+        r = await get_content(f'https://{server}.e-sim.org/apiFights.html?battleId={battle_id}&roundId={round_id}')
+        if not r:
+            continue
+        r = [(battle_id, round_id, hit['damage'], hit['weapon'], hit['berserk'], hit['defenderSide'], hit['citizenship'],
+              hit['citizenId'], get_time(hit['time']), hit.get('militaryUnit', 0)) for hit in reversed(r)]
+        if round_id != current_round:
+            await bot.dbs[server].executemany(f"INSERT INTO apiFights {tuple(all_columns)} VALUES (?,?,?,?,?,?,?,?,?,?)", r)
+        df = pd.concat([df, pd.DataFrame(r, columns=list(all_columns))], ignore_index=True)
+    if first_round < last_round:
+        await bot.dbs[server].commit()
+    return df
