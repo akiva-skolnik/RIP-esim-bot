@@ -272,7 +272,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                 formal_battle_type = 'CUP_EVENT_BATTLE'
             elif formal_battle_type == "mu cup":
                 formal_battle_type = 'MILITARY_UNIT_CUP_EVENT_BATTLE'
-            elif formal_battle_type == "dual":
+            elif formal_battle_type == "duel":
                 formal_battle_type = 'DUEL_TOURNAMENT'
             battle_types.append(formal_battle_type.strip().upper())
         for x in battle_types:
@@ -343,18 +343,17 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                         countries_dict[attacker]['lost'] += 1
                 dmg_in_battle = defaultdict(lambda: {'dmg': 0, "hits": 0})
                 await utils.custom_delay(interaction)
-                t_check_each_round = check_each_round and api_battles["type"] != "DUEL_TOURNAMENT"
                 if api_battles['defenderScore'] == 8 or api_battles['attackerScore'] == 8:
                     last = api_battles['currentRound']
                 else:
                     last = api_battles['currentRound'] + 1
-                for round_id in range(1, last if t_check_each_round else 2):
+                for round_id in range(1, last if check_each_round else 2):
                     sides = {'defender': 0, 'attacker': 0}
                     attacker_dmg = defaultdict(lambda: {'dmg': 0, "Clutches": 0})
                     defender_dmg = defaultdict(lambda: {'dmg': 0, "Clutches": 0})
                     dmg_in_round = defaultdict(int)
                     for hit in reversed(await utils.get_content(
-                            f'{base_url}apiFights.html?battleId={battle_id}&roundId={round_id if t_check_each_round else 0}')):
+                            f'{base_url}apiFights.html?battleId={battle_id}&roundId={round_id if check_each_round else 0}')):
                         key = hit['citizenId']
                         user = my_dict[key]
                         wep = 5 if hit['berserk'] else 1
@@ -397,14 +396,14 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                         dmg_in_battle[key]["dmg"] += hit['damage']
                         dmg_in_battle[key]["hits"] += wep
                         user['records'][2] = max(user['records'][2], hit['damage'])
-                        if not t_check_each_round:
+                        if not check_each_round or api_battles["type"] == "DUEL_TOURNAMENT":
                             continue
                         side = 'defender' if hit['defenderSide'] else 'attacker'
                         (defender_dmg if hit['defenderSide'] else attacker_dmg)[key]['dmg'] += hit['damage']
                         sides[side] += hit['damage']
                         dmg_in_round[key] += hit['damage']
 
-                    if not t_check_each_round:
+                    if not check_each_round or api_battles["type"] == "DUEL_TOURNAMENT":
                         continue
                     if sides['attacker'] > sides['defender']:
                         for key, value in attacker_dmg.items():

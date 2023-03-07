@@ -422,13 +422,12 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             for page in range(1, 10):  # the last page is unknown
                 tree = await utils.get_locked_content(
                     f'{base_url}productMarket.html?resource={item}&countryId=-1&quality={quality}&page={page}')
-                raw_prices = tree.xpath("//tr[position()>1]//td[4]/b/text()")[::2]
-                cc = [x.strip() for x in tree.xpath("//tr[position()>1]//td[4]/text()") if x.strip()][::2]
-                stock = tree.xpath("//tr[position()>1]//td[3]/text()")
-                if not raw_prices:  # temp, new style in some servers.
+                raw_prices = tree.xpath("//*[@class='productMarketOffer']//b/text()")
+                cc = [x.strip() for x in tree.xpath("//*[@class='price']/div/text()") if x.strip()]
+                stock = [int(x) for x in tree.xpath("//*[@class='quantity']//text()") if x.strip()]
+                if len(cc) > len(stock): # old market view
                     raw_prices = tree.xpath("//*[@class='productMarketOffer']//b/text()")[::2]
                     cc = [x.strip() for x in tree.xpath("//*[@class='price']/div/text()") if x.strip()][::3]
-                    stock = tree.xpath("//*[@class='quantity']/text()")
                 if len(raw_prices) < 15:  # last page
                     break
                 for cc, raw_price, stock in zip(cc, raw_prices, stock):
@@ -437,7 +436,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                         tree = await utils.get_locked_content(f"{base_url}monetaryMarket.html?buyerCurrencyId={country_id}")
                         mm_ratio = tree.xpath("//tr[2]//td[3]/b/text()") or [0]
                         price = round(float(mm_ratio[0]) * float(raw_price), 4)
-                        final[country_id] = {"price": price, "stock": int(stock.strip()),
+                        final[country_id] = {"price": price, "stock": stock,
                                              "country": self.bot.countries[country_id]}
                 await utils.custom_delay(interaction)
             occupants.clear()

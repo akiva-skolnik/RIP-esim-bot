@@ -22,6 +22,8 @@ class Admin(Cog):
     async def execute(self, interaction: Interaction, code: str) -> None:
         # https://github.com/Rapptz/RoboDanny/blob/rewrite/cogs/admin.py#L215
         """Executes a given code"""
+        if interaction.user.id != self.bot.owner_id:
+            return
         await interaction.response.defer()
         env = {
             'bot': self.bot,
