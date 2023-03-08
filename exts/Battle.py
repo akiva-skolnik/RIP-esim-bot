@@ -1204,7 +1204,6 @@ class Battle(Cog):
         base_url = f"https://{server}.e-sim.org/"
         first, last = min(ids), max(ids)
         api_battles_df = await utils.find_many_api_battles(server, ids)
-        api_battles_df.to_csv("a.csv")
         battle_type = api_battles_df[api_battles_df['battle_id'] == first]["type"][0]
         if battle_type not in ('TEAM_TOURNAMENT', "COUNTRY_TOURNAMENT", "LEAGUE", "CUP_EVENT_BATTLE",
                                "MILITARY_UNIT_CUP_EVENT_BATTLE", "TEAM_NATIONAL_CUP_BATTLE"):
@@ -1218,6 +1217,7 @@ class Battle(Cog):
         output = StringIO()
         df = hit_time_df.groupby('citizenId', sort=False)[["damage", "hits"] + [f'Q{i} weps' for i in range(6)]].sum()
         df.sort_values("damage", ascending=False, inplace=True)
+        df.to_csv(output)
         hit_time_df = hit_time_df[['citizenId', 'damage', 'time']]
         hit_time_df['citizenName'] = ""
 
