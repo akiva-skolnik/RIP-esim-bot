@@ -34,21 +34,6 @@ async def on_error(*args, **kwargs) -> None:
     await channel.send(f"{msg}\n```{format_exc()}"[:1900] + "```")
 
 
-async def delete_cup(coll: str) -> None:
-    """Deleting Cup Function at Restart"""
-    cup_db = await utils.find_one("collection", coll)
-    for query, channels in cup_db.items():
-        for channel_as_key in channels:
-            for channel_id, _ in channel_as_key.items():
-                channel = bot.get_channel(int(channel_id))
-                try:
-                    await channel.send(f"Error. Cup query `{query}` has been reset.")
-                except Exception:
-                    pass
-                await asyncio.sleep(1)
-    await utils.replace_one("collection", coll, {})
-
-
 async def activate_reminder() -> None:
     """Activating Reminder Function at Restart"""
     db_dict = await utils.find_one("collection", "remind")
@@ -125,8 +110,6 @@ async def start() -> None:
         return
 
     utils.alert.start()
-    for coll in ("cup", "cup_plus"):
-        await delete_cup(coll)
     await activate_reminder()
     await activate_watch_and_ping()
     await activate_motivate()
