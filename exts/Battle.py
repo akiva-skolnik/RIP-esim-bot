@@ -22,8 +22,7 @@ from matplotlib.dates import DateFormatter
 from pytz import timezone
 
 from Help import utils
-from Help.transformers import (AuctionLink, BattleLink, Country, Server,
-                               TournamentLink)
+from Help.transformers import AuctionLink, BattleLink, Country, Server, TournamentLink
 from Help.utils import (CoolDownModified, bar, camel_case_merge,
                         dmg_calculator, dmg_trend, draw_pil_table,
                         human_format, not_support)
@@ -1225,7 +1224,9 @@ class Battle(Cog):
                     return await interaction.response.send_message(f"First battle must be a cup (not `{battle_type}`)")
             elif battle_type != api_battles['type']:
                 continue
-            dfs.append(await utils.api_fights(server, api_battles))
+            df = await utils.api_fights(server, api_battles)
+            if df is not None:
+                dfs.append(df)
         hit_time_df = pd.concat(dfs, ignore_index=True, copy=False)
         hit_time_df['hits'] = hit_time_df['berserk'].apply(lambda x: 5 if x else 1)
         for i in range(6):
@@ -1276,10 +1277,10 @@ class Battle(Cog):
             api = await utils.get_content(f'{base_url}apiCitizenByName.html?name={nick.lower()}')
             key = f"{utils.codes(api['citizenship'])} [{api['login']}]({base_url}profile.html?id={api['id']})"
             if key not in final:
-                embed.add_field(name="\u200B",
-                                value=f"{df.set_index('citizenId').index.get_loc(api['id'])}. __{key}__")
-                embed.add_field(name="\u200B", value=f'{df[api["id"]]["damage"]:,}')
-                embed.add_field(name="\u200B", value=f'{df[api["id"]]["hits"]:,}')
+                i = df.index.get_loc(api['id'])
+                embed.add_field(name="\u200B", value=f"{i}. __{key}__")
+                embed.add_field(name="\u200B", value=f'{df.iloc[i]["damage"]:,}')
+                embed.add_field(name="\u200B", value=f'{df.iloc[i]["hits"]:,}')
 
         await utils.custom_followup(interaction, embed=await utils.convert_embed(interaction, embed),
                                files=[File(fp=BytesIO(output.getvalue().encode()),

@@ -1184,4 +1184,4 @@ async def api_fights(server: str, api: dict, round_id:int = 0) -> pd.DataFrame:
         dfs.append(pd.DataFrame(r, columns=columns))
     if first_round < last_round:
         await bot.dbs[server].commit()
-    return pd.concat(dfs, ignore_index=True, copy=False)
+    return pd.concat(dfs, ignore_index=True, copy=False) if dfs else None
