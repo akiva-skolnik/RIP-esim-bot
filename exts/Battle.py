@@ -1204,7 +1204,7 @@ class Battle(Cog):
         base_url = f"https://{server}.e-sim.org/"
         first, last = min(ids), max(ids)
         api_battles_df = await utils.find_many_api_battles(server, ids)
-        battle_type = api_battles_df[api_battles_df['battle_id'] == first]["type"][0]
+        battle_type = api_battles_df[api_battles_df['battle_id'] == first]["type"].iloc[0]
         if battle_type not in ('TEAM_TOURNAMENT', "COUNTRY_TOURNAMENT", "LEAGUE", "CUP_EVENT_BATTLE",
                                "MILITARY_UNIT_CUP_EVENT_BATTLE", "TEAM_NATIONAL_CUP_BATTLE"):
             return await interaction.response.send_message(f"First battle must be a cup (not `{battle_type}`)")
