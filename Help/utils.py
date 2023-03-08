@@ -1138,35 +1138,99 @@ async def replace_one(collection: str, _id: str, data: dict) -> None:
         json.dump(data, file)
 
 
-async def api_battles(server: str, battle_id: int) -> dict:
-    all_columns = ('currentRound', 'attackerScore', 'regionId', 'defenderScore',
-                   'frozen', 'type', 'defenderId', 'attackerId', 'totalSecondsRemaining', 'battle_id')
+async def insert_api_battles(server: str, battle_id: int, columns: iter) -> dict:
+    r = await get_content(f'https://{server}.e-sim.org/apiBattles.html?battleId={battle_id}')
+    r['totalSecondsRemaining'] = r["hoursRemaining"] * 3600 + r["minutesRemaining"] * 60 + r["secondsRemaining"]
+    r['battle_id'] = battle_id
+    r = {k: r[k] for k in columns}
+    await bot.dbs[server].execute(f"INSERT OR REPLACE INTO apiBattles VALUES (?,?,?,?,?,?,?,?,?,?)",
+                                  tuple(r[k] for k in columns))
+    return r
+
+
+async def find_many_api_battles(server: str, ids: iter) -> pd.DataFrame:
+    """find_many_api_battles"""
+    columns = ['battle_id', 'currentRound', 'attackerScore', 'regionId', 'defenderScore',
+               'frozen', 'type', 'defenderId', 'attackerId', 'totalSecondsRemaining']
+    first, last = min(ids), max(ids)
+    get_range = len(ids) / (last - first + 1) > 0.5 # get_range=True when ids~=range(min(ids), max(ids))
+    cursor = await bot.dbs[server].execute(f"SELECT * FROM apiBattles WHERE battle_id " + (
+        f"BETWEEN {first} AND {last}" if get_range else f"IN {tuple(ids)}"))
+    values = [x for x in await cursor.fetchall() if x[0] in ids] if get_range else await cursor.fetchall()  # x[0] = battle_id
+    df = pd.DataFrame(values, columns=columns)
+    df['last_round_in_db'] = df['currentRound']
+    values = []
+    for battle_id in ids:
+        row = df.loc[df['battle_id'] == battle_id]
+        if row.empty or 8 not in (row['defenderScore'].iloc[0], row['attackerScore'].iloc[0]):
+            r = await insert_api_battles(server, battle_id, columns)
+            r['last_round_in_db'] = 0
+            if row.empty:
+                values.append(r)
+            else:
+                df.iloc[row.index[0]] = pd.Series(r)
+    await bot.dbs[server].commit()
+    return pd.concat([df, pd.DataFrame(values)], ignore_index=True, copy=False)
+
+
+async def find_many_api_fights(server: str, api_battles_df: pd.DataFrame) -> pd.DataFrame:
+    columns = ['battle_id', 'round_id', 'damage', 'weapon', 'berserk', 'defenderSide', 'citizenship',
+               'citizenId', 'time', 'militaryUnit']
+    ids = api_battles_df["battle_id"].values
+    first, last = min(ids), max(ids)
+    get_range = len(ids) / (last - first + 1) > 0.5 # get_range=True when ids~=range(min(ids), max(ids))
+    cursor = await bot.dbs[server].execute(f"SELECT * FROM apiFights WHERE battle_id " + (
+        f"BETWEEN {first} AND {last}" if get_range else f"IN {tuple(ids)}"))
+    values = [x for x in await cursor.fetchall() if x[1] in ids] if get_range else await cursor.fetchall()  # x[1] = battle_id
+    dfs = []
+    if values:
+        dfs.append(pd.DataFrame(values, columns=["index"] + columns))
+        dfs[0].drop('index', axis=1, inplace=True)
+    for i, api in api_battles_df.iterrows():
+        current_round = api["currentRound"]
+        if 8 in (api['defenderScore'], api['attackerScore']):
+            last_round = current_round
+        else:
+            last_round = current_round + 1
+        for round_id in range(api["last_round_in_db"] + 1, last_round):
+            r = await get_content(f'https://{server}.e-sim.org/apiFights.html?battleId={api["battle_id"]}&roundId={round_id}')
+            if not r:
+                continue
+            r = [(api["battle_id"], round_id, hit['damage'], hit['weapon'], hit['berserk'], hit['defenderSide'], hit['citizenship'],
+                  hit['citizenId'], hit['time'], hit.get('militaryUnit', 0)) for hit in reversed(r)]
+            if round_id != current_round:
+                await bot.dbs[server].executemany(f"INSERT INTO apiFights {tuple(columns)} VALUES (?,?,?,?,?,?,?,?,?,?)", r)
+            dfs.append(pd.DataFrame(r, columns=columns))
+
+    await bot.dbs[server].commit()
+    return pd.concat(dfs, ignore_index=True, copy=False)
+
+
+async def find_one_api_battles(server: str, battle_id: int) -> dict:
+    columns = ['battle_id', 'currentRound', 'attackerScore', 'regionId', 'defenderScore',
+               'frozen', 'type', 'defenderId', 'attackerId', 'totalSecondsRemaining']
     cursor = await bot.dbs[server].execute(f"SELECT * FROM apiBattles WHERE battle_id = {battle_id}")
     r = await cursor.fetchone()
-    r = dict(zip(all_columns, r)) if r else {}
+    r = dict(zip(columns, r)) if r else {}
     last_round_in_db = r.get('currentRound', 0)
 
     if not r or 8 not in (r['defenderScore'], r['attackerScore']):
-        r = await get_content(f'https://{server}.e-sim.org/apiBattles.html?battleId={battle_id}')
-        r['totalSecondsRemaining'] = r["hoursRemaining"] * 3600 + r["minutesRemaining"] * 60 + r["secondsRemaining"]
-        r['battle_id'] = battle_id
-        r = {k: r[k] for k in all_columns}
-        await bot.dbs[server].execute(f"INSERT OR REPLACE INTO apiBattles VALUES (?,?,?,?,?,?,?,?,?,?)", tuple(r[k] for k in all_columns))
+        r = await insert_api_battles(server, battle_id, columns)
         await bot.dbs[server].commit()
     r["last_round_in_db"] = last_round_in_db
     return r
 
 
-async def api_fights(server: str, api: dict, round_id:int = 0) -> pd.DataFrame:
+async def find_one_api_fights(server: str, api: dict, round_id:int = 0) -> pd.DataFrame:
     columns = ['battle_id', 'round_id', 'damage', 'weapon', 'berserk', 'defenderSide', 'citizenship',
-                   'citizenId', 'time', 'militaryUnit']
+               'citizenId', 'time', 'militaryUnit']
     battle_id = api["battle_id"]
-    cursor = await bot.dbs[server].execute(f"SELECT {','.join(columns)} FROM apiFights WHERE battle_id = {battle_id}" +
+    cursor = await bot.dbs[server].execute(f"SELECT * FROM apiFights WHERE battle_id = {battle_id}" +
                                            (f" AND round_id = {round_id}" if round_id else ""))
     dfs = []
     values = await cursor.fetchall()
     if values:
-        dfs.append(pd.DataFrame(values, columns=columns))
+        dfs.append(pd.DataFrame(values, columns=["index"] + columns))
 
     current_round, first_round = api["currentRound"], api["last_round_in_db"] + 1
     if 8 in (api['defenderScore'], api['attackerScore']):

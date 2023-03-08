@@ -93,12 +93,10 @@ class MyClient(Bot):
         self.api = "http://3.70.2.167:5000/"
         self.date_format = "%d-%m-%Y %H:%M:%S"
 
-        self.all_servers = ['primera', 'secura', 'suna', 'alpha', 'luxia',
-                            'unica', 'sigma']
+        self.all_servers = ['primera', 'secura', 'suna', 'alpha', 'luxia', 'unica', 'sigma']
 
         self.products = ["iron", "grain", "oil", "stone", "wood", "diamonds",
-                        "weapon", "house", "gift", "food", "ticket", "defense_system", "hospital",
-                        "estate"]
+                        "weapon", "house", "gift", "food", "ticket", "defense_system", "hospital", "estate"]
 
         self.countries = {
             1: 'Poland', 2: 'Russia', 3: 'Germany', 4: 'France', 5: 'Spain', 6: 'United Kingdom',

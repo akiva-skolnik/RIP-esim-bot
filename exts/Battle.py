@@ -139,31 +139,22 @@ class Battle(Cog):
     async def cup_plus(self, interaction: Interaction, tournament_link: Transform[str, TournamentLink],
                        nick: str = "") -> None:
         """Displays the top 10 players in a cup tournament (faster for premium)"""
-        await interaction.response.send_message("Ok")
-        link = tournament_link
-        server = link.split("https://", 1)[1].split(".e-sim.org", 1)[0]
+        await interaction.response.defer()
+        server = tournament_link.split("https://", 1)[1].split(".e-sim.org", 1)[0]
         await utils.default_nick(interaction, server, nick)
-        find_cup = await utils.find_one("collection", interaction.command.name)
-        if link not in find_cup or len(find_cup[link]) >= 10:
-            if "countryTournament" not in link:
-                tree = await utils.get_locked_content(link)
-            else:
-                tree = await utils.get_locked_content(link + "&hash=%23slideShedule", method="post")
-            ids = {int(x) for x in (
-                utils.get_ids_from_path(tree, '//*[@class="battle-link"]') if "countryTournament" not in link else
-                utils.get_ids_from_path(tree, '//*[@class="getBattle right"]'))}
-            if ids:
-                find_cup[link] = [
-                    {str(interaction.channel.id): {"nick": nick, "author_id": str(interaction.user.id)}}]
-                await utils.replace_one("collection", interaction.command.name, find_cup)
-                await self.cup_func(interaction, server, nick, ids)
-            else:
-                await interaction.edit_original_response(content="No IDs found. Consider using the `cup` command instead. Example: `/cup 40730 40751 alpha`")
-                return
+        if "countryTournament" not in tournament_link:
+            tree = await utils.get_locked_content(tournament_link)
         else:
-            find_cup[link].append({str(interaction.channel.id): {"nick": nick, "author_id": str(interaction.user.id)}})
-            await utils.replace_one("collection", interaction.command.name, find_cup)
+            tree = await utils.get_locked_content(tournament_link + "&hash=%23slideShedule", method="post")
+        ids = {int(x) for x in (
+            utils.get_ids_from_path(tree, '//*[@class="battle-link"]') if "countryTournament" not in tournament_link else
+            utils.get_ids_from_path(tree, '//*[@class="getBattle right"]'))}
+        if ids:
+            await self.cup_func(interaction, server, nick, ids)
+        else:
+            await interaction.edit_original_response(content="No ids found. Consider using the `/cup` command instead. Example: `/cup alpha 40730 40751`")
             return
+
 
     @checks.dynamic_cooldown(CoolDownModified(30))
     @command()
@@ -694,6 +685,7 @@ class Battle(Cog):
                 embed.add_field(name="Registered", value="\n".join(result[2]))
                 await interaction.edit_original_response(embed=await utils.convert_embed(interaction, embed))
         except Exception:
+            print(datetime.now().astimezone(timezone('Europe/Berlin')))
             traceback.print_exc()
         db_dict = await utils.find_one("collection", "motivate")
         if server not in db_dict:
@@ -1211,23 +1203,14 @@ class Battle(Cog):
         """cup func"""
         base_url = f"https://{server}.e-sim.org/"
         first, last = min(ids), max(ids)
-        battle_type = ""
-        dfs = []
-        for index, battle_id in enumerate(ids):
-            api_battles = await utils.api_battles(server, battle_id)
-            if api_battles['frozen']:
-                continue
-            if not battle_type:
-                battle_type = api_battles['type']
-                if battle_type not in ['TEAM_TOURNAMENT', "COUNTRY_TOURNAMENT", "LEAGUE", "CUP_EVENT_BATTLE",
-                                       "MILITARY_UNIT_CUP_EVENT_BATTLE", "TEAM_NATIONAL_CUP_BATTLE"]:
-                    return await interaction.response.send_message(f"First battle must be a cup (not `{battle_type}`)")
-            elif battle_type != api_battles['type']:
-                continue
-            df = await utils.api_fights(server, api_battles)
-            if df is not None:
-                dfs.append(df)
-        hit_time_df = pd.concat(dfs, ignore_index=True, copy=False)
+        api_battles_df = await utils.find_many_api_battles(server, ids)
+        api_battles_df.to_csv("a.csv")
+        battle_type = api_battles_df[api_battles_df['battle_id'] == first]["type"][0]
+        if battle_type not in ('TEAM_TOURNAMENT', "COUNTRY_TOURNAMENT", "LEAGUE", "CUP_EVENT_BATTLE",
+                               "MILITARY_UNIT_CUP_EVENT_BATTLE", "TEAM_NATIONAL_CUP_BATTLE"):
+            return await interaction.response.send_message(f"First battle must be a cup (not `{battle_type}`)")
+        api_battles_df = api_battles_df[api_battles_df["type"] == battle_type]
+        hit_time_df = await utils.find_many_api_fights(server, api_battles_df)
         hit_time_df['hits'] = hit_time_df['berserk'].apply(lambda x: 5 if x else 1)
         for i in range(6):
             hit_time_df[f'Q{i} weps'] = hit_time_df.apply(lambda c: c['hits'] if c['weapon'] == i else 0, axis=1)
@@ -1235,7 +1218,6 @@ class Battle(Cog):
         output = StringIO()
         df = hit_time_df.groupby('citizenId', sort=False)[["damage", "hits"] + [f'Q{i} weps' for i in range(6)]].sum()
         df.sort_values("damage", ascending=False, inplace=True)
-        df.to_csv(output)
         hit_time_df = hit_time_df[['citizenId', 'damage', 'time']]
         hit_time_df['citizenName'] = ""
 
@@ -1313,7 +1295,7 @@ class Battle(Cog):
                     ax2.plot(dmg_time["time"], dmg_time["dmg"], label=player, color=colors.get(player))
 
                 if hit_time1:
-                    ax1.legend(loc=2)
+                    ax1.legend()
                 else:
                     ax2.legend()
                 max_dmg = max(x["dmg"][-1] for x in hit_time.values())
@@ -1364,6 +1346,7 @@ async def motivate_func(bot, server: str, data: dict) -> None:
             await utils.replace_one("collection", "motivate", data)
             del data, tree
         except Exception:
+            print(datetime.now().astimezone(timezone('Europe/Berlin')))
             traceback.print_exc()
         await sleep(randint(500, 700))
         data = await utils.find_one("collection", "motivate")

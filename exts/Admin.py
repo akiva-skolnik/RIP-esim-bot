@@ -19,6 +19,18 @@ class Admin(Cog):
 
     @command()
     @guilds(utils.hidden_guild)
+    async def logout(self, interaction: Interaction) -> None:
+        for server, db in self.bot.dbs.items():
+            await db.commit()
+            await db.close()
+        await self.bot.session.close()
+        await self.bot.locked_session.close()
+        await self.bot.org_session.close()
+        await interaction.response.send_message("done")
+        await self.bot.close()
+
+    @command()
+    @guilds(utils.hidden_guild)
     async def execute(self, interaction: Interaction, code: str) -> None:
         # https://github.com/Rapptz/RoboDanny/blob/rewrite/cogs/admin.py#L215
         """Executes a given code"""
@@ -72,10 +84,10 @@ class Admin(Cog):
 
     @command()
     @guilds(utils.hidden_guild)
-    async def load(self, interaction: Interaction, cmd: str) -> None:
+    async def load(self, interaction: Interaction, ext: str) -> None:
         """Load Extensions"""
-        await self.bot.reload_extension("exts." + cmd)
-        await utils.custom_followup(interaction, f"{cmd} loaded", ephemeral=True)
+        await self.bot.reload_extension("exts." + ext)
+        await utils.custom_followup(interaction, f"{ext} loaded", ephemeral=True)
 
     @command()
     @guilds(utils.hidden_guild)

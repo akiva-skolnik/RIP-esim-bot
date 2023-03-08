@@ -41,9 +41,11 @@ async def delete_cup(coll: str) -> None:
         for channel_as_key in channels:
             for channel_id, _ in channel_as_key.items():
                 channel = bot.get_channel(int(channel_id))
-                if channel:
+                try:
                     await channel.send(f"Error. Cup query `{query}` has been reset.")
-                    await asyncio.sleep(1)
+                except Exception:
+                    pass
+                await asyncio.sleep(1)
     await utils.replace_one("collection", coll, {})
 
 
