@@ -1145,6 +1145,7 @@ async def insert_api_battles(server: str, battle_id: int, columns: iter) -> dict
     r = {k: r[k] for k in columns}
     await bot.dbs[server].execute(f"INSERT OR REPLACE INTO apiBattles VALUES (?,?,?,?,?,?,?,?,?,?)",
                                   tuple(r[k] for k in columns))
+    await bot.dbs[server].commit()
     return r
 
 
@@ -1170,7 +1171,6 @@ async def find_many_api_battles(interaction: Interaction, server: str, ids: iter
             else:
                 df.iloc[row.index[0]] = pd.Series(r)
             await custom_delay(interaction)
-    await bot.dbs[server].commit()
     return pd.concat([df, pd.DataFrame(values)], ignore_index=True, copy=False)
 
 
@@ -1201,10 +1201,10 @@ async def find_many_api_fights(interaction: Interaction, server: str, api_battle
                   hit['citizenId'], hit['time'], hit.get('militaryUnit', 0)) for hit in reversed(r)]
             if round_id != current_round:
                 await bot.dbs[server].executemany(f"INSERT INTO apiFights {tuple(columns)} VALUES (?,?,?,?,?,?,?,?,?,?)", r)
+                await bot.dbs[server].commit()
             dfs.append(pd.DataFrame(r, columns=columns))
             await custom_delay(interaction)
 
-    await bot.dbs[server].commit()
     return pd.concat(dfs, ignore_index=True, copy=False)
 
 
@@ -1218,7 +1218,6 @@ async def find_one_api_battles(server: str, battle_id: int) -> dict:
 
     if not r or 8 not in (r['defenderScore'], r['attackerScore']):
         r = await insert_api_battles(server, battle_id, columns)
-        await bot.dbs[server].commit()
     r["last_round_in_db"] = last_round_in_db
     return r
 
@@ -1247,7 +1246,6 @@ async def find_one_api_fights(server: str, api: dict, round_id:int = 0) -> pd.Da
               hit['citizenId'], hit['time'], hit.get('militaryUnit', 0)) for hit in reversed(r)]
         if round_id != current_round:
             await bot.dbs[server].executemany(f"INSERT INTO apiFights {tuple(columns)} VALUES (?,?,?,?,?,?,?,?,?,?)", r)
+            await bot.dbs[server].commit()
         dfs.append(pd.DataFrame(r, columns=columns))
-    if first_round < last_round:
-        await bot.dbs[server].commit()
     return pd.concat(dfs, ignore_index=True, copy=False) if dfs else None
