@@ -1148,7 +1148,7 @@ async def insert_api_battles(server: str, battle_id: int, columns: iter) -> dict
     return r
 
 
-async def find_many_api_battles(server: str, ids: iter) -> pd.DataFrame:
+async def find_many_api_battles(interaction: Interaction, server: str, ids: iter) -> pd.DataFrame:
     """find_many_api_battles"""
     columns = ['battle_id', 'currentRound', 'attackerScore', 'regionId', 'defenderScore',
                'frozen', 'type', 'defenderId', 'attackerId', 'totalSecondsRemaining']
@@ -1169,11 +1169,12 @@ async def find_many_api_battles(server: str, ids: iter) -> pd.DataFrame:
                 values.append(r)
             else:
                 df.iloc[row.index[0]] = pd.Series(r)
+            await custom_delay(interaction)
     await bot.dbs[server].commit()
     return pd.concat([df, pd.DataFrame(values)], ignore_index=True, copy=False)
 
 
-async def find_many_api_fights(server: str, api_battles_df: pd.DataFrame) -> pd.DataFrame:
+async def find_many_api_fights(interaction: Interaction, server: str, api_battles_df: pd.DataFrame) -> pd.DataFrame:
     columns = ['battle_id', 'round_id', 'damage', 'weapon', 'berserk', 'defenderSide', 'citizenship',
                'citizenId', 'time', 'militaryUnit']
     ids = api_battles_df["battle_id"].values
@@ -1201,6 +1202,7 @@ async def find_many_api_fights(server: str, api_battles_df: pd.DataFrame) -> pd.
             if round_id != current_round:
                 await bot.dbs[server].executemany(f"INSERT INTO apiFights {tuple(columns)} VALUES (?,?,?,?,?,?,?,?,?,?)", r)
             dfs.append(pd.DataFrame(r, columns=columns))
+            await custom_delay(interaction)
 
     await bot.dbs[server].commit()
     return pd.concat(dfs, ignore_index=True, copy=False)

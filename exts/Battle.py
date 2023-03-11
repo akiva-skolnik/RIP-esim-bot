@@ -1203,13 +1203,14 @@ class Battle(Cog):
         """cup func"""
         base_url = f"https://{server}.e-sim.org/"
         first, last = min(ids), max(ids)
-        api_battles_df = await utils.find_many_api_battles(server, ids)
+        api_battles_df = await utils.find_many_api_battles(interaction, server, ids)
         battle_type = api_battles_df[api_battles_df['battle_id'] == first]["type"].iloc[0]
         if battle_type not in ('TEAM_TOURNAMENT', "COUNTRY_TOURNAMENT", "LEAGUE", "CUP_EVENT_BATTLE",
                                "MILITARY_UNIT_CUP_EVENT_BATTLE", "TEAM_NATIONAL_CUP_BATTLE"):
-            return await interaction.response.send_message(f"First battle must be a cup (not `{battle_type}`)")
+            await utils.custom_followup(interaction, f"First battle must be a cup (not `{battle_type}`)")
+            return
         api_battles_df = api_battles_df[api_battles_df["type"] == battle_type]
-        hit_time_df = await utils.find_many_api_fights(server, api_battles_df)
+        hit_time_df = await utils.find_many_api_fights(interaction, server, api_battles_df)
         hit_time_df['hits'] = hit_time_df['berserk'].apply(lambda x: 5 if x else 1)
         for i in range(6):
             hit_time_df[f'Q{i} weps'] = hit_time_df.apply(lambda c: c['hits'] if c['weapon'] == i else 0, axis=1)
@@ -1232,6 +1233,7 @@ class Battle(Cog):
             final[hyperlink]['hits'] = row['hits']
             if i < 5:
                 hit_time_df.loc[(hit_time_df['citizenId'] == citizen_id), 'citizenName'] = api_citizen['login']
+            await utils.custom_delay(interaction)
 
         hit_time_df = hit_time_df[hit_time_df['citizenName'] != ""]
         hit_time = defaultdict(lambda: {"dmg": [], "time": []})
