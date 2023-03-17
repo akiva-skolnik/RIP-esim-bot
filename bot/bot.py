@@ -35,7 +35,7 @@ class MyTree(app_commands.CommandTree):
     """Lock new server"""
     async def interaction_check(self, interaction: Interaction) -> bool:
         """Lock new server"""
-        if not any("sigma" in str(v) for v in interaction.data.values()):
+        if not any("azura" in str(v) for v in interaction.data.values()):
             return True
         today = str(date.today())
         if bot.premium_users.get(str(interaction.user.id), {}).get("level", -1) >= 1 or (
@@ -47,7 +47,7 @@ class MyTree(app_commands.CommandTree):
             return True
         try:
             await interaction.response.send_message(
-                "sigma server is for premium users only. You can use one command per day for free."
+                "azura server is for premium users only. You can use one command per day for free."
                 "\nGet premium at <https://www.buymeacoffee.com/RipEsim> :coffee:"
                 "\nSupport: https://discord.com/invite/q96wSd6")
         except HTTPException:
@@ -85,7 +85,8 @@ class MyClient(Bot):
             "suna": ["1imlsoLdaEb45NnJGmo5T7mQxsjzzTGbrkvqfcR8pMlE", 2061648609, 0],
             "alpha": ["1KqxbZ9LqS191wRf1VGLNl-aw6UId9kmUE0k7NfKQdI4", 1445005647, 0],
             "unica": ["1PvjB3E-7A4cYAUmczJ1HNDOUAQAUnFzjSkCu-dJuVL0", 1876322398, 1265748453],
-            "sigma": ["1SuHcJLqS-nSAzprs7kGsrrcuNLOdXsPRaDVQbkvpxZc", 1876322398, 1265748453]
+            "sigma": ["1SuHcJLqS-nSAzprs7kGsrrcuNLOdXsPRaDVQbkvpxZc", 1876322398, 1265748453],
+            "azura": ["1xy8Ssj91q6z8vqmtnpbviY1pK44ed3FQrOI3KyVq2cg", 1876322398, 1265748453]
         }
 
         self.delay = {}
@@ -93,7 +94,7 @@ class MyClient(Bot):
         self.api = "http://3.70.2.167:5000/"
         self.date_format = "%d-%m-%Y %H:%M:%S"
 
-        self.all_servers = ['primera', 'secura', 'suna', 'alpha', 'luxia', 'unica', 'sigma']
+        self.all_servers = ['primera', 'secura', 'suna', 'alpha', 'luxia', 'unica', 'sigma', 'azura']
 
         self.products = ["iron", "grain", "oil", "stone", "wood", "diamonds",
                         "weapon", "house", "gift", "food", "ticket", "defense_system", "hospital", "estate"]
@@ -177,33 +178,6 @@ class MyClient(Bot):
         self.locked_session = ClientSession(timeout=ClientTimeout(total=150), headers=headers)
         self.org_session = ClientSession(timeout=ClientTimeout(total=150), headers=headers)
         self.dbs = {server: await aiosqlite.connect(f'../db/{server}.db') for server in self.all_servers}
-        for server, db in self.dbs.items():
-            await db.execute('''CREATE TABLE IF NOT EXISTS apiFights
-                                  (ID INTEGER PRIMARY KEY,
-                                  battle_id int UNSIGNED,
-                                  round_id tinyint,
-                                  damage int UNSIGNED,
-                                  weapon tinyint,
-                                  berserk boolean,
-                                  defenderSide boolean,
-                                  citizenship tinyint UNSIGNED,
-                                  citizenId INT,
-                                  time DATETIME,
-                                  militaryUnit smallint UNSIGNED
-                                  )''')
-            await db.execute("CREATE INDEX IF NOT EXISTS battle_id_index ON apiFights (battle_id)")
-            await db.execute('''CREATE TABLE IF NOT EXISTS apiBattles
-                                  (battle_id int UNSIGNED PRIMARY KEY,
-                                  currentRound tinyint,
-                                  attackerScore tinyint,
-                                  regionId smallint UNSIGNED,
-                                  defenderScore tinyint,
-                                  frozen boolean,
-                                  type VARCHAR(32),
-                                  defenderId tinyint UNSIGNED,
-                                  attackerId smallint UNSIGNED,
-                                  totalSecondsRemaining smallint UNSIGNED
-                                  )''')
 
         await load_extensions()
 

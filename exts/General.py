@@ -628,17 +628,20 @@ class General(Cog):
 
         elif "/militaryUnit.html" in link:
             embed.description = None
-            api_mu = await utils.get_content(link.replace("militaryUnit", "apiMilitaryUnitById"))
-            row = {"Name": api_mu['name'], "Total DMG": f"{api_mu['totalDamage']:,}",
-                   "Max members": api_mu['maxMembers'], "Citizenship": self.bot.countries[api_mu['countryId']],
-                   "Type": api_mu['militaryUnitType']}
+            api1 = await utils.get_content(link.replace("militaryUnit", "apiMilitaryUnitById"))
+            api2 = await utils.get_content(link.replace("militaryUnit", "apiMilitaryUnit"))
+            row = {"Name": api1['name'], "Total Damage": f"{api1['totalDamage']:,}", "Today Damage": f"{api2['todayDamage']:,}",
+                   "Max Members": api1['maxMembers'], "Citizenship": self.bot.countries[api1['countryId']],
+                   "Type": api1['militaryUnitType'], "Value": api2['value']}
             row['Citizenship'] = f"{utils.codes(row['Citizenship'])}" + row['Citizenship']
             embed.add_field(name="Info", value="\n".join([f"**{k}:** {v}" for k, v in row.items()]))
-            row = {"Recruitment": link.replace("militaryUnit", "militaryUnitRecrutation"),
+            row = {"Battle Order": f"[{self.bot.countries[api2['todayBattleAttacker']]} VS {self.bot.countries[api2['todayBattleDefender']]}]({base_url}battle.html?id={api2['todayBattleId']})",
+                   "Recruitment": link.replace("militaryUnit", "militaryUnitRecrutation"),
                    "Donate products": link.replace("militaryUnit", "donateProductsToMilitaryUnit"),
                    "Donate money": link.replace("militaryUnit", "donateMoneyToMilitaryUnit"),
                    "MU Companies": link.replace("militaryUnit", "militaryUnitCompanies"),
-                   "Members info": link.replace("militaryUnit", "militaryUnitMembers")}
+                   "Members info": link.replace("militaryUnit", "militaryUnitMembers"),
+                   "Leader": f"{base_url}profile.html?id={api2['leaderId']}"}
             embed.add_field(name="Links", value="\n".join([f"[{k.title()}]({v})" for k, v in row.items()]))
 
         elif "/newspaper.html" in link:
@@ -702,15 +705,15 @@ class General(Cog):
 
             if "&round=" in link:
                 round_id = link.split("&round=")[1].split("&")[0]
-                api = link.replace("battle", "apiFights").replace("id", "battleId").replace("round", "roundId")
+                api2 = link.replace("battle", "apiFights").replace("id", "battleId").replace("round", "roundId")
             else:
                 if api_battle['defenderScore'] == 8 or api_battle['attackerScore'] == 8:
                     round_id = api_battle['currentRound'] - 1
                 else:
                     round_id = api_battle['currentRound']
-                api = link.replace("battle", "apiFights").replace("id", "battleId") + f"&roundId={round_id}"
+                api2 = link.replace("battle", "apiFights").replace("id", "battleId") + f"&roundId={round_id}"
 
-            my_dict, hit_time = await utils.save_dmg_time(api, attacker, defender)
+            my_dict, hit_time = await utils.save_dmg_time(api2, attacker, defender)
             output_buffer = await utils.dmg_trend(hit_time, server, f'{link.split("=")[1].split("&")[0]}-{round_id}')
             hit_time.clear()
             score = f"{api_battle['defenderScore']}:{api_battle['attackerScore']}"
@@ -729,14 +732,14 @@ class General(Cog):
             return
 
         elif "/showEquipment.html" in link or "/apiEquipmentById.html" in link:
-            api = await utils.get_content(link.replace("showEquipment", "apiEquipmentById"))
+            api2 = await utils.get_content(link.replace("showEquipment", "apiEquipmentById"))
             embed = Embed(colour=0x3D85C6, url=link,
-                          title=f"__**Q{api['EqInfo'][0]['quality']} {api['EqInfo'][0]['slot'].title()}**__")
-            if "ownerId" in api['EqInfo'][0]:
-                owner_link = f"{link.replace('showEquipment', 'profile').split('=')[0]}={api['EqInfo'][0]['ownerId']}"
+                          title=f"__**Q{api2['EqInfo'][0]['quality']} {api2['EqInfo'][0]['slot'].title()}**__")
+            if "ownerId" in api2['EqInfo'][0]:
+                owner_link = f"{link.replace('showEquipment', 'profile').split('=')[0]}={api2['EqInfo'][0]['ownerId']}"
                 embed.description = f"[Owner Profile]({owner_link})"
             embed.add_field(name="Parameters:",
-                            value="\n".join(f"**{x['Name']}:** {round(x['Value'], 3)}" for x in api['Parameters']))
+                            value="\n".join(f"**{x['Name']}:** {round(x['Value'], 3)}" for x in api2['Parameters']))
             await utils.custom_followup(interaction, embed=await utils.custom_author(embed))
             return
 

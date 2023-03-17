@@ -117,7 +117,7 @@ class Battle(Cog):
     @command()
     async def calc(self, interaction: Interaction, server: Transform[str, Server], nick: str, bonuses: str = "") -> None:
         """DMG calculator"""
-        api = await utils.get_content(f"https://{server}.e-sim.org/apiCitizenById.html?id={nick.lower()}")
+        api = await utils.get_content(f"https://{server}.e-sim.org/apiCitizenByName.html?name={nick.lower()}")
         dmg = await dmg_calculator(api, bonuses)
 
         embed = Embed(colour=0x3D85C6,
@@ -429,7 +429,7 @@ class Battle(Cog):
             else:
                 citizenship = table[0][0]
                 embed.url = f"{base_url}countryPoliticalStatistics.html?countryId={key_id}"
-            embed.title = f"**{utils.codes(citizenship)} {table[0][0]}** - {table[0][1]} DMG"
+            embed.title = f"**{utils.codes(citizenship)} {table[0][0]}** - {table[0][-1]} DMG"
             for num, (name, value) in enumerate(zip(header[1:], table[0][1:])):
                 embed.insert_field_at(num, name=name, value=value)
             embed.insert_field_at(-3, name="\u2800", value="\u2800", inline=False)

@@ -569,11 +569,7 @@ async def default_nick(interaction: Interaction, server: str, nick: str = "-") -
         nick = bot.default_nick_dict[str(interaction.user.id)].get(server)
     if nick == "-":
         return ""
-    nick = nick or interaction.user.name
-    await custom_followup(
-        interaction, f"Default nick detected: {nick}\nIf you don't like it, write `-` as nick, or type `/default {server} -`",
-        ephemeral=True)
-    return nick
+    return nick or interaction.user.name
 
 
 async def custom_delay(interaction: Interaction) -> None:
@@ -974,7 +970,12 @@ countries_per_server = {
     'sigma': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
               30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55,
               56, 57, 58, 59, 60, 62, 63, 64, 71, 72, 80, 110, 111, 112, 115, 119, 121, 122, 123, 124, 125, 127, 128,
+              130, 131, 132, 133, 134, 135, 136, 138, 143, 144, 145, 148, 150, 155, 156, 162, 165],
+    'azura': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
+              30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55,
+              56, 57, 58, 59, 60, 62, 63, 64, 71, 72, 80, 110, 111, 112, 115, 119, 121, 122, 123, 124, 125, 127, 128,
               130, 131, 132, 133, 134, 135, 136, 138, 143, 144, 145, 148, 150, 155, 156, 162, 165]
+
 
 }
 
@@ -1138,6 +1139,8 @@ async def replace_one(collection: str, _id: str, data: dict) -> None:
         json.dump(data, file)
 
 
+inserted_api_fights = {server: {} for server in bot.all_servers}
+
 async def insert_api_battles(server: str, battle_id: int, columns: iter) -> dict:
     r = await get_content(f'https://{server}.e-sim.org/apiBattles.html?battleId={battle_id}')
     r['totalSecondsRemaining'] = r["hoursRemaining"] * 3600 + r["minutesRemaining"] * 60 + r["secondsRemaining"]
@@ -1199,9 +1202,12 @@ async def find_many_api_fights(interaction: Interaction, server: str, api_battle
                 continue
             r = [(api["battle_id"], round_id, hit['damage'], hit['weapon'], hit['berserk'], hit['defenderSide'], hit['citizenship'],
                   hit['citizenId'], hit['time'], hit.get('militaryUnit', 0)) for hit in reversed(r)]
-            if round_id != current_round:
+            if api["battle_id"] not in inserted_api_fights[server]:
+                inserted_api_fights[server][api["battle_id"]] = []
+            if round_id != current_round and round_id not in inserted_api_fights[server][api["battle_id"]]:
                 await bot.dbs[server].executemany(f"INSERT INTO apiFights {tuple(columns)} VALUES (?,?,?,?,?,?,?,?,?,?)", r)
                 await bot.dbs[server].commit()
+                inserted_api_fights[server][api["battle_id"]].append(round_id)
             dfs.append(pd.DataFrame(r, columns=columns))
             await custom_delay(interaction)
 
@@ -1244,8 +1250,11 @@ async def find_one_api_fights(server: str, api: dict, round_id:int = 0) -> pd.Da
             continue
         r = [(battle_id, round_id, hit['damage'], hit['weapon'], hit['berserk'], hit['defenderSide'], hit['citizenship'],
               hit['citizenId'], hit['time'], hit.get('militaryUnit', 0)) for hit in reversed(r)]
-        if round_id != current_round:
+        if battle_id not in inserted_api_fights[server]:
+            inserted_api_fights[server][battle_id] = []
+        if round_id != current_round and round_id not in inserted_api_fights[server][battle_id]:
             await bot.dbs[server].executemany(f"INSERT INTO apiFights {tuple(columns)} VALUES (?,?,?,?,?,?,?,?,?,?)", r)
             await bot.dbs[server].commit()
+            inserted_api_fights[server][battle_id].append(round_id)
         dfs.append(pd.DataFrame(r, columns=columns))
     return pd.concat(dfs, ignore_index=True, copy=False) if dfs else None

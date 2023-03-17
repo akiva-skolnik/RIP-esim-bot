@@ -45,6 +45,37 @@ class Country(Transformer):
             bot.countries.values(), key=lambda x: SequenceMatcher(None, x.lower(), value.lower()).ratio(), reverse=True)][:10]
 
 
+class BattleTypes(Transformer):  # noqa
+    """BattleTypes"""
+    async def transform(self, interaction: Interaction, battles_types: str) -> list:
+        correct_battle_types = ['ATTACK', 'CIVIL_WAR', 'COUNTRY_TOURNAMENT', 'CUP_EVENT_BATTLE', 'LEAGUE',
+                                'MILITARY_UNIT_CUP_EVENT_BATTLE', 'PRACTICE_BATTLE', 'RESISTANCE', 'DUEL_TOURNAMENT',
+                                'TEAM_NATIONAL_CUP_BATTLE', 'TEAM_TOURNAMENT', 'WORLD_WAR_EVENT_BATTLE']
+
+        battle_types = []
+        for formal_battle_type in battles_types.replace("and", ",").replace("\n", ",").split(","):
+            formal_battle_type = formal_battle_type.lower().strip()
+            if formal_battle_type in ("ww", "world war"):
+                formal_battle_type = 'WORLD_WAR_EVENT_BATTLE'
+            elif formal_battle_type in ("tournament", "country tournament", "country"):
+                formal_battle_type = 'COUNTRY_TOURNAMENT'
+            elif formal_battle_type in ("cw", "civil war"):
+                formal_battle_type = 'CIVIL_WAR'
+            elif formal_battle_type in ("rw", "resistance war"):
+                formal_battle_type = 'RESISTANCE'
+            elif formal_battle_type == "cup":
+                formal_battle_type = 'CUP_EVENT_BATTLE'
+            elif formal_battle_type == "mu cup":
+                formal_battle_type = 'MILITARY_UNIT_CUP_EVENT_BATTLE'
+            elif formal_battle_type == "duel":
+                formal_battle_type = 'DUEL_TOURNAMENT'
+            battle_types.append(formal_battle_type.strip().upper())
+        for x in battle_types:
+            if x not in correct_battle_types:
+                raise CheckFailure(f"No such type (`{x}`). Pls choose from this list:\n" + ", ".join(
+                    [f"`{i}`" for i in correct_battle_types]))
+        return battle_types or ['ATTACK', 'RESISTANCE']
+
 class Ids(Transformer):  # noqa
     """Ids"""
     async def transform(self, interaction: Interaction, ids: str) -> list:
