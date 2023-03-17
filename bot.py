@@ -175,7 +175,7 @@ async def update_time(server: str) -> None:
         "luxia": ["Minutes online (since day 1)", "10/02/2022", "11/02/2022"],
         "unica": ["Minutes online (since day 1)", "01/12/2022", "02/12/2022"],
         "sigma": ["Minutes online (since day 1)", "27/01/2023", "28/01/2023"],
-        "azura": ["Minutes online (since day 1)", "17/03/2023", "18/03/2023"]}
+        "azura": ["Minutes online (since day 1)", "16/03/2023", "17/03/2023"]}
     headers = ["Link", "Nick", "Citizenship",
                "Minutes online (since 19/05/2020)" if server not in first_date else first_date[server][0],
                "Avg. per day", "Minutes online (this month)", "Avg. per day"]
