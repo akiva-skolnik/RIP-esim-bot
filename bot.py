@@ -17,6 +17,7 @@ warnings.filterwarnings("ignore")
 
 PRODUCT_SHEET = "17y8qEU4aHQRTXKdnlM278z3SDzY16bmxMwrZ0RKWcEI"
 servers: dict = {
+    "azura": "1xy8Ssj91q6z8vqmtnpbviY1pK44ed3FQrOI3KyVq2cg",
     "sigma": "1SuHcJLqS-nSAzprs7kGsrrcuNLOdXsPRaDVQbkvpxZc",
     "unica": "1PvjB3E-7A4cYAUmczJ1HNDOUAQAUnFzjSkCu-dJuVL0",
     "luxia": "1mx_JkHVnTVikNdTSxhvfFh4Pzuepp9ZGakCAtxnGxyY",
@@ -173,7 +174,8 @@ async def update_time(server: str) -> None:
         "primera": ["Minutes online (since 10/12/20)", "09/12/2020", "10/12/2020"],
         "luxia": ["Minutes online (since day 1)", "10/02/2022", "11/02/2022"],
         "unica": ["Minutes online (since day 1)", "01/12/2022", "02/12/2022"],
-        "sigma": ["Minutes online (since day 1)", "27/01/2023", "28/01/2023"]}
+        "sigma": ["Minutes online (since day 1)", "27/01/2023", "28/01/2023"],
+        "azura": ["Minutes online (since day 1)", "17/03/2023", "18/03/2023"]}
     headers = ["Link", "Nick", "Citizenship",
                "Minutes online (since 19/05/2020)" if server not in first_date else first_date[server][0],
                "Avg. per day", "Minutes online (this month)", "Avg. per day"]
@@ -330,7 +332,7 @@ async def price(server: str) -> None:
             countries_cc.clear()
             occupants.clear()
             db_mm.clear()
-            if server not in ('unica', 'sigma'):
+            if server not in ('unica', 'sigma', 'azura'):
                 this_month = "01-" + datetime.now().astimezone(pytz.timezone('Europe/Berlin')).strftime("%m-%Y")
             else:
                 this_month = datetime.now().astimezone(pytz.timezone('Europe/Berlin')).strftime("%d-%m-%Y")
