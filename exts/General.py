@@ -705,15 +705,15 @@ class General(Cog):
 
             if "&round=" in link:
                 round_id = link.split("&round=")[1].split("&")[0]
-                api2 = link.replace("battle", "apiFights").replace("id", "battleId").replace("round", "roundId")
+                api = link.replace("battle", "apiFights").replace("id", "battleId").replace("round", "roundId")
             else:
                 if api_battle['defenderScore'] == 8 or api_battle['attackerScore'] == 8:
                     round_id = api_battle['currentRound'] - 1
                 else:
                     round_id = api_battle['currentRound']
-                api2 = link.replace("battle", "apiFights").replace("id", "battleId") + f"&roundId={round_id}"
+                api = link.replace("battle", "apiFights").replace("id", "battleId") + f"&roundId={round_id}"
 
-            my_dict, hit_time = await utils.save_dmg_time(api2, attacker, defender)
+            my_dict, hit_time = await utils.save_dmg_time(api, attacker, defender)
             output_buffer = await utils.dmg_trend(hit_time, server, f'{link.split("=")[1].split("&")[0]}-{round_id}')
             hit_time.clear()
             score = f"{api_battle['defenderScore']}:{api_battle['attackerScore']}"
@@ -732,14 +732,14 @@ class General(Cog):
             return
 
         elif "/showEquipment.html" in link or "/apiEquipmentById.html" in link:
-            api2 = await utils.get_content(link.replace("showEquipment", "apiEquipmentById"))
+            api = await utils.get_content(link.replace("showEquipment", "apiEquipmentById"))
             embed = Embed(colour=0x3D85C6, url=link,
-                          title=f"__**Q{api2['EqInfo'][0]['quality']} {api2['EqInfo'][0]['slot'].title()}**__")
-            if "ownerId" in api2['EqInfo'][0]:
-                owner_link = f"{link.replace('showEquipment', 'profile').split('=')[0]}={api2['EqInfo'][0]['ownerId']}"
+                          title=f"__**Q{api['EqInfo'][0]['quality']} {api['EqInfo'][0]['slot'].title()}**__")
+            if "ownerId" in api['EqInfo'][0]:
+                owner_link = f"{link.replace('showEquipment', 'profile').split('=')[0]}={api['EqInfo'][0]['ownerId']}"
                 embed.description = f"[Owner Profile]({owner_link})"
             embed.add_field(name="Parameters:",
-                            value="\n".join(f"**{x['Name']}:** {round(x['Value'], 3)}" for x in api2['Parameters']))
+                            value="\n".join(f"**{x['Name']}:** {round(x['Value'], 3)}" for x in api['Parameters']))
             await utils.custom_followup(interaction, embed=await utils.custom_author(embed))
             return
 

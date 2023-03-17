@@ -19,35 +19,35 @@ class Admin(Cog):
 
     @command()
     @guilds(utils.hidden_guild)
-    async def create_tables(self, interaction: Interaction):
-        for server, db in self.bot.dbs.items():
-            await db.execute('''CREATE TABLE IF NOT EXISTS apiFights
-                                  (ID INTEGER PRIMARY KEY,
-                                  battle_id int UNSIGNED,
-                                  round_id tinyint,
-                                  damage int UNSIGNED,
-                                  weapon tinyint,
-                                  berserk boolean,
-                                  defenderSide boolean,
-                                  citizenship tinyint UNSIGNED,
-                                  citizenId INT,
-                                  time DATETIME,
-                                  militaryUnit smallint UNSIGNED
-                                  )''')
-            await db.execute("CREATE INDEX IF NOT EXISTS battle_id_index ON apiFights (battle_id)")
-            await db.execute('''CREATE TABLE IF NOT EXISTS apiBattles
-                                  (battle_id int UNSIGNED PRIMARY KEY,
-                                  currentRound tinyint,
-                                  attackerScore tinyint,
-                                  regionId smallint UNSIGNED,
-                                  defenderScore tinyint,
-                                  frozen boolean,
-                                  type VARCHAR(32),
-                                  defenderId tinyint UNSIGNED,
-                                  attackerId smallint UNSIGNED,
-                                  totalSecondsRemaining smallint UNSIGNED
-                                  )''')
-            await interaction.response.send_message("done")
+    async def create_tables(self, interaction: Interaction, server: str):
+        db = self.bot.dbs[server]
+        await db.execute('''CREATE TABLE IF NOT EXISTS apiFights
+                              (ID INTEGER PRIMARY KEY,
+                              battle_id int UNSIGNED,
+                              round_id tinyint,
+                              damage int UNSIGNED,
+                              weapon tinyint,
+                              berserk boolean,
+                              defenderSide boolean,
+                              citizenship tinyint UNSIGNED,
+                              citizenId INT,
+                              time DATETIME,
+                              militaryUnit smallint UNSIGNED
+                              )''')
+        await db.execute("CREATE INDEX IF NOT EXISTS battle_id_index ON apiFights (battle_id)")
+        await db.execute('''CREATE TABLE IF NOT EXISTS apiBattles
+                              (battle_id int UNSIGNED PRIMARY KEY,
+                              currentRound tinyint,
+                              attackerScore tinyint,
+                              regionId smallint UNSIGNED,
+                              defenderScore tinyint,
+                              frozen boolean,
+                              type VARCHAR(32),
+                              defenderId tinyint UNSIGNED,
+                              attackerId smallint UNSIGNED,
+                              totalSecondsRemaining smallint UNSIGNED
+                              )''')
+        await interaction.response.send_message("done")
 
     @command()
     @guilds(utils.hidden_guild)
