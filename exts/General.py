@@ -374,7 +374,7 @@ class General(Cog):
 
         lookup = ['\N{FIRST PLACE MEDAL}', '\N{SECOND PLACE MEDAL}', '\N{THIRD PLACE MEDAL}'] + ['\N{SPORTS MEDAL}'] * 7
         embed = Embed(colour=0x3D85C6)
-        b = await utils.find_one("collection", "commands count")
+        b = await utils.find_one("collection", "commands_count")
         counter = sorted(b.items(), key=lambda kv: kv[1], reverse=True)[:10]
         value = '\n'.join(f'{lookup[index]}: **{command_name}** ({uses:,} uses)' for (index, (command_name, uses)) in
                           enumerate(counter)) or 'No Commands'
@@ -635,7 +635,7 @@ class General(Cog):
                    "Type": api1['militaryUnitType'], "Value": api2['value']}
             row['Citizenship'] = f"{utils.codes(row['Citizenship'])}" + row['Citizenship']
             embed.add_field(name="Info", value="\n".join([f"**{k}:** {v}" for k, v in row.items()]))
-            row = {"Battle Order": f"[{self.bot.countries[api2['todayBattleAttacker']]} VS {self.bot.countries[api2['todayBattleDefender']]}]({base_url}battle.html?id={api2['todayBattleId']})",
+            row = {f"Battle Order: {self.bot.countries[api2['todayBattleAttacker']]} VS {self.bot.countries[api2['todayBattleDefender']]}": f"{base_url}battle.html?id={api2['todayBattleId']}",
                    "Recruitment": link.replace("militaryUnit", "militaryUnitRecrutation"),
                    "Donate products": link.replace("militaryUnit", "donateProductsToMilitaryUnit"),
                    "Donate money": link.replace("militaryUnit", "donateMoneyToMilitaryUnit"),

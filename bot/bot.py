@@ -167,7 +167,7 @@ class MyClient(Bot):
         self.phone_users = (find_one("collection", "phone") or {"users": []})["users"]
         self.default_nick_dict = find_one("collection", "default")
         self.premium_users = find_one("collection", "donors")
-        self.premium_servers = (find_one("collection", "premium guilds") or {"guilds": []})["guilds"]
+        self.premium_servers = (find_one("collection", "premium_guilds") or {"guilds": []})["guilds"]
         self.custom_delay_dict = find_one("collection", "delay")
         self.dbs = {}
 

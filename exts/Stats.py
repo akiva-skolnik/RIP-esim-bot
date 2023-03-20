@@ -252,7 +252,8 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
             return
 
         side_count = []
-        included_countries = [country.split(",") for country in included_countries.lower().split("vs")]
+        if included_countries:
+            included_countries = [country.split(",") for country in included_countries.lower().split("vs")]
         if included_countries and included_countries[0][0]:
             for country in included_countries:
                 side_count.append([self.bot.countries_by_name[x.strip().lower()] for x in country if x.strip()])

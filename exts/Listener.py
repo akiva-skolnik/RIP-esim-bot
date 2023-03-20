@@ -43,7 +43,7 @@ class Listener(Cog):
             await channel.send(msg)
 
         # update commands count
-        commands_count = await utils.find_one("collection", "commands count")
+        commands_count = await utils.find_one("collection", "commands_count")
         if str(command.name) not in commands_count:
             commands_count[str(command.name)] = 0
         commands_count[str(command.name)] += 1

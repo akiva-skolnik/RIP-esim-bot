@@ -84,8 +84,8 @@ class Ids(Transformer):  # noqa
             ids_list = fixed_ids.split()
             if ".e-sim.org" in ids:
                 ids = [get_id(ids)]
-            elif "https://" in ids:
-                if "https://docs.google.com/spreadsheets/d/" in ids:
+            elif ids.startswith("https://"):
+                if ids.startswith("https://docs.google.com/spreadsheets/d/"):
                     ids = ids.split("/edit")[0] + "/export?format=csv"
                 async with bot.session.get(ids, ssl=True) as respond:
                     ids = sorted({i.replace("\r", "").replace(",", "") for i in (await respond.text()).splitlines() if i})
