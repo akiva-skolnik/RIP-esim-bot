@@ -5,14 +5,13 @@ import traceback
 from asyncio import sleep
 from collections import defaultdict
 from copy import deepcopy
-from csv import writer
+from csv import reader, writer
 from datetime import datetime, timedelta
 from io import BytesIO, StringIO
 from json import loads
 from random import randint
 from typing import Optional
 
-import pandas as pd
 from discord import Embed, File, Interaction, Role, TextChannel
 from discord.app_commands import Transform, check, checks, command, describe, guild_only
 from discord.ext.commands import Cog, Context, hybrid_command
@@ -139,20 +138,30 @@ class Battle(Cog):
     async def cup_plus(self, interaction: Interaction, tournament_link: Transform[str, TournamentLink],
                        nick: str = "") -> None:
         """Displays the top 10 players in a cup tournament (faster for premium)"""
-        await interaction.response.defer()
-        server = tournament_link.split("https://", 1)[1].split(".e-sim.org", 1)[0]
+        await interaction.response.send_message("Ok")
+        link = tournament_link
+        server = link.split("https://", 1)[1].split(".e-sim.org", 1)[0]
         await utils.default_nick(interaction, server, nick)
-        if "countryTournament" not in tournament_link:
-            tree = await utils.get_locked_content(tournament_link)
+        find_cup = await utils.find_one("collection", interaction.command.name)
+        if link not in find_cup or len(find_cup[link]) >= 10:
+            if "countryTournament" not in link:
+                tree = await utils.get_locked_content(link)
+            else:
+                tree = await utils.get_locked_content(link + "&hash=%23slideShedule", method="post")
+            ids = {int(x) for x in (
+                utils.get_ids_from_path(tree, '//*[@class="battle-link"]') if "countryTournament" not in link else
+                utils.get_ids_from_path(tree, '//*[@class="getBattle right"]'))}
+            if ids:
+                find_cup[link] = [
+                    {str(interaction.channel.id): {"nick": nick, "author_id": str(interaction.user.id)}}]
+                await utils.replace_one("collection", interaction.command.name, find_cup)
+                await self.cup_func(interaction, link, server, ids, True)
+            else:
+                await interaction.edit_original_response(content="No IDs found. Consider using the `cup` command instead. Example: `/cup 40730 40751 alpha`")
+                return
         else:
-            tree = await utils.get_locked_content(tournament_link + "&hash=%23slideShedule", method="post")
-        ids = {int(x) for x in (
-            utils.get_ids_from_path(tree, '//*[@class="battle-link"]') if "countryTournament" not in tournament_link else
-            utils.get_ids_from_path(tree, '//*[@class="getBattle right"]'))}
-        if ids:
-            await self.cup_func(interaction, server, nick, ids)
-        else:
-            await interaction.edit_original_response(content="No ids found. Consider using the `/cup` command instead. Example: `/cup alpha 40730 40751`")
+            find_cup[link].append({str(interaction.channel.id): {"nick": nick, "author_id": str(interaction.user.id)}})
+            await utils.replace_one("collection", interaction.command.name, find_cup)
             return
 
 
@@ -173,10 +182,42 @@ class Battle(Cog):
             return await interaction.response.send_message(
                                            "You can find the first and last id on the `news` -> `military events` page.",
                                            ephemeral=True)
-        await interaction.response.defer()
+        await interaction.response.send_message("Ok")
         await utils.default_nick(interaction, server, nick)
+        find_cup = await utils.find_one("collection", interaction.command.name)
+        db_query = f"{server} {first_battle_id} {last_battle_id}"
+        if db_query not in find_cup and any(server in k for k in find_cup):
+            for query in find_cup:
+                if server in query and query != db_query:
+                    view = utils.Confirm()
+                    await interaction.edit_original_response(
+                        content=f"Would you like to change your request (`{db_query}`) into `{query}`? It will be much faster.\n"
+                                f"(Someone else is running the command right now, and you can get their result)",
+                        view=view)
+
+                    await view.wait()
+                    if view.value:
+                        find_cup = await utils.find_one("collection", interaction.command.name)
+                        if query in find_cup:
+                            await interaction.edit_original_response(content="I'm on it, Sir. Thank you very much.", view=view)
+                            find_cup[query].append(
+                                {str(interaction.channel.id): {"nick": nick, "author_id": str(interaction.user.id)}})
+                            await utils.replace_one("collection", interaction.command.name, find_cup)
+                            return
+                    else:
+                        await interaction.edit_original_response(content="Ok.", view=view)
+                    break
+        if db_query not in find_cup or len(find_cup[db_query]) >= 10:
+            find_cup[db_query] = [
+                {str(interaction.channel.id): {"nick": nick, "author_id": str(interaction.user.id)}}]
+            await utils.replace_one("collection", interaction.command.name, find_cup)
+
+        else:
+            find_cup[db_query].append(
+                {str(interaction.channel.id): {"nick": nick, "author_id": str(interaction.user.id)}})
+            return await utils.replace_one("collection", interaction.command.name, find_cup)
         ids = range(first_battle_id, last_battle_id + 1)
-        await self.cup_func(interaction, server, nick, ids)
+        await self.cup_func(interaction, db_query, server, ids, False)
 
 
     @checks.dynamic_cooldown(CoolDownModified(15))
@@ -1198,8 +1239,136 @@ class Battle(Cog):
         PDF(X) = e^(-(x-np)^2/(2np(1-p))) / sqrt(2*PI*np(1-p))"""
         return math.exp(- math.pow((x - mean)/std, 2) / 2) / (math.sqrt(2 * math.pi) * std)
 
+    async def cup_func(self, interaction, db_query, server, ids, new_cup) -> None:
+        """cup func"""
+        base_url = f'https://{server}.e-sim.org/'
+        first, last = min(ids), max(ids)
+        try:
+            msg = await interaction.channel.send(content="Progress status: 1%.\n(I will update you after every 10%)",
+                                                 file=File("files/typing.gif"))
+            battle_type = ""
+            my_dict = defaultdict(lambda: {'weps': [0, 0, 0, 0, 0, 0], 'dmg': 0})
+            output = StringIO()
+            csv_writer = writer(output)
+            for index, battle_id in enumerate(ids):
+                msg = await utils.update_percent(index, len(ids), msg)
+                api_battles = await utils.get_content(f'{base_url}apiBattles.html?battleId={battle_id}')
+                if not new_cup:
+                    if api_battles['frozen']:
+                        continue
+                    if not battle_type:
+                        battle_type = api_battles['type']
+                        if battle_type not in ['TEAM_TOURNAMENT', "COUNTRY_TOURNAMENT", "LEAGUE", "CUP_EVENT_BATTLE",
+                                               "MILITARY_UNIT_CUP_EVENT_BATTLE", "TEAM_NATIONAL_CUP_BATTLE"]:
+                            await interaction.edit_original_response(content=f"First battle must be a cup (not `{battle_type}`)")
+                            db_dict = await utils.find_one("collection", interaction.command.name)
+                            del db_dict[db_query]
+                            return await utils.replace_one("collection", interaction.command.name, db_dict)
+                        await interaction.edit_original_response(content=f"\nChecking battles of type {battle_type} (id {first}) from id {first} to id {last}")
+                if new_cup or api_battles['type'] == battle_type:
+                    if api_battles['defenderScore'] == 8 or api_battles['attackerScore'] == 8:
+                        last_round = api_battles['currentRound']
+                    else:
+                        last_round = api_battles['currentRound'] + 1
+                    for round_id in range(1, last_round):
+                        for hit in await utils.get_content(
+                                f'{base_url}apiFights.html?battleId={battle_id}&roundId={round_id}'):
+                            key = hit['citizenId']
+                            my_dict[key]['weps'][hit['weapon']] += 5 if hit['berserk'] else 1
+                            my_dict[key]['dmg'] += hit['damage']
+                            csv_writer.writerow([key, hit["time"], hit['damage']])
+                        await utils.custom_delay(interaction)
 
-    async def cup_func(self, interaction: Interaction, server: str, nick: str, ids: iter) -> None:
+            my_dict = dict(sorted(my_dict.items(), key=lambda kv: kv[1]['dmg'], reverse=True))
+            top_10 = list(my_dict.keys())[:10]
+            hit_time = {k: {"dmg": [], "time": []} for k in top_10}
+            output.seek(0)
+            for hit in sorted(reader(output), key=lambda row: utils.get_time(row[1])):
+                citizen, time_reminding, dmg = int(hit[0]), hit[1], int(hit[2])
+                if citizen in top_10:
+                    hit_time[citizen]["time"].append(utils.get_time(time_reminding))
+                    if hit_time[citizen]["dmg"]:
+                        hit_time[citizen]["dmg"].append(hit_time[citizen]["dmg"][-1] + dmg)
+                    else:
+                        hit_time[citizen]["dmg"].append(dmg)
+
+            output = StringIO()
+            csv_writer = writer(output)
+            csv_writer.writerow(["#", "Citizen Id", "DMG", "Q0 wep", "Q1", "Q2", "Q3", "Q4", "Q5 wep"])
+            final = defaultdict(lambda: {'hits': 0, 'dmg': 0})
+            for index, (channel_id, data) in enumerate(my_dict.items(), 1):
+                if index <= 10:
+                    api_citizen_by_id = await utils.get_content(f'{base_url}apiCitizenById.html?id={channel_id}')
+                    hyperlink = f"{utils.codes(api_citizen_by_id['citizenship'])}" \
+                                f" [{api_citizen_by_id['login'][:25]}]({base_url}profile.html?id={channel_id})"
+                    final[hyperlink]['dmg'] = data['dmg']
+                    final[hyperlink]['hits'] = sum(data['weps'])
+                    hit_time[api_citizen_by_id['login']] = hit_time.pop(channel_id)
+                csv_writer.writerow([index, channel_id, data['dmg']] + data['weps'])
+            hit_time = dict(sorted(hit_time.items(), key=lambda kv: kv[1]["dmg"][-1], reverse=True)[:5])
+            output_buffer = await Battle.cup_trend(self.bot, hit_time)
+            if not output_buffer:
+                output_buffer = await dmg_trend(hit_time, server, f"{first} - {last}")
+            hit_time.clear()
+
+            embed = Embed(colour=0x3D85C6, title=f"{server}, {first}-{last}")
+            embed.add_field(name="**#. CS, Nick**",
+                            value="\n".join(f"{index}. {k}" for index, k in enumerate(final.keys(), 1)))
+            embed.add_field(name="**Damage**", value="\n".join([f'{v["dmg"]:,}' for v in final.values()]))
+            embed.add_field(name="**Hits**", value="\n".join([f'{v["hits"]:,}' for v in final.values()]))
+
+            db_dict = await utils.find_one("collection", interaction.command.name) or {}
+            for cup_dict in db_dict.get(db_query, {}):
+                for channel_id, data in cup_dict.items():
+                    output_buffer.seek(0)
+                    output.seek(0)
+                    graph = File(fp=output_buffer, filename=f"{interaction.id}.png")
+                    embed.set_thumbnail(url=f"attachment://{interaction.id}.png")
+                    added_fields = False
+                    if data["nick"] and data["nick"] != "-":
+                        try:
+                            api = await utils.get_content(f'{base_url}apiCitizenByName.html?name={data["nick"].lower()}')
+                            key = f"{utils.codes(api['citizenship'])} [{api['login']}]({base_url}profile.html?id={api['id']})"
+                            if key not in final:
+                                embed.add_field(name="\u200B",
+                                                value=f"{list(my_dict.keys()).index(api['id']) + 1}. __{key}__")
+                                embed.add_field(name="\u200B", value=f'{my_dict[api["id"]]["dmg"]:,}')
+                                embed.add_field(name="\u200B", value=f'{sum(my_dict[api["id"]]["weps"]):,}')
+                                added_fields = True
+                        except Exception:
+                            pass
+
+                    try:
+                        channel = self.bot.get_channel(int(channel_id))
+                        await channel.send(embed=await utils.convert_embed(int(data["author_id"]), embed),
+                                           files=[File(fp=BytesIO(output.getvalue().encode()),
+                                                       filename=f"Fighters_{server}_{first}-{last}.csv"), graph])
+                    except Exception as error:
+                        await utils.send_error(interaction, error)
+                    if added_fields:
+                        for _ in range(3):
+                            embed.remove_field(-1)
+                    await sleep(0.4)
+
+        except Exception as error:
+            await utils.send_error(interaction, error)
+            db_dict = await utils.find_one("collection", interaction.command.name)
+            if db_query in db_dict:
+                for cup_dict in db_dict[db_query]:
+                    for channel_id, _ in cup_dict.items():
+                        try:
+                            channel = self.bot.get_channel(int(channel_id))
+                            await channel.send("I am sorry, but it looks like e-sim rejected this request.")
+                            await sleep(0.4)
+                        except Exception:
+                            traceback.print_exc()
+
+        db_dict = await utils.find_one("collection", interaction.command.name)
+        if db_query in db_dict:
+            del db_dict[db_query]
+            await utils.replace_one("collection", interaction.command.name, db_dict)
+
+    async def new_cup_func(self, interaction: Interaction, server: str, nick: str, ids: iter) -> None:
         """cup func"""
         base_url = f"https://{server}.e-sim.org/"
         first, last = min(ids), max(ids)

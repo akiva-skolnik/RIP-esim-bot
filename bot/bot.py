@@ -177,7 +177,7 @@ class MyClient(Bot):
         self.session = ClientSession(timeout=ClientTimeout(total=100), headers=headers)
         self.locked_session = ClientSession(timeout=ClientTimeout(total=150), headers=headers)
         self.org_session = ClientSession(timeout=ClientTimeout(total=150), headers=headers)
-        self.dbs = {server: await aiosqlite.connect(f'../db/{server}.db') for server in self.all_servers}
+        #self.dbs = {server: await aiosqlite.connect(f'../db/{server}.db') for server in self.all_servers}
 
         await load_extensions()
 

@@ -23,7 +23,7 @@ class Listener(Cog):
         """Commands Counter"""
         if "name" not in interaction.data or not command:
             return
-        data = interaction.data["name"] + " " + ", ".join(
+        data = interaction.data["name"] + " " + " ".join(
             f"**{x['name']}**: {x.get('value')}" for x in interaction.data.get('options', []))
 
         msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(self.bot.date_format)}] : {data}"
@@ -54,7 +54,7 @@ class Listener(Cog):
     async def on_app_command_error(self, interaction: Interaction, error: AppCommandError):
         """on app command error"""
         error = getattr(error, 'original', error)
-        data = interaction.data["name"] + " " + ", ".join(
+        data = interaction.data["name"] + " " + " ".join(
             f"**{x['name']}**: {x.get('value')}" for x in interaction.data.get('options', []))
         msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(self.bot.date_format)}] : {data}"
         if not isinstance(error, CheckFailure):

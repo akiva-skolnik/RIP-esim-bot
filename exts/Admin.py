@@ -20,7 +20,7 @@ class Admin(Cog):
     @command()
     @guilds(utils.hidden_guild)
     async def create_tables(self, interaction: Interaction, servers: str = ""):
-        for server in servers.split(",") or self.bot.all_servers:
+        for server in servers.split(",") if servers else self.bot.all_servers:
             db = self.bot.dbs[server]
             await db.execute('''CREATE TABLE IF NOT EXISTS apiFights
                                   (ID INTEGER PRIMARY KEY,
