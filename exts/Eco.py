@@ -109,10 +109,10 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             tree = await utils.get_content(f"{base_url}jobMarket.html?countryId={k}&minimalSkill={skill}")
             salary = tree.xpath('//*[@id="esim-layout"]//tr[2]//td[5]/b/text()')
             if salary:
-                tree = await utils.get_content(f"{base_url}monetaryMarket.html?buyerCurrencyId={k}")
-                mm_ratio = tree.xpath("//tr[2]//td[3]/b")
+                tree = await utils.get_content(f"{base_url}monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={k}&page=1")
+                mm_ratio = tree.xpath("//*[@class='ratio']//b/text()")
                 if mm_ratio:
-                    mm_ratio = mm_ratio[0].text
+                    mm_ratio = mm_ratio[0]
                 else:
                     continue
                 gold = round(float(mm_ratio) * float(salary[0]), 4)
@@ -245,8 +245,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             if await self.bot.should_cancel(interaction, msg):
                 break
             msg = await utils.update_percent(index, length, msg)
-            tree = await utils.get_content(f"{base_url}monetaryMarket.html?buyerCurrencyId={country_id}")
-            mm_dict[mm_name] = float((tree.xpath("//tr[2]//td[3]/b/text()") or [0])[0])
+            tree = await utils.get_content(f"{base_url}monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1")
+            mm_dict[mm_name] = float((tree.xpath("//*[@class='ratio']//b/text()") or [0])[0])
             await utils.custom_delay(interaction)
 
         output = StringIO()
@@ -433,8 +433,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 for cc, raw_price, stock in zip(cc, raw_prices, stock):
                     country_id = currency_names[cc.lower()]
                     if country_id not in final and country_id in occupants:
-                        tree = await utils.get_locked_content(f"{base_url}monetaryMarket.html?buyerCurrencyId={country_id}")
-                        mm_ratio = tree.xpath("//tr[2]//td[3]/b/text()") or [0]
+                        tree = await utils.get_content(f"{base_url}monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1")
+                        mm_ratio = tree.xpath("//*[@class='ratio']//b/text()") or [0]
                         price = round(float(mm_ratio[0]) * float(raw_price), 4)
                         final[country_id] = {"price": price, "stock": stock,
                                              "country": self.bot.countries[country_id]}
@@ -531,7 +531,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
     @describe(link="profile, military unit or stock company link")
     async def productivity(self, interaction: Interaction, link: str) -> None:
         """Companies productivity results (per player / MU / SC)."""
-
+        await interaction.response.defer()
         link = link.split("#")[0].replace("http://", "https://")
         server = link.split("https://", 1)[1].split(".e-sim.org", 1)[0]
         base_url = f"https://{server}.e-sim.org/"
@@ -563,7 +563,6 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             await utils.custom_followup(interaction, "No companies found", ephemeral=True)
             return
 
-        await interaction.response.defer()
         msg = await utils.custom_followup(interaction,
                                           "Progress status: 1%.\n(I will update you after every 10%)" if len(
                                               companies) > 10 else "I'm on it, Sir. Be patient.",
