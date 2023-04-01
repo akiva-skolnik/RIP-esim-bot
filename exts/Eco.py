@@ -779,7 +779,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         file = File(fp=output_buffer, filename=f"{interaction.id}.png")
         embed.set_thumbnail(url=f"attachment://{interaction.id}.png")
 
-        tree = await utils.get_content(link)
+        tree = await utils.get_content(f"https://{server}.e-sim.org/monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1")
         buy = tree.xpath('//*[@id="buy"]//option[@selected="selected"]')[0].text
         seller = tree.xpath("//td[1]/a/text()")
         links = [int(x.split("?id=")[1]) for x in tree.xpath("//td[1]/a/@href")]
