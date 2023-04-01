@@ -237,12 +237,12 @@ async def mm():
             # get data
             for country_id in countries_per_server[server]:
                 try:
-                    tree = await get_content(f'{url}monetaryMarket.html?buyerCurrencyId={country_id}')
+                    tree = await get_content(f'{url}monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1')
                     await asyncio.sleep(0.3)
                 except:
                     await asyncio.sleep(5)
                     continue
-                MM = float((tree.xpath("//tr[2]//td[3]/b/text()") or [0])[0])
+                MM = float((tree.xpath("//*[@class='ratio']//b/text()") or [0])[0])
                 mm_per_server[server][str(country_id)] = min(1.4, MM)
 
             # update history
