@@ -10,8 +10,7 @@ from random import randint
 import pytz
 
 from big_dicts import countries_per_id, countries_per_server
-from utils import (find_one, get_content, get_countries, get_eqs,
-                   get_locked_content, replace_one, spreadsheets)
+from utils import find_one, get_content, get_countries, get_eqs, replace_one, spreadsheets
 
 warnings.filterwarnings("ignore")
 
@@ -238,12 +237,12 @@ async def mm():
             for country_id in countries_per_server[server]:
                 try:
                     tree = await get_content(f'{url}monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1')
-                    await asyncio.sleep(0.3)
+                    MM = float(tree.xpath("//*[@class='ratio']//b/text()")[0])
+
                 except:
-                    await asyncio.sleep(5)
-                    continue
-                MM = float((tree.xpath("//*[@class='ratio']//b/text()") or [0])[0])
+                    MM = 0
                 mm_per_server[server][str(country_id)] = min(1.4, MM)
+                await asyncio.sleep(0.35)
 
             # update history
             history: dict = await find_one("mm_history", server)
