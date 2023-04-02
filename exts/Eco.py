@@ -109,11 +109,10 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             tree = await utils.get_content(f"{base_url}jobMarket.html?countryId={k}&minimalSkill={skill}")
             salary = tree.xpath('//*[@id="esim-layout"]//tr[2]//td[5]/b/text()')
             if salary:
-                tree = await utils.get_content(f"{base_url}monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={k}&page=1")
-                mm_ratio = tree.xpath("//*[@class='ratio']//b/text()")
-                if mm_ratio:
-                    mm_ratio = mm_ratio[0]
-                else:
+                try:
+                    tree = await utils.get_content(f"{base_url}monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={k}&page=1")
+                    mm_ratio = tree.xpath("//*[@class='ratio']//b/text()")[0]
+                except Exception:
                     continue
                 gold = round(float(mm_ratio) * float(salary[0]), 4)
                 data[f"{base_url}jobMarket.html?countryId={k}&minimalSkill={skill}"] = (gold, v[0], mm_ratio)
@@ -245,8 +244,12 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             if await self.bot.should_cancel(interaction, msg):
                 break
             msg = await utils.update_percent(index, length, msg)
-            tree = await utils.get_content(f"{base_url}monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1")
-            mm_dict[mm_name] = float((tree.xpath("//*[@class='ratio']//b/text()") or [0])[0])
+            try:
+                tree = await utils.get_content(f"{base_url}monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1")
+                ratio = float(tree.xpath("//*[@class='ratio']//b/text()")[0])
+            except Exception:
+                ratio = 0
+            mm_dict[mm_name] = ratio
             await utils.custom_delay(interaction)
 
         output = StringIO()
@@ -420,7 +423,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             currency_names = {v: k for k, v in utils.get_countries(server, index=2).items()}
             final = {}
             for page in range(1, 10):  # the last page is unknown
-                tree = await utils.get_locked_content(
+                tree = await utils.get_content(
                     f'{base_url}productMarket.html?resource={item}&countryId=-1&quality={quality}&page={page}')
                 raw_prices = tree.xpath("//*[@class='productMarketOffer']//b/text()")
                 cc = [x.strip() for x in tree.xpath("//*[@class='price']/div/text()") if x.strip()]
@@ -433,9 +436,12 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 for cc, raw_price, stock in zip(cc, raw_prices, stock):
                     country_id = currency_names[cc.lower()]
                     if country_id not in final and country_id in occupants:
-                        tree = await utils.get_content(f"{base_url}monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1")
-                        mm_ratio = tree.xpath("//*[@class='ratio']//b/text()") or [0]
-                        price = round(float(mm_ratio[0]) * float(raw_price), 4)
+                        try:
+                            tree = await utils.get_content(f"{base_url}monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1")
+                            mm_ratio = tree.xpath("//*[@class='ratio']//b/text()")[0]
+                        except Exception:
+                            mm_ratio = 0
+                        price = round(float(mm_ratio) * float(raw_price), 4)
                         final[country_id] = {"price": price, "stock": stock,
                                              "country": self.bot.countries[country_id]}
                 await utils.custom_delay(interaction)
@@ -778,10 +784,9 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         output_buffer = utils.plt_to_bytes()
         file = File(fp=output_buffer, filename=f"{interaction.id}.png")
         embed.set_thumbnail(url=f"attachment://{interaction.id}.png")
-
-        tree = await utils.get_content(f"https://{server}.e-sim.org/monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1")
-        sellers = tree.xpath("//*[@class='seller']/a/text()")
-        if sellers:
+        try:
+            tree = await utils.get_content(f"https://{server}.e-sim.org/monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1")
+            sellers = tree.xpath("//*[@class='seller']/a/text()")
             buy = tree.xpath("//*[@class='buy']/button")[0].attrib['data-buy-currency-name']
             seller_ids = [int(x.split("?id=")[1]) for x in tree.xpath("//*[@class='seller']/a/@href")]
             amounts = tree.xpath("//*[@class='amount']//b/text()")
@@ -794,6 +799,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             embed.add_field(name="Stock", value="\n".join([x["amount"] for x in row[:5]]))
             embed.add_field(name="Price", value="\n".join([x["ratio"] for x in row[:5]]))
             embed.set_footer(text=buy)
+        except Exception:
+            pass
         await utils.custom_followup(interaction, file=file, embed=await utils.convert_embed(interaction, embed))
 
     @checks.dynamic_cooldown(CoolDownModified(10))
