@@ -780,21 +780,20 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         embed.set_thumbnail(url=f"attachment://{interaction.id}.png")
 
         tree = await utils.get_content(f"https://{server}.e-sim.org/monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1")
-        buy = tree.xpath('//*[@id="buy"]//option[@selected="selected"]')[0].text
-        seller = tree.xpath("//td[1]/a/text()")
-        links = [int(x.split("?id=")[1]) for x in tree.xpath("//td[1]/a/@href")]
-        amount = tree.xpath("//td[2]/b/text()")
-        ratio = tree.xpath("//td[3]/b/text()")
-        row = []
-        for seller, link, amount, ratio in zip(seller, links, amount, ratio):
-            row.append({"seller": seller.strip(), "seller_id": link, "amount": amount, "ratio": ratio})
-
-        row = row[:5]
-        embed.add_field(name="Seller", value="\n".join(
-            [f'[{x["seller"]}](https://{server}.e-sim.org/profile.html?id={x["seller_id"]})' for x in row]))
-        embed.add_field(name="Stock", value="\n".join([str(x["amount"]) for x in row]))
-        embed.add_field(name="Price", value="\n".join([str(x["ratio"]) for x in row]))
-        embed.set_footer(text=buy)
+        sellers = tree.xpath("//*[@class='seller']/a/text()")
+        if sellers:
+            buy = tree.xpath("//*[@class='buy']/button")[0].attrib['data-buy-currency-name']
+            seller_ids = [int(x.split("?id=")[1]) for x in tree.xpath("//*[@class='seller']/a/@href")]
+            amounts = tree.xpath("//*[@class='amount']//b/text()")
+            ratios = tree.xpath("//*[@class='ratio']//b/text()")
+            row = []
+            for seller, seller_id, amount, ratio in zip(sellers, seller_ids, amounts, ratios):
+                row.append({"seller": seller.strip(), "seller_id": seller_id, "amount": amount, "ratio": ratio})
+            embed.add_field(name="Seller", value="\n".join(
+                [f'[{x["seller"]}](https://{server}.e-sim.org/profile.html?id={x["seller_id"]})' for x in row[:5]]))
+            embed.add_field(name="Stock", value="\n".join([x["amount"] for x in row[:5]]))
+            embed.add_field(name="Price", value="\n".join([x["ratio"] for x in row[:5]]))
+            embed.set_footer(text=buy)
         await utils.custom_followup(interaction, file=file, embed=await utils.convert_embed(interaction, embed))
 
     @checks.dynamic_cooldown(CoolDownModified(10))
