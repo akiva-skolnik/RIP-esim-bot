@@ -389,9 +389,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 results = None
                 if await utils.is_premium_level_1(interaction, False):
                     tree = await utils.get_locked_content(
-                        f'{base_url}productMarket.html?resource={item}&countryId=-1&quality={quality}')
-                    market_is_not_empty = tree.xpath("//tr[position()>1]//td[3]/text()") or \
-                                          tree.xpath("//*[@class='quantity']/text()")
+                        f'{base_url}productMarketOffers?type={item}&countryId=-1&quality={quality}&page=1')
+                    market_is_not_empty = tree.xpath("//*[@class='productMarketOffer']//b/text()")
                     if market_is_not_empty:
                         real_time = True
 
@@ -424,14 +423,11 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             final = {}
             for page in range(1, 10):  # the last page is unknown
                 tree = await utils.get_content(
-                    f'{base_url}productMarket.html?resource={item}&countryId=-1&quality={quality}&page={page}')
+                    f'{base_url}productMarketOffers?type={item}&countryId=-1&quality={quality}&page={page}')
                 raw_prices = tree.xpath("//*[@class='productMarketOffer']//b/text()")
                 cc = [x.strip() for x in tree.xpath("//*[@class='price']/div/text()") if x.strip()]
                 stock = [int(x) for x in tree.xpath("//*[@class='quantity']//text()") if x.strip()]
-                if len(cc) > len(stock): # old market view
-                    raw_prices = tree.xpath("//*[@class='productMarketOffer']//b/text()")[::2]
-                    cc = [x.strip() for x in tree.xpath("//*[@class='price']/div/text()") if x.strip()][::3]
-                if len(raw_prices) < 15:  # last page
+                if len(raw_prices) < 20:  # last page
                     break
                 for cc, raw_price, stock in zip(cc, raw_prices, stock):
                     country_id = currency_names[cc.lower()]
