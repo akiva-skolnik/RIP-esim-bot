@@ -297,9 +297,8 @@ async def price(server: str) -> None:
             offers: dict = {}
             db_mm: dict = await find_one("mm", server)
             for page in range(1, 100):  # the last page is unknown
-                tree = await get_content(f'{url}productMarket.html?countryId=-1&page={page}')
-                raw_products = tree.xpath("//*[@class='productMarketOfferList']//*[@class='product']//div//img/@src") or \
-                               tree.xpath("//*[@id='productMarketItems']//*[@class='product']//div//img/@src")
+                tree = await get_content(f'{url}productMarketOffers?quality=0&type=ANY&countryId=-1&page={page}')
+                raw_products = tree.xpath("//*[@class='product']//div//img/@src")
                 products = []
                 i = -1
                 for product in raw_products:
@@ -313,11 +312,8 @@ async def price(server: str) -> None:
                 raw_prices = tree.xpath("//*[@class='productMarketOffer']//b/text()")
                 cc = [x.strip() for x in tree.xpath("//*[@class='price']/div/text()") if x.strip()]
                 stock = [int(x) for x in tree.xpath("//*[@class='quantity']//text()") if x.strip()]
-                if len(cc) > len(stock): # old market view
-                    raw_prices = tree.xpath("//*[@class='productMarketOffer']//b/text()")[::2]
-                    cc = [x.strip() for x in tree.xpath("//*[@class='price']/div/text()") if x.strip()][::3]
 
-                if len(raw_prices) < 15:  # last page
+                if len(raw_prices) < 20:  # last page
                     break
                 for product, cc, price, stock in zip(products, cc, raw_prices, stock):
                     country = countries_cc[cc.lower()]
