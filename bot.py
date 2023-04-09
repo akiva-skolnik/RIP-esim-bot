@@ -355,8 +355,6 @@ async def price(server: str) -> None:
                         new_values.append(["", "-", "-", "-"])
                 if randint(1, 3) == 1:
                     await spreadsheets(PRODUCT_SHEET, server, "!A1:G300", new_values, True)
-            else:  # error
-                continue
             results.clear()
             new_values.clear()
         except Exception as e:
