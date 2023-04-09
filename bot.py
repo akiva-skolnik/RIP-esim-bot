@@ -292,39 +292,18 @@ async def price(server: str) -> None:
     while True:
         start = time.time()
         try:
-            countries_cc: dict = {v: k for k, v in get_countries(server, index=2).items()}
             occupants: set = {i['occupantId'] for i in await get_content(f'{url}apiMap.html')}
             offers: dict = {}
             db_mm: dict = await find_one("mm", server)
-            for page in range(1, 100):  # the last page is unknown
-                tree = await get_content(f'{url}productMarketOffers?quality=0&type=ANY&countryId=-1&page={page}')
-                raw_products = tree.xpath("//*[@class='product']//div//img/@src")
-                products = []
-                i = -1
-                for product in raw_products:
-                    product = product.replace("_", " ").split("/")[-1].split(".png")[0]
-                    if product.startswith("q") and len(product) == 2:
-                        products[i] = product.upper() + " " + products[i]
-                    else:
-                        products.append(product)
-                        i += 1
-
-                raw_prices = tree.xpath("//*[@class='productMarketOffer']//b/text()")
-                cc = [x.strip() for x in tree.xpath("//*[@class='price']/div/text()") if x.strip()]
-                stock = [int(x) for x in tree.xpath("//*[@class='quantity']//text()") if x.strip()]
-
-                if len(raw_prices) < 20:  # last page
-                    break
-                for product, cc, price, stock in zip(products, cc, raw_prices, stock):
-                    country = countries_cc[cc.lower()]
-                    if country in occupants:
-                        if product not in offers:
-                            offers[product] = {}
-                        if country not in offers[product]:
-                            offers[product][country] = {"price": round(db_mm.get(str(country), 0) * float(price), 4),
-                                                        "stock": stock}
-                await asyncio.sleep(0.37)
-            countries_cc.clear()
+            for offer in await get_content(f"{url}apiProductMarket.html?id=-1"):
+                country = offer["countryId"]
+                product = offer["quality"], offer["resource"].title()
+                if country in occupants:
+                    if product not in offers:
+                        offers[product] = {}
+                    if country not in offers[product]:
+                        offers[product][country] = {"price": round(db_mm.get(str(country), 0) * float(offer["price"]), 4),
+                                                    "stock": offer["quantity"]}
             occupants.clear()
             db_mm.clear()
             if server not in ('unica', 'sigma', 'azura'):
@@ -333,15 +312,10 @@ async def price(server: str) -> None:
                 this_month = datetime.now().astimezone(pytz.timezone('Europe/Berlin')).strftime("%d-%m-%Y")
             now = datetime.now().astimezone(pytz.timezone('Europe/Berlin')).strftime("%d-%m-%Y %H:%M:%S")
             results: dict = {}
-            for product, DICT in offers.items():
-                if len(product.split()[0]) == 2:
-                    quality = product.split()[0].replace("Q", "")
-                    product_type = product.split()[1]
-                else:
-                    quality = 5
-                    product_type = product.split()[0]
-
+            raw_products = ["Iron", "Diamonds", "Grain", "Oil", "Stone", "Wood"]
+            for (quality, product_type), DICT in offers.items():
                 # Delete 0 (no MM offers)
+                product = f"Q{quality} {product_type}" if product_type not in raw_products else product_type
                 DICT = sorted({k: v for k, v in DICT.items() if DICT[k]['price']}.items(), key=lambda x: x[1]["price"])[:5]
                 FIND: dict = await find_one("prices_history", product)
                 for count, (country, price_stock) in enumerate(DICT):
