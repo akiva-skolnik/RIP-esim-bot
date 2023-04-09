@@ -427,8 +427,6 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 raw_prices = tree.xpath("//*[@class='productMarketOffer']//b/text()")
                 cc = [x.strip() for x in tree.xpath("//*[@class='price']/div/text()") if x.strip()]
                 stock = [int(x) for x in tree.xpath("//*[@class='quantity']//text()") if x.strip()]
-                if len(raw_prices) < 20:  # last page
-                    break
                 for cc, raw_price, stock in zip(cc, raw_prices, stock):
                     country_id = currency_names[cc.lower()]
                     if country_id not in final and country_id in occupants:
@@ -440,6 +438,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                         price = round(float(mm_ratio) * float(raw_price), 4)
                         final[country_id] = {"price": price, "stock": stock,
                                              "country": self.bot.countries[country_id]}
+                if len(raw_prices) < 20:  # last page
+                    break
                 await utils.custom_delay(interaction)
             occupants.clear()
 
