@@ -85,7 +85,7 @@ class Battle(Cog):
             else:
                 buff = ":red_circle: "
                 total_debuff += 1
-            row = [hyperlink, buff + last, till_change, dmg]
+            row = [hyperlink, last, buff + till_change, dmg]
             if row not in result:
                 result.append(row)
 
@@ -97,8 +97,8 @@ class Battle(Cog):
             return
         dmg = [int(x[-1].replace(",", "")) for x in result]
         median = statistics.median(dmg)
-        result = [[x[0], x[1], (":low_brightness: " if int(x[-1].replace(",", "")) < median else
-                                ":high_brightness: ") + x[2]] for x in result]
+        result = [[x[0], (":low_brightness: " if int(x[-1].replace(",", "")) < median else ":high_brightness: ") + x[1],
+                   x[2]] for x in result]
         result = sorted(result, key=lambda x: datetime.strptime(x[-1].split(": ")[-1], "%H:%M:%S"))
         embed = Embed(colour=0x3D85C6,
                       description=f"**Buffed players {country or mu_name}, {server}**\n"
