@@ -10,7 +10,7 @@ from random import randint
 import pytz
 
 from big_dicts import countries_per_id, countries_per_server
-from utils import find_one, get_content, get_countries, get_eqs, replace_one, spreadsheets
+from utils import find_one, get_content, get_locked_content, get_countries, get_eqs, replace_one, spreadsheets
 
 warnings.filterwarnings("ignore")
 
@@ -236,7 +236,8 @@ async def mm():
             # get data
             for country_id in countries_per_server[server]:
                 try:
-                    tree = await get_content(f'{url}monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1')
+                    func = get_locked_content if server == "primera" else get_content
+                    tree = await func(f'{url}monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1')
                     MM = float(tree.xpath("//*[@class='ratio']//b/text()")[0])
 
                 except:
