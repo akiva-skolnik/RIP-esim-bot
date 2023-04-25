@@ -1093,6 +1093,7 @@ class Battle(Cog):
     async def spectators(self, interaction: Interaction, battle_link: Transform[dict, BattleLink]) -> None:
         """Displays spectators count in a battle (plus some extra info)."""
 
+        await interaction.response.defer()
         server, battle_id = battle_link["server"], battle_link["id"]
         link = f"https://{server}.e-sim.org/battle.html?id={battle_id}"
         tree = await utils.get_locked_content(link)
@@ -1102,11 +1103,8 @@ class Battle(Cog):
             await utils.custom_followup(interaction, "This battle is probably over. If not, please report it as a bug.",
                                         ephemeral=True)
             return
-
-        await interaction.response.defer()
-        my_id = utils.get_ids_from_path(tree, '//*[@id="userName"]')[0]
         api = await utils.get_content(
-            f"https://{server}.e-sim.org/battleScore.html?id={hidden_id}&at={my_id}&ci=1&premium=1", "json")
+            f"https://{server}.e-sim.org/battleScore.html?id={hidden_id}&at=1&ci=1&premium=1", "json")
         spect = {"spectatorsByCountries": [], "defendersByCountries": [], "attackersByCountries": []}
         for key, spect_list in spect.items():
             for item in api[key].splitlines():

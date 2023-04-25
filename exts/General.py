@@ -259,7 +259,7 @@ class General(Cog):
                 continue
             row = [f"#{index} {utils.codes(cs) if not country else ''}"
                    f" [{current_nick[:17]}]({base_url}profile.html?id={citizen_id})",
-                   f"{total_minutes} ({total_avg}h per day)", f"{month_minutes} ({month_avg}h per day)"]
+                   f"{int(total_minutes):,} ({total_avg}h per day)", f"{int(month_minutes):,} ({month_avg}h per day)"]
             if row not in result:
                 result.append(row)
             if len(result) == 100:

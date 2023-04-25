@@ -106,11 +106,12 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             if await self.bot.should_cancel(interaction, msg):
                 break
             msg = await utils.update_percent(index, len(api_countries), msg)
-            tree = await utils.get_content(f"{base_url}jobMarket.html?countryId={k}&minimalSkill={skill}")
-            salary = tree.xpath('//*[@id="esim-layout"]//tr[2]//td[5]/b/text()')
+            tree = await utils.get_content(f"{base_url}getJobOffers.html?countryId={k}&minimalSkill={skill}&regionId=0")
+            salary = tree.xpath('//*[@class="currency"]/b/text()')
             if salary:
                 try:
-                    tree = await utils.get_content(f"{base_url}monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={k}&page=1")
+                    func = utils.get_locked_content if server == "primera" else utils.get_content
+                    tree = await func(f"{base_url}monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={k}&page=1")
                     mm_ratio = tree.xpath("//*[@class='ratio']//b/text()")[0]
                 except Exception:
                     continue
@@ -245,7 +246,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 break
             msg = await utils.update_percent(index, length, msg)
             try:
-                tree = await utils.get_content(f"{base_url}monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1")
+                func = utils.get_locked_content if server == "primera" else utils.get_content
+                tree = await func(f"{base_url}monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1")
                 ratio = float(tree.xpath("//*[@class='ratio']//b/text()")[0])
             except Exception:
                 ratio = 0
@@ -431,7 +433,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                     country_id = currency_names[cc.lower()]
                     if country_id not in final and country_id in occupants:
                         try:
-                            tree = await utils.get_content(f"{base_url}monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1")
+                            func = utils.get_locked_content if server == "primera" else utils.get_content
+                            tree = await func(f"{base_url}monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1")
                             mm_ratio = tree.xpath("//*[@class='ratio']//b/text()")[0]
                         except Exception:
                             mm_ratio = 0
@@ -781,7 +784,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         file = File(fp=output_buffer, filename=f"{interaction.id}.png")
         embed.set_thumbnail(url=f"attachment://{interaction.id}.png")
         try:
-            tree = await utils.get_content(f"https://{server}.e-sim.org/monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1")
+            func = utils.get_locked_content if server == "primera" else utils.get_content
+            tree = await func(f"https://{server}.e-sim.org/monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1")
             sellers = tree.xpath("//*[@class='seller']/a/text()")
             buy = tree.xpath("//*[@class='buy']/button")[0].attrib['data-buy-currency-name']
             seller_ids = [int(x.split("?id=")[1]) for x in tree.xpath("//*[@class='seller']/a/@href")]
