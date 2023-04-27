@@ -85,11 +85,11 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
 
     @checks.dynamic_cooldown(CoolDownModified(10))
     @command()
-    @describe(ids_in_file="You must provide list/range of ids or attach a file containing the list of ids (if there are too many)",
-              ids="You must provide list/range of ids or attach a file containing the list of ids (if there are too many)",
+    @describe(ids_in_file="csv file at cells A1, A2, A3...",
+              ids="separated by a comma (,)",
               extra_premium_info="True (premium) will take twice as long but will return much more data")
     async def convert(self, interaction: Interaction, server: Transform[str, Server], ids_in_file: Optional[Attachment],
-                      ids: Optional[Transform[list, Ids]],
+                      ids: Optional[str],
                       your_input_is: Literal["citizen ids", "citizen names", "military unit ids", "citizenship ids",
                                              "single MU id (get info about all MU members)"],
                       extra_premium_info: bool = False) -> None:
@@ -107,6 +107,8 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
             return
         if ids is None:
             ids = []
+        else:
+            ids = [x.strip() for x in ids.split(",")]
         await interaction.response.defer()
         if ids_in_file:
             ids.extend([i.decode("utf-8").split(",")[0] for i in (await ids_in_file.read()).splitlines() if i])
@@ -243,7 +245,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
     #         extra_premium_info="True (premium) will give more data, but it will take much longer")
     # @check(utils.is_premium_level_1)
     async def dmg_stats(self, interaction: Interaction, server: Transform[str, Server], battles: Transform[list, Ids],
-                        included_countries: Optional[str], battles_types: Transform[list, BattleTypes]) -> None:
+                        included_countries: Optional[str], battles_types: Optional[Transform[list, BattleTypes]]) -> None:
         """Displays a lot of data about the given battles"""
 
         if not await utils.is_premium_level_1(interaction, False) and len(battles) > 500:

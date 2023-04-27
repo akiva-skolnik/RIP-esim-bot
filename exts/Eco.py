@@ -558,8 +558,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             qualities = [x.split("productIcons/")[1].split(".")[0].upper() for x in
                          tree.xpath('//*[@id="myCompaniesToSortTable"]//tr//td[2]//img[2]/@src')]
             types = [Type if Type in ["Iron", "Diamonds", "Grain", "Oil", "Stone", "Wood"] else f"{Q} {Type}" for
-                     Q, Type in
-                     zip(qualities, types)]
+                     Q, Type in zip(qualities, types)]
         else:
             await utils.custom_followup(interaction, "`link` must be SC / MU / profile link!", ephemeral=True)
             return
@@ -568,10 +567,9 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             await utils.custom_followup(interaction, "No companies found", ephemeral=True)
             return
 
-        msg = await utils.custom_followup(interaction,
-                                          "Progress status: 1%.\n(I will update you after every 10%)" if len(
-                                              companies) > 10 else "I'm on it, Sir. Be patient.",
-                                          file=File("files/typing.gif"))
+        msg = await utils.custom_followup(
+            interaction, "Progress status: 1%.\n(I will update you after every 10%)" if len(companies) > 10 else
+            "I'm on it, Sir. Be patient.", file=File("files/typing.gif"))
 
         for index, (company, company_type) in enumerate(zip(companies, types)):
             if await self.bot.should_cancel(interaction, msg):
@@ -581,7 +579,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             tree = await utils.get_locked_content(base_url + 'companyWorkResults.html?id=' + str(company))
             if not headers1:
                 headers1 = tree.xpath('//*[@id="productivityTable"]//tr[1]//td[position()>2]//text()')
-            for worker in range(2, 102):  # First 100 workers
+            for worker in range(2, 1002):  # First 1000 workers
                 for column in range(3, 13):
                     for div in range(1, 9):
                         try:
