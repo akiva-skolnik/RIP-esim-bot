@@ -579,9 +579,9 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             tree = await utils.get_locked_content(base_url + 'companyWorkResults.html?id=' + str(company))
             if not headers1:
                 headers1 = tree.xpath('//*[@id="productivityTable"]//tr[1]//td[position()>2]//text()')
-            for worker in range(2, 1002):  # First 1000 workers
+            for worker in range(2, 10002):  # First 10000 workers
                 for column in range(3, 13):
-                    for div in range(1, 9):
+                    for div in range(1, 9):  # max 4 works * 2 entries
                         try:
                             unit = tree.xpath(f'//*[@id="productivityTable"]//tr[{worker}]//td[{column}]//div[{div}]')[
                                 0].text

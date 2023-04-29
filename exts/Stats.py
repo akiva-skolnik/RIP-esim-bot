@@ -149,7 +149,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
         if extra_premium_info:
             csv_writer.writerow(["Id", "Link", "Nick", "Citizenship", "MU Id", "Last Login", "ES", "XP", "Strength",
                                  "Per limit", "Per Berserk", "Crit", "Avoid", "Miss", "Dmg", "Max", "Total Dmg",
-                                 "Today's dmg", "Premium till", "", "Helmet", "Vision", "Armor", "Pants", "Shoes", "LC",
+                                 "Today's dmg", "Premium till", "", "Vision", "Helmet", "Armor", "Pants", "Shoes", "LC",
                                  "WU", "Offhand", "", "Congress medal", "CP", "Train", "Inviter", "Subs", "work", "BHs",
                                  "RW", "Tester", "Tournament"])
         else:
@@ -215,7 +215,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                         medals1.append(0)
                 strength = api['strength']
                 dmg = await dmg_calculator(api=api)
-                stats = {"crit": 12.5, "avoid": 5, "miss": 12.5, "dmg": 0, "max": 0}
+                stats = {"crit": 12.5, "avoid": 5, "miss": 12.5, "damage": 0, "max": 0}
                 for eq_type, parameters, values, _ in utils.get_eqs(tree):
                     for val, p in zip(values, parameters):
                         if p in stats:
