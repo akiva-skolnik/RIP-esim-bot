@@ -4,9 +4,9 @@ from json import decoder
 from traceback import format_exception
 
 from aiohttp import ClientError, client_exceptions
-from discord import Embed, Interaction
+from discord import Embed, Interaction, errors
 from discord.app_commands import AppCommandError, CheckFailure, Command
-from discord.ext.commands import Cog, CommandOnCooldown, errors
+from discord.ext.commands import Cog, CommandOnCooldown
 from pytz import timezone
 
 from Help import utils
@@ -65,8 +65,8 @@ class Listener(Cog):
             except Exception:  # Big msg
                 await error_channel.send(f"{msg}\n{error}"[:1950])
 
-        if isinstance(error, errors.UserNotFound):
-            error1 = str(error) + " \n**Try using a mention instead!**"
+        if isinstance(error, errors.NotFound):
+            return
         elif isinstance(error, CommandOnCooldown):
             return await utils.custom_followup(
                 interaction,
