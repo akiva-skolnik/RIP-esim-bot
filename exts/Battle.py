@@ -1062,24 +1062,17 @@ class Battle(Cog):
 
     @checks.dynamic_cooldown(utils.CoolDownModified(2))
     @command()
-    @describe(ping_id="leave it empty if you wish to remove all ids in this channel")
-    async def stop(self, interaction: Interaction, ping_id: Optional[int]) -> None:
+    @describe(ping_id="write 0 if you wish to remove all ids in this channel")
+    async def stop(self, interaction: Interaction, ping_id: int) -> None:
         """Stopping `ping` program for a given id.
         If you meant to stop `motivate` program - use `got`"""
         find_ping = await utils.find_one("collection", "ping")
-        if not ping_id:
-            ping_id = [x.split()[1] for x in find_ping if str(interaction.channel.id) == x.split()[0]]
-            if len(ping_id) == 1:
-                if f"{interaction.channel.id} {ping_id[0]}" in find_ping:
-                    del find_ping[f"{interaction.channel.id} {ping_id[0]}"]
-                    await utils.replace_one("collection", "ping", find_ping)
-                    await utils.custom_followup(interaction, "Program `ping` have been stopped. no more spam!")
-            elif len(ping_id) > 1:
-                await utils.custom_followup(interaction,
-                                            f"Type `/stop <ID>` with at least one of those ID's: {', '.join(ping_id)}\nExample: `/stop {ping_id[0]}`",
-                                            ephemeral=True)
-            else:
-                await utils.custom_followup(interaction, "There is nothing to stop", ephemeral=True)
+        if ping_id == 0:
+            ping_ids = [x.split()[1] for x in find_ping if str(interaction.channel.id) == x.split()[0]]
+            for ping_id in ping_ids:
+                del find_ping[f"{interaction.channel.id} {ping_id}"]
+            await utils.replace_one("collection", "ping", find_ping)
+            await utils.custom_followup(interaction, "Program `ping` have been stopped. no more spam!")
 
         elif f"{interaction.channel.id} {ping_id}" in find_ping:
             del find_ping[f"{interaction.channel.id} {ping_id}"]
