@@ -1534,7 +1534,8 @@ async def ping_func(channel: TextChannel, t: float, server: str, ping_id: str, c
             for page in range(1, await utils.last_page(link)):
                 tree = await utils.get_content(link + f'&page={page}')
                 for battle_data in (await utils.battles_data(tree))["battles"]:
-                    if battle_data["battle_id"] not in ids and country in (battle_data['defender']['name'], battle_data['attacker']['name'],):
+                    if battle_data["battle_id"] not in ids and (
+                            not country or country in (battle_data['defender']['name'], battle_data['attacker']['name'])):
                         detailed_list.append(battle_data)
                         ids.append(battle_data["battle_id"])
         if not detailed_list:
