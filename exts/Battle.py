@@ -1096,15 +1096,18 @@ class Battle(Cog):
             await utils.custom_followup(interaction, "This battle is probably over. If not, please report it as a bug.",
                                         ephemeral=True)
             return
+        api_citizen = await utils.get_content(
+            f"https://{server}.e-sim.org/apiCitizenByName.html?name={self.bot.config['nick'].lower()}")
+        at, ci = api_citizen["id"], api_citizen["citizenshipId"]
         api = await utils.get_content(
-            f"https://{server}.e-sim.org/battleScore.html?id={hidden_id}&at=1&ci=1&premium=1", "json")
+            f"https://{server}.e-sim.org/battleScore.html?id={hidden_id}&at={at}&ci={ci}&premium=1", "json")
         spect = {"spectatorsByCountries": [], "defendersByCountries": [], "attackersByCountries": []}
         for key, spect_list in spect.items():
             for item in api[key].splitlines():
                 if "-" in item:
                     count = int(item.split("-")[0].split(">")[-1].strip())
                     country = item.split("xflagsSmall-")[1].split('"')[0].replace("-", " ")
-                    if key == "spectatorsByCountries" and country == "Poland":
+                    if key == "spectatorsByCountries" and country == api_citizen["citizenship"]:
                         count -= 1
                         if not count:
                             continue
