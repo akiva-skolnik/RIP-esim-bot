@@ -1531,7 +1531,7 @@ async def ping_func(channel: TextChannel, t: float, server: str, ping_id: str, c
                 tree = await utils.get_content(link + f'&page={page}')
                 for battle_data in (await utils.battles_data(tree))["battles"]:
                     if battle_data["battle_id"] not in ids and (
-                            not country or country in (battle_data['defender']['name'], battle_data['attacker']['name'])):
+                            not country or country.lower() in (battle_data['defender']['name'].lower(), battle_data['attacker']['name'].lower())):
                         detailed_list.append(battle_data)
                         ids.append(battle_data["battle_id"])
         if not detailed_list:
@@ -1568,7 +1568,7 @@ async def ping_func(channel: TextChannel, t: float, server: str, ping_id: str, c
                                 value=f"{defender_dmg:,}")
                 embed.add_field(name=f"Battle type: {api_battles['type'].replace('_', ' ').title()}",
                                 value=await bar(defender_dmg, attacker_dmg, d_name, a_name))
-                embed.add_field(name=f"{utils.codes(a_name)} " + utils.shorten_country(d_name),
+                embed.add_field(name=f"{utils.codes(a_name)} " + utils.shorten_country(a_name),
                                 value=f"{attacker_dmg:,}")
                 embed.set_footer(text="Type /stop if you wish to stop it.")
                 embed.set_thumbnail(url=f"attachment://{channel.id}.png")
