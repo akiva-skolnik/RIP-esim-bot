@@ -14,8 +14,7 @@ from discord.utils import setup_logging
 from pytz import timezone
 
 from bot.bot import bot
-from exts.Battle import (motivate_func, ping_func, watch_auction_func,
-                         watch_func)
+from exts.Battle import motivate_func, ping_func, watch_auction_func, watch_func
 from exts.General import remind_func
 from Help import utils
 

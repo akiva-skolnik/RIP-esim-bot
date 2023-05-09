@@ -6,9 +6,11 @@ from datetime import datetime, timedelta
 from io import BytesIO, StringIO
 from typing import Optional
 
+import pandas as pd
 from discord import Embed, File, Interaction
 from discord.app_commands import Range, Transform, check, checks, command, describe, rename
 from discord.ext.commands import BadArgument, Cog
+from lxml import html
 from matplotlib import pyplot as plt
 from matplotlib.ticker import MultipleLocator
 from pytz import timezone
@@ -570,36 +572,32 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         msg = await utils.custom_followup(
             interaction, "Progress status: 1%.\n(I will update you after every 10%)" if len(companies) > 10 else
             "I'm on it, Sir. Be patient.", file=File("files/typing.gif"))
-
+        product_raw = {"Weapon": "Iron", "House": "Wood", "Gift": "Diamonds",
+                       "Food": "Grain",
+                       "Ticket": "Oil", "Defense System": "Stone", "Hospital": "Stone",
+                       "Estate": "Stone"}
         for index, (company, company_type) in enumerate(zip(companies, types)):
             if await self.bot.should_cancel(interaction, msg):
                 break
             msg = await utils.update_percent(index, len(companies), msg)
             await utils.custom_delay(interaction)
-            tree = await utils.get_locked_content(base_url + 'companyWorkResults.html?id=' + str(company))
+            try:
+                tree = await utils.get_locked_content(base_url + 'companyWorkResults.html?id=' + str(company))
+            except Exception:
+                await utils.custom_followup(interaction, f"Skipped company {company}")
+                continue
             if not headers1:
                 headers1 = tree.xpath('//*[@id="productivityTable"]//tr[1]//td[position()>2]//text()')
-            for worker in range(2, 1002):  # First 1000 workers
-                for column in range(3, 13):
-                    for div in range(1, 9):  # max 4 works * 2 entries
-                        try:
-                            unit = tree.xpath(f'//*[@id="productivityTable"]//tr[{worker}]//td[{column}]//div[{div}]')[
-                                0].text
-                            if "(" in unit:
-                                produced[company_type][column - 3] += float(unit[1:-1])
-
-                            else:
-                                raw = " ".join([x for x in company_type.split() if "Q" not in x])
-                                if raw not in ["Iron", "Diamonds", "Grain", "Oil", "Stone", "Wood"]:
-                                    product_raw = {"Weapon": "Iron", "House": "Wood", "Gift": "Diamonds",
-                                                   "Food": "Grain",
-                                                   "Ticket": "Oil", "Defense System": "Stone", "Hospital": "Stone",
-                                                   "Estate": "Stone"}
-                                    used[product_raw[raw]][column - 3] += float(unit)
-                        except Exception:
-                            break
-                if not tree.xpath(f'//*[@id="productivityTable"]//tr[{worker}]'):
-                    break
+            df = pd.read_html(html.tostring(tree))[0]
+            raw = " ".join([x for x in company_type.split() if "Q" not in x])
+            not_raw = raw not in ("Iron", "Diamonds", "Grain", "Oil", "Stone", "Wood")
+            for i, row in df.iloc[1:, 2:].iterrows():
+                for key, value in row.items():
+                    if not isinstance(value, str):
+                        continue
+                    produced[company_type][key - 2] += sum(float(unit) for unit in value.split()[0::2])
+                    if not_raw:
+                        used[product_raw[raw]][key - 2] += sum(float(unit[1:-1]) for unit in value.split()[1::2])
 
         db_dict = await utils.find_one("price", server)
         output = StringIO()

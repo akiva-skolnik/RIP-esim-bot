@@ -147,7 +147,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
         output = StringIO()
         csv_writer = writer(output)
         if extra_premium_info:
-            csv_writer.writerow(["Id", "Link", "Nick", "Citizenship", "MU Id", "Last Login", "ES", "XP", "Strength",
+            csv_writer.writerow(["Id", "Link", "Nick", "Citizenship", "MU Id", "Inactive Since", "ES", "XP", "Strength",
                                  "Per limit", "Per Berserk", "Crit", "Avoid", "Miss", "Dmg", "Max", "Total Dmg",
                                  "Today's dmg", "Premium till", "", "Vision", "Helmet", "Armor", "Pants", "Shoes", "LC",
                                  "WU", "Offhand", "", "Congress medal", "CP", "Train", "Inviter", "Subs", "work", "BHs",

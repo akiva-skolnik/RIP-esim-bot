@@ -3,8 +3,7 @@ from difflib import SequenceMatcher
 from typing import List
 
 from discord import Interaction
-from discord.app_commands import (CheckFailure, Choice, Transformer,
-                                  TransformerError)
+from discord.app_commands import CheckFailure, Choice, Transformer, TransformerError
 
 from bot.bot import bot
 from Help import utils
