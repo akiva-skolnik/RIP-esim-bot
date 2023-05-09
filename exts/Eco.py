@@ -595,9 +595,9 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 for key, value in row.items():
                     if not isinstance(value, str):
                         continue
-                    produced[company_type][key - 2] += sum(float(unit) for unit in value.split()[0::2])
+                    produced[company_type][key - 2] += sum(float(unit[1:-1]) for unit in value.split()[1::2])
                     if not_raw:
-                        used[product_raw[raw]][key - 2] += sum(float(unit[1:-1]) for unit in value.split()[1::2])
+                        used[product_raw[raw]][key - 2] += sum(float(unit) for unit in value.split()[0::2])
 
         db_dict = await utils.find_one("price", server)
         output = StringIO()
