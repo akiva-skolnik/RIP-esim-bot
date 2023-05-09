@@ -95,7 +95,8 @@ class Listener(Cog):
         try:
             await utils.custom_followup(interaction, embed=embed)
         except Exception:
-            await interaction.user.send(embed=embed)
+            await interaction.user.send("I am unable to send messages to the channel.\n"
+                                        "If you don't see me on the Member List on the right panel, you should give me more access.")
 
 
 async def setup(bot):
