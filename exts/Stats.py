@@ -322,16 +322,17 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                     wep = 5 if hit['berserk'] else 1
 
                     # TODO: consider hospitals
-                    seconds_from_last = (utils.get_time(hit["time"], True) - utils.get_time(user['last_hit'],
-                                                                                            True)).total_seconds()
+                    seconds_from_last = (utils.get_time(hit["time"], True) -
+                                         utils.get_time(user['last_hit'], True)).total_seconds()
                     full_limits = 15 + 15 + 2
                     day = hit['time'].split()[0]
                     if user['last_hit'].split()[0] != day:  # day change
                         user['limits'] = full_limits
-                        user['restores'][day] = 0
                         if day not in days:
                             days.append(day)
                     if seconds_from_last > 0:
+                        if day not in user['restores']:
+                            user['restores'][day] = 0
                         user['restores'][day] += 1
                         if server not in ("primera", "secura", "suna"):  # fast server has limits restore
                             user['limits'] = min(user['limits'] + int(seconds_from_last // 600) * 2 + 2, full_limits)
