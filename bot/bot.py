@@ -35,7 +35,7 @@ class MyTree(app_commands.CommandTree):
     """Lock new server"""
     async def interaction_check(self, interaction: Interaction) -> bool:
         """Lock new server"""
-        if not any("azura" in str(v) for v in interaction.data.values()):
+        if not any("zeta" in str(v) for v in interaction.data.values()):
             return True
         today = str(date.today())
         if bot.premium_users.get(str(interaction.user.id), {}).get("level", -1) >= 1 or (
@@ -47,7 +47,7 @@ class MyTree(app_commands.CommandTree):
             return True
         try:
             await interaction.response.send_message(
-                "azura server is for premium users only. You can use one command per day for free."
+                "zeta server is for premium users only. You can use one command per day for free."
                 "\nGet premium at <https://www.buymeacoffee.com/RipEsim> :coffee:"
                 "\nSupport: https://discord.com/invite/q96wSd6")
         except HTTPException:
@@ -86,7 +86,8 @@ class MyClient(Bot):
             "alpha": ["1KqxbZ9LqS191wRf1VGLNl-aw6UId9kmUE0k7NfKQdI4", 1445005647, 0],
             "unica": ["1PvjB3E-7A4cYAUmczJ1HNDOUAQAUnFzjSkCu-dJuVL0", 1876322398, 1265748453],
             "sigma": ["1SuHcJLqS-nSAzprs7kGsrrcuNLOdXsPRaDVQbkvpxZc", 1876322398, 1265748453],
-            "azura": ["1xy8Ssj91q6z8vqmtnpbviY1pK44ed3FQrOI3KyVq2cg", 1876322398, 1265748453]
+            "azura": ["1xy8Ssj91q6z8vqmtnpbviY1pK44ed3FQrOI3KyVq2cg", 1876322398, 1265748453],
+            "zeta": ["1lYS3tG259h1NxS-I-KNwyTnkoSK1zQzmjaSyo1iWtzo", 1876322398, 1265748453],
         }
 
         self.delay = {}
@@ -94,7 +95,7 @@ class MyClient(Bot):
         self.api = "http://3.70.2.167:5000/"
         self.date_format = "%d-%m-%Y %H:%M:%S"
 
-        self.all_servers = ['primera', 'secura', 'suna', 'alpha', 'luxia', 'unica', 'sigma', 'azura']
+        self.all_servers = ['primera', 'secura', 'suna', 'alpha', 'luxia', 'unica', 'sigma', 'azura', 'zeta']
 
         self.products = ["iron", "grain", "oil", "stone", "wood", "diamonds",
                         "weapon", "house", "gift", "food", "ticket", "defense_system", "hospital", "estate"]
