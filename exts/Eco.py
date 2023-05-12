@@ -21,7 +21,7 @@ from Help.utils import CoolDownModified, draw_pil_table, split_list
 
 options = ["iron", "grain", "oil", "stone", "wood", "diamonds"]
 product_gids = {"primera": 6602346, "secura": 1142213909, "suna": 1317638633, "alpha": 1073258602,
-                'luxia': 1542255867, "unica": 443000877, "sigma": 385067454, "azura": 2005137513, "zeta": 755107492}
+                'luxia': 1542255867, "sigma": 385067454, "azura": 2005137513, "zeta": 755107492}
 
 
 class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": False}):
