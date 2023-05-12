@@ -157,7 +157,7 @@ class General(Cog):
         link = f"{base_url}profile.html?id={str(api['id'])}"
         tree = await utils.get_content(link)
 
-        is_online = tree.xpath('//*[@id="loginBar"]/span[2]/@class')[0] == "online"
+        is_online = tree.xpath('//*[@id="loginBar"]//span[2]/@class')[0] == "online"
         embed = Embed(colour=0x3D85C6, url=link, description=title, title=("\U0001f7e2" if is_online else "\U0001f534")
                       + f" {api['login']}, {utils.codes(api['citizenship'])} {api['citizenship']}")
 
