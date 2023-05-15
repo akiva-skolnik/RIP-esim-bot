@@ -1101,8 +1101,11 @@ async def battles_data(tree) -> dict:
     scores = tree.xpath('//*[@class="battleFooterScore hoverText"]/text()')
     row = {"sorting": sorting, "filter": filtering, "country": country, "country_id": country_id,
            "battles": []}
-    for i, (dmg, progress_attacker, counter, sides, battle_id, battle_region, score) in enumerate(zip(
-            total_dmg, progress_attackers, counters, sides, battle_ids, battle_regions, scores)):
+    types = tree.xpath('//*[@class="battleHeader"]//i/@data-hover')
+    for i, (dmg, progress_attacker, counter, sides, battle_id, battle_region, score, battle_type) in enumerate(zip(
+            total_dmg, progress_attackers, counters, sides, battle_ids, battle_regions, scores, types)):
+        if battle_type not in ('Normal battle', 'Resistance war'):
+            continue
         defender, attacker = sides.split(" vs ")
         row["battles"].append(
             {"total_dmg": dmg, "time_reminding": counter,
