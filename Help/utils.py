@@ -526,7 +526,7 @@ async def update_percent(current_id: int, ids_length: int, msg: Message) -> Mess
     try:
         if current_id >= ids_length - 3:
             try:
-                await msg.delete()
+                await msg.edit(content="Progress status: 100%", attachments=[])
                 return msg
             except Exception:
                 pass

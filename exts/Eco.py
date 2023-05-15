@@ -549,6 +549,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
 
         if "/stockCompany.html" in link:
             tree = await utils.get_locked_content(link)
+
             types = [x.strip() for x in tree.xpath('//tr//td[1]//div[4]//tr[position()>1]//td[2]/text()')]
             companies = utils.get_ids_from_path(tree, '//tr//td[1]//div[4]//tr[position()>1]//td[1]/a')
 
@@ -564,7 +565,10 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         else:
             await utils.custom_followup(interaction, "`link` must be SC / MU / profile link!", ephemeral=True)
             return
-
+        try:
+            name = link if "/companies.html" in link else tree.xpath("//span[@class='big-login']")[0].text
+        except IndexError:
+            name = link
         if not companies:
             await utils.custom_followup(interaction, "No companies found", ephemeral=True)
             return
@@ -643,22 +647,23 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             ["Net Profit (gold):", "", round(total_profit - total_cost, 2), "", "* SALARIES ARE NOT INCLUDED!"])
         output.seek(0)
 
-        embed = Embed(colour=0x3D85C6, title='Net profit per day, based on market prices\n[Salaries are not included!]',
-                      url=link)
+        embed = Embed(colour=0x3D85C6, title=name, url=link,
+                      description='Net profit per day, based on market prices\nSalaries are not included!')
         embed.add_field(name="Day", value="\n".join(per_day.keys()))
         embed.add_field(name="Theoretical Estimated Profit",
                         value="\n".join(f"{round(val['worth'] - val['cost']):,}g" for val in per_day.values()))
         embed.add_field(name="\u200B", value="\u200B")
-        embed.add_field(name="Sum", value=f"{round(total_profit - total_cost):,}g")
+
         embed.add_field(name="Average", value=f"{round((total_profit - total_cost) / len(per_day)):,}g")
         embed.add_field(name="Median",
                         value=f"{round(statistics.median([val['worth'] - val['cost'] for val in per_day.values()])):,}g")
+        embed.add_field(name="Sum", value=f"{round(total_profit - total_cost):,}g")
 
         fig, ax = plt.subplots()
         ax.set_title("Theoretical Estimated Profit Per Day")
         ax.set_ylabel('Gold')
         ax.set_xlabel('Day')
-        ax.plot([x.replace("Day ", "") for x in per_day.keys()][:-1],
+        ax.plot(list(per_day.keys())[:-1],
                 [val['worth'] - val['cost'] for val in per_day.values()][:-1])
         ax.grid()
         output_buffer = utils.plt_to_bytes()
