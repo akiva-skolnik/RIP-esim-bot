@@ -259,9 +259,10 @@ class Premium(Cog):
             File(fp=await utils.csv_to_image(output3), filename=f"Preview_{server}.png"),
             File(fp=BytesIO(output3.getvalue().encode()), filename=f"Items_{first}_{last}_{server}.csv")])
 
-    @command()
-    @check(utils.is_premium_level_1)
-    @describe(fund_raising_link="if you have a working link, pls provide it (faster result), otherwise i will do my best.")
+    # Admin blocked access
+    # @command()
+    # @check(utils.is_premium_level_1)
+    # @describe(fund_raising_link="if you have a working link, pls provide it (faster result), otherwise i will do my best.")
     async def bb(self, interaction: Interaction, server: Transform[str, Server], fund_raising_link: Optional[str]) -> None:
         """Displays baby boom (fund-raising) stats for a given server."""
         if fund_raising_link and "fundRaising" not in fund_raising_link:

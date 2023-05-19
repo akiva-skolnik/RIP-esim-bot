@@ -43,7 +43,6 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
             else f'{base_url}achievement.html?type=BH_COLLECTOR_II'
         last_page = await utils.last_page(link)
         if last_page == 1:
-            at_least_10_medals = True
             link = f'{base_url}achievement.html?type=BH_COLLECTOR_I'
             last_page = await utils.last_page(link)
 
@@ -78,8 +77,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
         csv_writer.writerow(["#", "Nick", "Citizenship", "BHs"])
         csv_writer.writerows([[index + 1] + row for index, row in enumerate(sorted_list)])
         output.seek(0)
-        msg = 'All active players with more than 10 BH medals' if at_least_10_medals else 'All active players with more than 100 BH medals'
-        await utils.custom_followup(interaction, msg, files=[
+        await utils.custom_followup(interaction, f'All players listed here: <{link}>', files=[
             File(fp=await utils.csv_to_image(output), filename=f"Preview_{server}.png"),
             File(fp=BytesIO(output.getvalue().encode()), filename=f"BHs_{server}.csv")], mention_author=True)
 
@@ -571,7 +569,6 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
         link = f'{base_url}achievement.html?type=EQUIPPED_V' if scan_more_players else f'{base_url}achievement.html?type=LEGENDARY_EQUIPMENT'
         last_page = await utils.last_page(link)
         if last_page == 1:
-            scan_more_players = True
             link = f'{base_url}achievement.html?type=EQUIPPED_V'
             last_page = await utils.last_page(link)
         msg = await utils.custom_followup(interaction, "Progress status: 1%.\n(I will update you after every 10%)",
@@ -598,9 +595,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
             ["#", "Nick", "Citizenship", "Crit", "Miss", "Avoid", "Max", "Dmg", "Per limit", "Per berserk", "Eco"])
         csv_writer.writerows([[index + 1] + row for index, row in enumerate(sorted_list)])
         output.seek(0)
-        msg = "Only players that have ever had Q5 EQ" if scan_more_players else \
-            "Only active players that have ever worn more than 5 Q6 EQ's at the same time. "
-        await utils.custom_followup(interaction, msg, files=[
+        await utils.custom_followup(interaction, f'All players listed here: <{link}>', files=[
             File(fp=await utils.csv_to_image(output), filename=f"Preview_sets_{server}.png"),
             File(fp=BytesIO(output.getvalue().encode()), filename=f"Sets_{server}.csv")], mention_author=True)
 
