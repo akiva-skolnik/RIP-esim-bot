@@ -492,33 +492,26 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                             if "LC" not in my_dict[(nick, link)]:
                                 my_dict[(nick, link)]["LC"] = [0, 0, 0, 0, 0, 0]
                             my_dict[(nick, link)]["LC"][int(quality.replace("Q", "")) - 1] += 1
-
-                battle_link = f'{base_url}battleDrops.html?id={current_id}&showSpecialItems=yes'
-                last_page = await utils.last_page(battle_link)
-                for page in range(1, last_page):
-                    tree = await utils.get_content(battle_link + f'&page={page}')
-                    nicks = [x.strip() for x in tree.xpath("//tr[position()>1]//td[2]//a/text()")]
-                    links = [f"{base_url}battle.html?id={x}" for x in
-                             utils.get_ids_from_path(tree, "//tr[position()>1]//td[2]//a")]
-                    items = [x.strip() for x in tree.xpath("//tr[position()>1]//td[1]//text()") if x.strip()]
-                    for nick, link, item in zip(nicks, links, items):
-                        if "elixir" in item:
-                            key = "elixir"
-                        elif "Bandage size " in item:
-                            key = "bandage"
-                        else:
-                            key = item.replace("Equipment parameter ", "").replace(
-                                "Camouflage ", "").replace(" class", "")
-                        if key not in my_dict[(nick, link)]:
-                            my_dict[(nick, link)][key] = 0
+                for si_type in ("EQUIPMENT_PARAMETER_UPGRADE", "EQUIPMENT_PARAMETER_RESHUFFLE"):
+                    battle_link = f'{base_url}battleDrops.html?id={current_id}&showSpecialItems=yes&siType={si_type}'
+                    last_page = await utils.last_page(battle_link)
+                    for page in range(1, last_page):
+                        tree = await utils.get_content(battle_link + f'&page={page}')
+                        nicks = [x.strip() for x in tree.xpath("//tr[position()>1]//td[2]//a/text()")]
+                        links = [f"{base_url}battle.html?id={x}" for x in
+                                 utils.get_ids_from_path(tree, "//tr[position()>1]//td[2]//a")]
+                        items = [x.strip() for x in tree.xpath("//tr[position()>1]//td[1]//text()") if x.strip()]
+                        for nick, link, item in zip(nicks, links, items):
+                            key = item.replace("Equipment parameter ", "")
+                            if key not in my_dict[(nick, link)]:
+                                my_dict[(nick, link)][key] = 0
                         my_dict[(nick, link)][key] += 1
             except Exception as error:
                 await utils.send_error(interaction, error, current_id)
                 break
             for k, v in my_dict.items():
                 row = list(k) + [x or "0" for x in v["Q"]] + [
-                    v.get("upgrade", "0"), v.get("reshuffle", "0"), v.get("elixir", "0"), v.get("1st", "0"),
-                    v.get("2nd", "0"), v.get("3rd", "0"), v.get("bandage", "0")] + v.get("LC", [])
+                    v.get("upgrade", "0"), v.get("reshuffle", "0")] + v.get("LC", [])
                 csv_writer.writerow(row)
             await utils.custom_delay(interaction)
         f.close()
@@ -533,8 +526,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                 else:
                     my_dict[nick] = [int(x) for x in row[2:]]
 
-        headers = ["Nick", "Link", "Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Upgrade", "Reshuffle", "Elixir",
-                   "Camouflage 1st class", "2nd", "3rd", "Bandage"]
+        headers = ["Nick", "Link", "Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Upgrade", "Reshuffle"]
         if lucky:
             headers += ["Q1 LC", "Q2 LC", "Q3 LC", "Q4 LC", "Q5 LC", "Q6 LC"]
         with open(filename, 'w', newline='') as csvfile:
