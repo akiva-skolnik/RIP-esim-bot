@@ -515,20 +515,22 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                 csv_writer.writerow(row)
             await utils.custom_delay(interaction)
         f.close()
-        my_dict = {}
-        with open(filename, 'r') as csvfile:
-            csv_reader = reader(csvfile)
-            for row in csv_reader:
-                nick = (row[0], row[1])
-                if nick in my_dict:
-                    for i in range(len(my_dict[nick])-2):
-                        my_dict[nick][i] += int(row[i+2])
-                else:
-                    my_dict[nick] = [int(x) for x in row[2:]]
-
         headers = ["Nick", "Link", "Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Upgrade", "Reshuffle"]
         if lucky:
             headers += ["Q1 LC", "Q2 LC", "Q3 LC", "Q4 LC", "Q5 LC", "Q6 LC"]
+        my_dict = {}
+        with open(filename, 'r') as csvfile:
+            for row in reader(csvfile):
+                nick = (row[0], row[1])
+                if nick not in my_dict:
+                    my_dict[nick] = [0]*(len(headers)-2)
+                for i in range(len(headers)-2):
+                    try:
+                        if row[i + 2]:
+                            my_dict[nick][i] += int(row[i+2])
+                    except IndexError:
+                        pass
+
         with open(filename, 'w', newline='') as csvfile:
             csv_writer = writer(csvfile)
             csv_writer.writerow(headers)
