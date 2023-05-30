@@ -1306,8 +1306,8 @@ class Battle(Cog):
             hit_time.clear()
 
             embed = Embed(colour=0x3D85C6, title=f"{server}, {first}-{last}")
-            embed.add_field(name="**#. CS, Nick**",
-                            value="\n".join(f"{index}. {k}" for index, k in enumerate(final.keys(), 1)))
+            embed.add_field(name="**CS, Nick**",
+                            value="\n".join(f"{k}" for index, k in enumerate(final.keys(), 1)))
             embed.add_field(name="**Damage**", value="\n".join([f'{v["dmg"]:,}' for v in final.values()]))
             embed.add_field(name="**Hits**", value="\n".join([f'{v["hits"]:,}' for v in final.values()]))
 
@@ -1412,8 +1412,8 @@ class Battle(Cog):
         if not output_buffer:
             output_buffer = await dmg_trend(hit_time, server, f"{first} - {last}")
         embed = Embed(colour=0x3D85C6, title=f"{server}, {first}-{last}")
-        embed.add_field(name="**#. CS, Nick**",
-                        value="\n".join(f"{index}. {k}" for index, k in enumerate(final.keys(), 1)))
+        embed.add_field(name="**CS, Nick**",
+                        value="\n".join(f"{k}" for k in final.keys(), 1))
         embed.add_field(name="**Damage**", value="\n".join([f'{v["damage"]:,}' for v in final.values()]))
         embed.add_field(name="**Hits**", value="\n".join([f'{v["hits"]:,}' for v in final.values()]))
         output_buffer.seek(0)
