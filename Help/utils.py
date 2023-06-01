@@ -486,11 +486,11 @@ async def get_locked_content(link: str, test_login: bool = False, method: str = 
     link = link.split("#")[0].replace("http://", "https://")
     server = link.split("https://", 1)[1].split(".e-sim.org", 1)[0]
     if not org:
-        nick, pw = bot.config['nick'], bot.config['pw']
+        nick, password = bot.config.get(server, bot.config['nick']), bot.config.get(server+"_password", bot.config['password'])
         session = bot.locked_session
     else:
         nick = bot.orgs[server][0]
-        pw = bot.orgs[server][1]
+        password = bot.orgs[server][1]
         session = bot.org_session
     base_url = f"https://{server}.e-sim.org/"
     not_logged_in = False
@@ -508,7 +508,7 @@ async def get_locked_content(link: str, test_login: bool = False, method: str = 
             raise error
         not_logged_in = True
     if not_logged_in:
-        payload = {'login': nick, 'password': pw, "submit": "Login"}
+        payload = {'login': nick, 'password': password, "submit": "Login"}
         async with session.get(base_url, ssl=False) as _:
             async with session.post(base_url + "login.html", data=payload, ssl=False) as r:
                 if "index.html?act=login" not in str(r.url):
