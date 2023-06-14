@@ -77,7 +77,7 @@ class Battle(Cog):
                     nick.lower() == current_nick.lower()))):
                 continue
 
-            hyperlink = (":star:" if premium else ":lock:") + f" {utils.codes(citizenship) if not country else ''} [{current_nick}]({link})"
+            hyperlink = (":star:" if premium else ":lock:") + f" {utils.codes(citizenship) if not country else ''} [{current_nick[:12]}]({link})"
             if (datetime.strptime(now, self.bot.date_format) - datetime.strptime(
                     buffed, self.bot.date_format)).total_seconds() < 24 * 60 * 60:
                 buff = ":green_circle: "

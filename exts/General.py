@@ -135,7 +135,7 @@ class General(Cog):
                 embed.add_field(name="Start Time", value="\n".join(str(start_time[i]).split('.', maxsplit=1)[0] for i in indexes))
                 embed.add_field(name="\u200B", value="\u200B")
             else:
-                embed.add_field(name="Err...", value="Nothing found", inline=False)
+                embed.add_field(name=server, value="Nothing found", inline=False)
         await utils.custom_followup(interaction, embed=await utils.convert_embed(interaction, embed))
 
     @checks.dynamic_cooldown(CoolDownModified(5))
