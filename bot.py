@@ -18,7 +18,6 @@ PRODUCT_SHEET = "17y8qEU4aHQRTXKdnlM278z3SDzY16bmxMwrZ0RKWcEI"
 servers: dict = {
     "zeta": "1lYS3tG259h1NxS-I-KNwyTnkoSK1zQzmjaSyo1iWtzo",
     "azura": "1xy8Ssj91q6z8vqmtnpbviY1pK44ed3FQrOI3KyVq2cg",
-    "sigma": "1SuHcJLqS-nSAzprs7kGsrrcuNLOdXsPRaDVQbkvpxZc",
     "luxia": "1mx_JkHVnTVikNdTSxhvfFh4Pzuepp9ZGakCAtxnGxyY",
     "suna": "1imlsoLdaEb45NnJGmo5T7mQxsjzzTGbrkvqfcR8pMlE",
     "alpha": "1KqxbZ9LqS191wRf1VGLNl-aw6UId9kmUE0k7NfKQdI4",
@@ -172,7 +171,6 @@ async def update_time(server: str) -> None:
     first_date = {
         "primera": ["Minutes online (since 10/12/20)", "09/12/2020", "10/12/2020"],
         "luxia": ["Minutes online (since day 1)", "10/02/2022", "11/02/2022"],
-        "sigma": ["Minutes online (since day 1)", "27/01/2023", "28/01/2023"],
         "azura": ["Minutes online (since day 1)", "16/03/2023", "17/03/2023"],
         "zeta": ["Minutes online (since day 1)", "11/05/2023", "12/05/2023"]}
     headers = ["Link", "Nick", "Citizenship",
@@ -307,7 +305,7 @@ async def price(server: str) -> None:
                                                     "stock": offer["quantity"]}
             occupants.clear()
             db_mm.clear()
-            if server not in ('sigma', 'azura', 'zeta'):
+            if server not in ('azura', 'zeta'):
                 this_month = "01-" + datetime.now().astimezone(pytz.timezone('Europe/Berlin')).strftime("%m-%Y")
             else:
                 this_month = datetime.now().astimezone(pytz.timezone('Europe/Berlin')).strftime("%d-%m-%Y")
