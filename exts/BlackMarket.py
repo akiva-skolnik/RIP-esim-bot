@@ -162,7 +162,7 @@ class BlackMarket(GroupCog, name="black-market"):
     async def remove(self, interaction: Interaction, offer_id: Optional[int]) -> None:
         """
         Remove your offer from the black market.
-        Type `/bm list` to get all your offers ids.
+        Type `/black-market list` to get all your offers ids.
         """
         data = await utils.find_one("collection", __name__)
         if not offer_id:
@@ -221,7 +221,7 @@ class BlackMarket(GroupCog, name="black-market"):
                 text=f"\nYour average rate is {round(sum(rate['rate'] for rate in rates) / len(rates), 2)} from 10")
 
         if not results and not rates:
-            await utils.custom_followup(interaction, "You do not have any offer yet. You can use `/bm add`",
+            await utils.custom_followup(interaction, "You do not have any offer yet. You can use `/black-market add`",
                                         ephemeral=True)
         else:
             await utils.custom_followup(interaction, embed=await utils.custom_author(embed))

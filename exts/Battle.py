@@ -157,7 +157,7 @@ class Battle(Cog):
                 await utils.replace_one("collection", interaction.command.name, find_cup)
                 await self.cup_func(interaction, link, server, ids, True)
             else:
-                await interaction.edit_original_response(content="No IDs found. Consider using the `cup` command instead. Example: `/cup 40730 40751 alpha`")
+                await interaction.edit_original_response(content="No IDs found. Consider using the `cup` command instead. Example: `/cup server: alpha first_battle_id: 40730 last_battle_id: 40751`")
                 return
         else:
             find_cup[link].append({str(interaction.channel.id): {"nick": nick, "author_id": str(interaction.user.id)}})
@@ -233,7 +233,7 @@ class Battle(Cog):
 
         **Notes:**
         - If your nick is the same string as some country (or close enough), add a dash before your nick. Example: `-Israel`
-        - For range of battles, use `<first>_<last>` instead of `<link>` (`/dmg alpha 1165_1167 Israel`)
+        - For range of battles, use `<first>_<last>` instead of `<link>` (`/dmg battle_link: alpha 1165_1167 country: Israel`)
         """
 
         server, battle_id, round_id = battle_link["server"], battle_link["id"], battle_link["round"]
@@ -1039,7 +1039,7 @@ class Battle(Cog):
         ping_id = randint(1000, 9999)
         await utils.custom_followup(
             interaction, f"I will write here at the last {t} minutes of every battle in "
-                         f"{server if not country else country}.\nIf you want to stop it, type `/stop {ping_id}`")
+                         f"{server if not country else country}.\nIf you want to stop it, type `/stop ping_id: {ping_id}`")
         ping_id = f"{interaction.channel.id} {ping_id}"
         try:
             role = role.mention
@@ -1134,9 +1134,9 @@ class Battle(Cog):
             if watch_dict["channel"] == str(interaction.channel.id):
                 data.append(f"<{watch_dict['link']}> (at T{watch_dict['t']})")
         await interaction.response.send_message('\n'.join(["**Watch List:**"] + data + [
-                "\nIf you want to remove any, write `/unwatch <link>`",
-                f"Example: `/unwatch {data[0].split()[0]}`"]) if data else
-            "Currently, I'm not watching any battle. Type `.help watch` if you want to watch one.")
+                "\nIf you want to remove any, write `/unwatch link: <link>`",
+                f"Example: `/unwatch link: {data[0].split()[0]}`"]) if data else
+            "Currently, I'm not watching any battle. Type `/watch` if you want to watch one.")
 
     @checks.dynamic_cooldown(CoolDownModified(10))
     @command()

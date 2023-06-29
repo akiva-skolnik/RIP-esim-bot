@@ -305,7 +305,7 @@ class General(Cog):
         random_id = randint(1000, 9999)
         await utils.custom_followup(interaction,
                                     f'The reminder is set to `{when}` Poland time (`{seconds}` seconds from now).'
-                                    f'\nIf you want to remove it, type `/remove {random_id}`')
+                                    f'\nIf you want to remove it, type `/remove reminder_id: {random_id}`')
         random_id = f"{interaction.channel.id} {random_id}"
         msg = interaction.user.mention + msg
         find_remind = await utils.find_one("collection", "remind")
@@ -341,11 +341,11 @@ class General(Cog):
                     await utils.replace_one("collection", "remind", find_remind)
                     await utils.custom_followup(interaction, f"{reminder_id[0]} removed", ephemeral=True)
             elif len(reminder_id) > 1:
-                await utils.custom_followup(interaction, "Type `/remove <ID>` with one of those ID's: " + ', '.join(
-                    reminder_id) + "\nExample: `/remove {reminder_id[0]}`", ephemeral=True)
+                await utils.custom_followup(interaction, "Type `/remove reminder_id: ID` with one of those ID's: " + ', '.join(
+                    reminder_id) + f"\nExample: `/remove reminder_id: {reminder_id[0]}`", ephemeral=True)
             else:
                 await utils.custom_followup(
-                    interaction, "There is nothing to remove. For adding reminders, use `/reminder`", ephemeral=True)
+                    interaction, "There is nothing to remove. For adding reminders, use `/remind`", ephemeral=True)
 
         elif reminder_id in [x.split()[1] for x in find_remind]:
             if f"{interaction.channel.id} {reminder_id}" in find_remind:

@@ -745,7 +745,7 @@ async def convert_embed(interaction_or_author: Union[Interaction, int], embed: E
             embed.insert_field_at(index + first + 1, name="\u200B", value="\n".join(["\n".join(x) for x in LIST]))
 
     if not embed.footer:
-        embed.set_footer(text="That is an auto phone format. Type `!phone -` to change this preference")
+        embed.set_footer(text="That is an auto phone format. Type `/phone` to change this preference")
 
     return embed
 
