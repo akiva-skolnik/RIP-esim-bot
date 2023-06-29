@@ -1077,46 +1077,44 @@ async def custom_followup(interaction: Interaction, content: str = None, **kwarg
     return msg
 
 
-async def battles_data(tree) -> dict:
+async def get_battles(base_url: str, country_id: int = 0, filtering: iter = ('Normal battle', 'Resistance war')) -> list[dict]:
     """Get battles data"""
-    country = tree.xpath('//*[@id="countryId"]//option[@selected="selected"]')[0].text
-    country_id = int(tree.xpath('//*[@id="countryId"]//option[@selected="selected"]/@value')[0])
-    sorting = tree.xpath('//*[@id="sorting"]//option[@selected="selected"]')[0].text.replace("Sort ", "")
-    filtering = tree.xpath('//*[@id="filter"]//option[@selected="selected"]')[0].text
+    battles = []
+    link = f'{base_url}battles.html?countryId={country_id}'
+    for page in range(1, await last_page(link)):
+        tree = await get_content(link + f'&page={page}')
+        total_dmg = tree.xpath('//*[@class="battleTotalDamage"]/text()')
+        progress_attackers = [float(x.replace("%", "")) for x in tree.xpath('//*[@id="attackerScoreInPercent"]/text()')]
+        attackers_dmg = tree.xpath('//*[@id="attackerDamage"]/text()')
+        defenders_dmg = tree.xpath('//*[@id="defenderDamage"]/text()')
+        counters = [i.split(");\n")[0] for i in tree.xpath('//*[@id="battlesTable"]//div//div//script/text()') for i in
+                    i.split("() + ")[1:]]
+        counters = [f'{int(x[0]):02d}:{int(x[1]):02d}:{int(x[2]):02d}' for x in await chunker(counters, 3)]
+        sides = tree.xpath('//*[@class="battleHeader"]//em/text()')
+        battle_ids = tree.xpath('//*[@class="battleHeader"]//a/@href')
+        battle_regions = tree.xpath('//*[@class="battleHeader"]//a/text()')
+        scores = tree.xpath('//*[@class="battleFooterScore hoverText"]/text()')
 
-    total_dmg = tree.xpath('//*[@class="battleTotalDamage"]/text()')
-    progress_attackers = [float(x.replace("%", "")) for x in tree.xpath('//*[@id="attackerScoreInPercent"]/text()')]
-    attackers_dmg = tree.xpath('//*[@id="attackerDamage"]/text()')
-    defenders_dmg = tree.xpath('//*[@id="defenderDamage"]/text()')
-    counters = [i.split(");\n")[0] for i in tree.xpath('//*[@id="battlesTable"]//div//div//script/text()') for i in
-                i.split("() + ")[1:]]
-    counters = [f'{int(x[0]):02d}:{int(x[1]):02d}:{int(x[2]):02d}' for x in await chunker(counters, 3)]
-    sides = tree.xpath('//*[@class="battleHeader"]//em/text()')
-    battle_ids = tree.xpath('//*[@class="battleHeader"]//a/@href')
-    battle_regions = tree.xpath('//*[@class="battleHeader"]//a/text()')
-    scores = tree.xpath('//*[@class="battleFooterScore hoverText"]/text()')
-    row = {"sorting": sorting, "filter": filtering, "country": country, "country_id": country_id,
-           "battles": []}
-    types = tree.xpath('//*[@class="battleHeader"]//i/@data-hover')
-    for i, (dmg, progress_attacker, counter, sides, battle_id, battle_region, score, battle_type) in enumerate(zip(
-            total_dmg, progress_attackers, counters, sides, battle_ids, battle_regions, scores, types)):
-        if battle_type not in ('Normal battle', 'Resistance war'):
-            continue
-        defender, attacker = sides.split(" vs ")
-        row["battles"].append(
-            {"total_dmg": dmg, "time_reminding": counter,
-             "battle_id": int(battle_id.split("=")[-1]), "region": battle_region,
-             "defender": {"name": defender, "score": int(score.strip().split(":")[0]),
-                          "bar": round(100 - progress_attacker, 2)},
-             "attacker": {"name": attacker, "score": int(score.strip().split(":")[1]),
-                          "bar": progress_attacker}})
-        if attackers_dmg:
-            try:
-                row["battles"][-1]["defender"]["dmg"] = int(defenders_dmg[i].replace(",", ""))
-                row["battles"][-1]["attacker"]["dmg"] = int(attackers_dmg[i].replace(",", ""))
-            except Exception:
-                pass
-    return row
+        types = tree.xpath('//*[@class="battleHeader"]//i/@data-hover')
+        for i, (dmg, progress_attacker, counter, sides, battle_id, battle_region, score, battle_type) in enumerate(zip(
+                total_dmg, progress_attackers, counters, sides, battle_ids, battle_regions, scores, types)):
+            if battle_type not in filtering:
+                continue
+            defender, attacker = sides.split(" vs ")
+            battles.append(
+                {"total_dmg": dmg, "time_reminding": counter,
+                 "battle_id": int(battle_id.split("=")[-1]), "region": battle_region,
+                 "defender": {"name": defender, "score": int(score.strip().split(":")[0]),
+                              "bar": round(100 - progress_attacker, 2)},
+                 "attacker": {"name": attacker, "score": int(score.strip().split(":")[1]),
+                              "bar": progress_attacker}})
+            if attackers_dmg:  # some servers do not show current dmg
+                try:
+                    battles[-1]["defender"]["dmg"] = int(defenders_dmg[i].replace(",", ""))
+                    battles[-1]["attacker"]["dmg"] = int(attackers_dmg[i].replace(",", ""))
+                except Exception:
+                    pass
+    return battles
 
 
 async def find_one(collection: str, _id: str) -> dict:

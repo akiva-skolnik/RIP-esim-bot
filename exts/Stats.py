@@ -239,11 +239,13 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
     @command(name="dmg-stats")
     @describe(battles="first-last or id1, id2, id3...",
               included_countries="Example: 'Norway, Israel VS Egypt' - all battles of norway plus all Israel VS Egypt battles",
-              battles_types="Check those types only (default: RWs and attacks)")
+              battles_types="Check those types only (default: RWs and attacks)",
+              fast_server="used for medkits estimation")
     #         extra_premium_info="True (premium) will give more data, but it will take much longer")
     # @check(utils.is_premium_level_1)
     async def dmg_stats(self, interaction: Interaction, server: Transform[str, Server], battles: Transform[list, Ids],
-                        included_countries: Optional[str], battles_types: Optional[Transform[list, BattleTypes]]) -> None:
+                        included_countries: Optional[str], battles_types: Optional[Transform[list, BattleTypes]],
+                        fast_server: bool = None) -> None:
         """Displays a lot of data about the given battles"""
 
         if not await utils.is_premium_level_1(interaction, False) and len(battles) > 500:
@@ -332,7 +334,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                         if day not in user['restores']:
                             user['restores'][day] = 0
                         user['restores'][day] += 1
-                        if server not in ("primera", "secura", "suna"):  # fast server has limits restore
+                        if fast_server or (fast_server is None and server not in ("primera", "secura", "suna")):  # fast server has limits restore
                             user['limits'] = min(user['limits'] + int(seconds_from_last // 600) * 2 + 2, full_limits)
                     if battle_restore and user.get("has_restore"):
                         user['limits'] = 10 + 10 + 2

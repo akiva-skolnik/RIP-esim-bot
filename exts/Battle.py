@@ -840,32 +840,23 @@ class Battle(Cog):
 
         await interaction.response.defer()
         base_url = f'https://{server}.e-sim.org/'
-        detailed_list = []
-        ids = []
-        for battle_filter in ("NORMAL", "RESISTANCE"):
-            link = f'{base_url}battles.html?filter={battle_filter}&countryId={self.bot.countries_by_name.get(country.lower(), 0)}'
-            for page in range(1, await utils.last_page(link)):
-                tree = await utils.get_content(link + f'&page={page}')
-                for battle_data in (await utils.battles_data(tree))["battles"]:
-                    if battle_data["battle_id"] not in ids and battle_data["attacker"]["name"] in self.bot.countries.values():
-                        detailed_list.append(battle_data)
-                        ids.append(battle_data["battle_id"])
+        battles = await utils.get_battles(base_url, self.bot.countries_by_name.get(country.lower(), 0))
 
-        if not detailed_list:
+        if not battles:
             await utils.custom_followup(interaction, "There are currently no active RWs or attacks.")
             return
-        detailed_list = sorted(detailed_list, key=lambda k: k['time_reminding'])
-        last = detailed_list[-1]["time_reminding"]
+        battles = sorted(battles, key=lambda k: k['time_reminding'])
+        last = battles[-1]["time_reminding"]
         headers = ["**Time remaining**", "**Defender | Attacker (Score)**", "**Bar**"]
-        detailed_list = [
+        battles = [
             [x["time_reminding"],
              f"[{utils.shorten_country(x['defender']['name'])} vs " + utils.shorten_country(x['attacker']['name']) +
              f"]({base_url}battle.html?id={x['battle_id']}) ({x['defender']['score']}:{x['attacker']['score']})",
-             (await bar(x['defender']['bar'], x['attacker']['bar'], size=6)).splitlines()[0]] for x in detailed_list]
+             (await bar(x['defender']['bar'], x['attacker']['bar'], size=6)).splitlines()[0]] for x in battles]
         embed = Embed(colour=0x3D85C6, title=server, url=f'{base_url}battles.html')
-        await utils.send_long_embed(interaction, embed, headers, detailed_list)
+        await utils.send_long_embed(interaction, embed, headers, battles)
         time_of_last = int(last.split(":")[0]) * 3600 + int(last.split(":")[1]) * 60 + int(last.split(":")[2])
-        detailed_list.clear()
+        battles.clear()
 
         update_seconds = 60
         while time_of_last > 0:
@@ -1521,18 +1512,11 @@ async def ping_func(channel: TextChannel, t: float, server: str, ping_id: str, c
     base_url = f'https://{server}.e-sim.org/'
     find_ping = await utils.find_one("collection", "ping")
     while ping_id in find_ping:
-        detailed_list = []
-        ids = []
-        for battle_filter in ("NORMAL", "RESISTANCE"):
-            link = f'{base_url}battles.html?filter={battle_filter}'
-            for page in range(1, await utils.last_page(link)):
-                tree = await utils.get_content(link + f'&page={page}')
-                for battle_data in (await utils.battles_data(tree))["battles"]:
-                    if battle_data["battle_id"] not in ids and (
-                            not country or country.lower() in (battle_data['defender']['name'].lower(), battle_data['attacker']['name'].lower())):
-                        detailed_list.append(battle_data)
-                        ids.append(battle_data["battle_id"])
-        if not detailed_list:
+        battles = await utils.get_battles(base_url)
+        if country:
+            battles = [x for x in battles if country.lower() in (x['defender']['name'].lower(), x['attacker']['name'].lower())]
+
+        if not battles:
             await channel.send("The program has stopped, because there are currently no active RWs or attacks in this " +
                                (f"country (`{country}`)." if country else f"server (`{server}`)."))
             find_ping = await utils.find_one("collection", "ping")
@@ -1540,8 +1524,8 @@ async def ping_func(channel: TextChannel, t: float, server: str, ping_id: str, c
                 del find_ping[ping_id]
                 await utils.replace_one("collection", "ping", find_ping)
             break
-        detailed_list = sorted(detailed_list, key=lambda k: k['time_reminding'])
-        for battle_dict in detailed_list:
+        battles = sorted(battles, key=lambda k: k['time_reminding'])
+        for battle_dict in battles:
             api_battles = await utils.get_content(f'{base_url}apiBattles.html?battleId={battle_dict["battle_id"]}')
             if api_battles["frozen"]:
                 continue
