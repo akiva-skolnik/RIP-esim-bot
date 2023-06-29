@@ -1077,7 +1077,7 @@ async def custom_followup(interaction: Interaction, content: str = None, **kwarg
     return msg
 
 
-async def get_battles(base_url: str, country_id: int = 0, filtering: iter = ('Normal battle', 'Resistance war')) -> list[dict]:
+async def get_battles(base_url: str, country_id: int = 0, filtering: iter = ('Normal battle', 'Resistance war')) -> list:
     """Get battles data"""
     battles = []
     link = f'{base_url}battles.html?countryId={country_id}'
