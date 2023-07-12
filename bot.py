@@ -242,8 +242,8 @@ async def mm():
                     ratios = tree.xpath("//*[@class='ratio']//b/text()")
                     amounts = tree.xpath("//*[@class='amount']//b/text()")
                     for ratio, amount in zip(ratios, amounts):
-                        if amount > 1:
-                            MM = ratio
+                        if float(amount) > 1:
+                            MM = float(ratio)
                             break
                 except:
                     pass
