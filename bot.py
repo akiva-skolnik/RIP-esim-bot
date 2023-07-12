@@ -235,13 +235,18 @@ async def mm():
             url = f'https://{server}.e-sim.org/'
             # get data
             for country_id in countries_per_server[server]:
+                MM = 0
                 try:
                     func = get_locked_content if server == "primera" else get_content
                     tree = await func(f'{url}monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1')
-                    MM = float(tree.xpath("//*[@class='ratio']//b/text()")[0])
-
+                    ratios = tree.xpath("//*[@class='ratio']//b/text()")
+                    amounts = tree.xpath("//*[@class='amount']//b/text()")
+                    for ratio, amount in zip(ratios, amounts):
+                        if amount > 1:
+                            MM = ratio
+                            break
                 except:
-                    MM = 0
+                    pass
                 mm_per_server[server][str(country_id)] = min(1.4, MM)
                 await asyncio.sleep(0.35)
 
