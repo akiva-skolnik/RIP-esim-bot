@@ -441,7 +441,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                             ratios = tree.xpath("//*[@class='ratio']//b/text()")
                             amounts = tree.xpath("//*[@class='amount']//b/text()")
                             for ratio, amount in zip(ratios, amounts):
-                                if amount > 1:
+                                if float(amount) > 1:
                                     mm_ratio = ratio
                                     break
                         except Exception:
