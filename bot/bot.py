@@ -86,7 +86,7 @@ class MyClient(Bot):
             "alpha": ["1KqxbZ9LqS191wRf1VGLNl-aw6UId9kmUE0k7NfKQdI4", 1445005647, 0],
             "azura": ["1xy8Ssj91q6z8vqmtnpbviY1pK44ed3FQrOI3KyVq2cg", 1876322398, 1265748453],
             "zeta": ["1lYS3tG259h1NxS-I-KNwyTnkoSK1zQzmjaSyo1iWtzo", 1876322398, 1265748453],
-            "delta": ["11v5Be8IDpVFHyLwd4pcIBa564KAzsp_FwATLVJmu08g", 1876322398, 1265748453],
+            "delta": ["11v5Be8IDpVFHyLwd4pcIBa564KAzsp_FwATLVJmu08g", 1876322398, 1265748453]
         }
 
         self.delay = {}

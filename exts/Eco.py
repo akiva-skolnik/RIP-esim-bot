@@ -434,12 +434,18 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 for cc, raw_price, stock in zip(cc, raw_prices, stock):
                     country_id = currency_names[cc.lower()]
                     if country_id not in final and country_id in occupants:
+                        mm_ratio = 0
                         try:
                             func = utils.get_locked_content if server == "primera" else utils.get_content
                             tree = await func(f"{base_url}monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1")
-                            mm_ratio = tree.xpath("//*[@class='ratio']//b/text()")[0]
+                            ratios = tree.xpath("//*[@class='ratio']//b/text()")
+                            amounts = tree.xpath("//*[@class='amount']//b/text()")
+                            for ratio, amount in zip(ratios, amounts):
+                                if amount > 1:
+                                    mm_ratio = ratio
+                                    break
                         except Exception:
-                            mm_ratio = 0
+                            pass
                         price = round(float(mm_ratio) * float(raw_price), 4)
                         final[country_id] = {"price": price, "stock": stock,
                                              "country": self.bot.countries[country_id]}
