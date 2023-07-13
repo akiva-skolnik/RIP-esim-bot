@@ -444,6 +444,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                                 if float(amount) > 1:
                                     mm_ratio = ratio
                                     break
+                            if not mm_ratio and ratios:
+                                mm_ratio = ratios[-1]
                         except Exception:
                             pass
                         price = round(float(mm_ratio) * float(raw_price), 4)
