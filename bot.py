@@ -245,6 +245,8 @@ async def mm():
                         if float(amount) > 1:
                             MM = float(ratio)
                             break
+                    if not MM and ratios:
+                        MM = float(ratios[-1])
                 except:
                     pass
                 mm_per_server[server][str(country_id)] = min(1.4, MM)
