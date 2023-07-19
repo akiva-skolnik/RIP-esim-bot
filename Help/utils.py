@@ -147,13 +147,13 @@ async def get_auction(link: str) -> dict:
     if not time1:
         time1 = [x.strip() for x in tree.xpath('//*[@id="esim-layout"]//div[1]//table//tr[2]//td[6]/text()') if
                  x.strip()]
-        reminding_seconds = -1
+        remaining_seconds = -1
     else:
         time1 = [int(x) for x in time1[0].split(":")]
-        reminding_seconds = time1[0] * 60 * 60 + time1[1] * 60 + time1[2]
+        remaining_seconds = time1[0] * 60 * 60 + time1[1] * 60 + time1[2]
         time1 = [f'{time1[0]:02d}:{time1[1]:02d}:{time1[2]:02d}']
     return {"seller": seller.strip(), "buyer": buyer[0].strip(), "item": item[0],
-            "price": price, "time": time1[0], "bidders": bidders, "reminding_seconds": reminding_seconds}
+            "price": price, "time": time1[0], "bidders": bidders, "remaining_seconds": remaining_seconds}
 
 
 async def save_dmg_time(api_fights: str, attacker:str, defender: str) -> (dict, dict):
@@ -1107,7 +1107,7 @@ async def get_battles(base_url: str, country_id: int = 0, filtering: iter = ('No
                 continue
             defender, attacker = sides.split(" vs ")
             battles.append(
-                {"total_dmg": dmg, "time_reminding": counter,
+                {"total_dmg": dmg, "time_remaining": counter,
                  "battle_id": int(battle_id.split("=")[-1]), "region": battle_region,
                  "defender": {"name": defender, "score": int(score.strip().split(":")[0]),
                               "bar": round(100 - progress_attacker, 2)},

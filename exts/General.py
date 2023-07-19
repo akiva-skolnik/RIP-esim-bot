@@ -496,7 +496,7 @@ class General(Cog):
 
         elif "/battles.html" in link:
             row = await utils.get_content(get_url)
-            embed.add_field(name="Time Reminding", value="\n".join([v['time_reminding'] for v in row['battles']][:5]))
+            embed.add_field(name="Time Reminding", value="\n".join([v['time_remaining'] for v in row['battles']][:5]))
             embed.add_field(name="Defender | Attacker", value="\n".join(
                 [f"[{utils.codes(v['defender']['name'])} {v['defender']['name']} |"
                  f" {utils.codes(v['attacker']['name'])} {v['attacker']['name']}]"

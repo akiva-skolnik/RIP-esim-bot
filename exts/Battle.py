@@ -845,11 +845,11 @@ class Battle(Cog):
         if not battles:
             await utils.custom_followup(interaction, "There are currently no active RWs or attacks.")
             return
-        battles = sorted(battles, key=lambda k: k['time_reminding'])
-        last = battles[-1]["time_reminding"]
+        battles = sorted(battles, key=lambda k: k['time_remaining'])
+        last = battles[-1]["time_remaining"]
         headers = ["**Time remaining**", "**Defender | Attacker (Score)**", "**Bar**"]
         battles = [
-            [x["time_reminding"],
+            [x["time_remaining"],
              f"[{utils.shorten_country(x['defender']['name'])} vs " + utils.shorten_country(x['attacker']['name']) +
              f"]({base_url}battle.html?id={x['battle_id']}) ({x['defender']['score']}:{x['attacker']['score']})",
              (await bar(x['defender']['bar'], x['attacker']['bar'], size=6)).splitlines()[0]] for x in battles]
@@ -1269,9 +1269,9 @@ class Battle(Cog):
             hit_time = {k: {"dmg": [], "time": []} for k in top_10}
             output.seek(0)
             for hit in sorted(reader(output), key=lambda row: utils.get_time(row[1])):
-                citizen, time_reminding, dmg = int(hit[0]), hit[1], int(hit[2])
+                citizen, time_remaining, dmg = int(hit[0]), hit[1], int(hit[2])
                 if citizen in top_10:
-                    hit_time[citizen]["time"].append(utils.get_time(time_reminding))
+                    hit_time[citizen]["time"].append(utils.get_time(time_remaining))
                     if hit_time[citizen]["dmg"]:
                         hit_time[citizen]["dmg"].append(hit_time[citizen]["dmg"][-1] + dmg)
                     else:
@@ -1524,7 +1524,7 @@ async def ping_func(channel: TextChannel, t: float, server: str, ping_id: str, c
                 del find_ping[ping_id]
                 await utils.replace_one("collection", "ping", find_ping)
             break
-        battles = sorted(battles, key=lambda k: k['time_reminding'])
+        battles = sorted(battles, key=lambda k: k['time_remaining'])
         for battle_dict in battles:
             api_battles = await utils.get_content(f'{base_url}apiBattles.html?battleId={battle_dict["battle_id"]}')
             if api_battles["frozen"]:
@@ -1631,10 +1631,10 @@ async def watch_auction_func(bot, channel: TextChannel, link: str, t: float, cus
     """Activate watch/auction function"""
     row = await utils.get_auction(link)
 
-    if row["reminding_seconds"] < 0:
+    if row["remaining_seconds"] < 0:
         return await remove_auction(bot, link, channel.id)
 
-    await sleep(row["reminding_seconds"] - t * 60)
+    await sleep(row["remaining_seconds"] - t * 60)
     row = await utils.get_auction(link)
 
     embed = Embed(colour=0x3D85C6, title=link,
