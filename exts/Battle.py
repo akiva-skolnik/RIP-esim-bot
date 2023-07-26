@@ -560,7 +560,7 @@ class Battle(Cog):
                        hits_for_q.items()}
         drops_per_q["Elixir"] = [int(hits_with_bonus / 150), (hits_with_bonus // 150 + 1) * 150 - hits_with_bonus]
         drops_per_q["upg. + shuffle"] = [hits // 1500, next_upgrade]
-        embed.add_field(name="**Q : Drops**", value="\n".join([f"**{k} :** {v[0]:,}" for k, v in drops_per_q.items()]))
+        embed.add_field(name="**Item : Drops**", value="\n".join([f"**{k} :** {v[0]:,}" for k, v in drops_per_q.items()]))
         embed.add_field(name="**Hits For Next**", value="\n".join([f"{int(v[1]):,}" for v in drops_per_q.values()]))
         if nick:
             try:
@@ -592,46 +592,32 @@ class Battle(Cog):
                         my_tops = value['hits'] + value['hits'] * bonus / 100
 
                     x, y = [], []
-                    player_chances = 0
-                    likely_b, first_likely_k, last_likely_k = 0, 0, 0
+                    total_chances = 0
                     n = total_drops
                     p = (my_tops / total_tops) if total_tops else 0
                     mean = n * p  # mu
                     std = math.sqrt(mean * (1 - p))  # sigma
-                    added = False
                     for k in range(n + 1):
                         if n * p >= 5 and n * (1 - p) >= 5:  # or: n*p*(1-p) > 10
                             prob = Battle.normal_pdf(k, mean, std)
                         else:
                             prob = math.comb(n, k) * math.pow(p, k) * math.pow(1 - p, n - k)
-                        if k == 0 and prob > 0.4:
-                            likely_b = 1 - prob
-                            last_likely_k = 1
-                            break
-
-                        player_chances += prob
                         x.append(prob * 100)
                         y.append(k)
-                        if k > 0 and (abs(mean - k) <= std or (k == 1 and mean < 1)):
-                            likely_b += prob
-                            if not first_likely_k:
-                                first_likely_k = k
-                            added = True
-                        if added:
-                            last_likely_k = max(last_likely_k, k)
-                            added = False
-
-                        if player_chances > 0.99:
+                        total_chances += prob
+                        if total_chances > 0.99:
                             break
 
+                    first, last = int(mean-std), int(mean+std)
+                    print(quality, x, y, first, last)
                     if total_drops and my_tops:
-                        if last_likely_k == 1:
+                        if first == 0:
                             drops_range = "1" if total_drops == 1 else "1+"
-                        elif first_likely_k < last_likely_k:
-                            drops_range = f"{first_likely_k}-{last_likely_k}"
+                            chances = 100 - x[0]
                         else:
-                            drops_range = str(first_likely_k)
-                        final[player][quality] = [drops_range, f"{likely_b:.0%}"]
+                            drops_range = f"{first}-{last}"
+                            chances = sum(x[first:last+1]) / (last + 1 - first)
+                        final[player][quality] = [drops_range, f"{round(chances)}%"]
                         qualities.add(quality)
                     else:
                         final[player][quality] = [0, "100%"]
