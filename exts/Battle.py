@@ -608,14 +608,17 @@ class Battle(Cog):
                         if total_chances > 0.99:
                             break
 
-                    first, last = int(mean-std), int(mean+std)
+                    first, last = round(mean-std), round(mean+std)
                     if total_drops and my_tops:
                         if first == 0:
                             drops_range = "1" if total_drops == 1 else "1+"
                             chances = 100 - x[0]
-                        else:
+                        elif first != last:
                             drops_range = f"{first}-{last}"
                             chances = sum(x[first:last+1])
+                        else:
+                            drops_range = str(int(mean))
+                            chances = x[int(mean)]
                         final[player][quality] = [drops_range, f"{round(chances)}%"]
                         qualities.add(quality)
                     else:
