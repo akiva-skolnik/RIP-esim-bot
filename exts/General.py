@@ -168,7 +168,7 @@ class General(Cog):
 
         buffs_debuffs = [camel_case_merge(x.split("/specialItems/")[-1].split(".png")[0]).replace("Elixir", "") for x in
                          tree.xpath('//*[@class="profile-row" and (strong="Debuffs" or strong="Buffs")]//img/@src') if
-                         "//cdn.e-sim.org//img/specialItems/" in x]
+                         "img/specialItems/" in x]
         buffs = ', '.join([x.split("_")[0].replace("Vacations", "Vac").replace("Resistance", "Sewer").replace(
             "Pain Dealer", "PD ").replace("Bonus Damage", "") + ("% Bonus" if "Bonus Damage" in x.split("_")[0] else "")
                            for x in buffs_debuffs if "Positive" in x.split("_")[1:]]).title()

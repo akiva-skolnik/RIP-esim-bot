@@ -771,7 +771,7 @@ class Premium(Cog):
                 tree = await utils.get_content(f'{base_url}stockCompanyProducts.html?id={sc_id}')
                 products_storage = {}
                 amount = [int(x.strip()) for x in tree.xpath('//*[@id="esim-layout"]//center//div//div//div[1]/text()')]
-                products = [x.split("//cdn.e-sim.org//img/productIcons/")[1].split(".png")[0].replace("Rewards/", "")
+                products = [x.split("img/productIcons/")[1].split(".png")[0].replace("Rewards/", "")
                             for x in
                             tree.xpath('//*[@id="esim-layout"]//center//div//div//div[2]//img[1]/@src')]
                 for count, product in enumerate(products):
@@ -779,7 +779,7 @@ class Premium(Cog):
                     if "Defense System" in product:
                         product = product.replace("Defense System", "Defense_System")
                     if quality:
-                        products[count] = quality[0].split("//cdn.e-sim.org//img/productIcons/")[1].split(
+                        products[count] = quality[0].split("img/productIcons/")[1].split(
                             ".png")[0].replace("Rewards/", "").upper() + " " + product
 
                 for product, amount in zip(products, amount):
@@ -788,7 +788,7 @@ class Premium(Cog):
                 # Offers
                 amount = [int(x.strip()) for x in
                           tree.xpath('//*[@id="esim-layout"]//div[2]//table//tr//td[3]/text()')[1:]]
-                products = [x.split("//cdn.e-sim.org//img/productIcons/")[1].split(".png")[0].replace("Rewards/", "")
+                products = [x.split("img/productIcons/")[1].split(".png")[0].replace("Rewards/", "")
                             for x in
                             tree.xpath('//*[@id="esim-layout"]//div[2]//table//tr//td[1]//img[1]/@src')]
                 for count, product in enumerate(products):
@@ -796,7 +796,7 @@ class Premium(Cog):
                     if "Defense System" in product:
                         product = product.replace("Defense System", "Defense_System")
                     if quality:
-                        products[count] = quality[0].split("//cdn.e-sim.org//img/productIcons/")[1].split(
+                        products[count] = quality[0].split("img/productIcons/")[1].split(
                             ".png")[0].replace("Rewards/", "").upper() + " " + product
                 for product, amount in zip(products, amount):
                     all_products.add(product)
