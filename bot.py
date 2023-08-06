@@ -65,7 +65,7 @@ async def update_buffs(server: str) -> None:
 
                 buffs_debuffs = [x.split("/specialItems/")[-1].split(".png")[0] for x in tree.xpath(
                     '//*[@class="profile-row" and (strong="Debuffs" or strong="Buffs")]//img/@src') if
-                                 "//cdn.e-sim.org//img/specialItems/" in x]
+                                 "img/specialItems/" in x]
                 buffs = [x.split("_")[0].lower() for x in buffs_debuffs if "positive" in x.split("_")[1:]]
                 if any(a in buffs for a in ('steroids', 'tank', 'bunker', 'sewer')):
                     if nick not in data:
