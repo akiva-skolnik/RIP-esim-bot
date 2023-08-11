@@ -422,7 +422,6 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                         real_time = True
 
         if real_time:
-            occupants = {i['occupantId'] for i in await utils.get_content(f'{base_url}apiMap.html')}
             currency_names = {v: k for k, v in utils.get_countries(server, index=2).items()}
             final = {}
             for page in range(1, 10):  # the last page is unknown
@@ -433,7 +432,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 stock = [int(x) for x in tree.xpath("//*[@class='quantity']//text()") if x.strip()]
                 for cc, raw_price, stock in zip(cc, raw_prices, stock):
                     country_id = currency_names[cc.lower()]
-                    if country_id not in final and country_id in occupants:
+                    if country_id not in final:
                         mm_ratio = 0
                         try:
                             func = utils.get_locked_content if server == "primera" else utils.get_content
@@ -454,7 +453,6 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 if len(raw_prices) < 20:  # last page
                     break
                 await utils.custom_delay(interaction)
-            occupants.clear()
 
             embed = Embed(colour=0x3D85C6, title=f"{product_name}, {server}")
             final = dict(sorted(final.items(), key=lambda x: x[1]["price"]))
