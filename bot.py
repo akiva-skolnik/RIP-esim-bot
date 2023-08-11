@@ -300,19 +300,16 @@ async def price(server: str) -> None:
     while True:
         start = time.time()
         try:
-            occupants: set = {i['occupantId'] for i in await get_content(f'{url}apiMap.html')}
             offers: dict = {}
             db_mm: dict = await find_one("mm", server)
             for offer in await get_content(f"{url}apiProductMarket.html?id=-1"):
                 country = offer["countryId"]
                 product = offer["quality"], offer["resource"].title()
-                if country in occupants:
-                    if product not in offers:
-                        offers[product] = {}
-                    if country not in offers[product]:
-                        offers[product][country] = {"price": round(db_mm.get(str(country), 0) * float(offer["price"]), 4),
-                                                    "stock": offer["quantity"]}
-            occupants.clear()
+                if product not in offers:
+                    offers[product] = {}
+                if country not in offers[product]:
+                    offers[product][country] = {"price": round(db_mm.get(str(country), 0) * float(offer["price"]), 4),
+                                                "stock": offer["quantity"]}
             db_mm.clear()
             if server not in ('azura', 'zeta', 'delta'):
                 this_month = "01-" + datetime.now().astimezone(pytz.timezone('Europe/Berlin')).strftime("%m-%Y")
