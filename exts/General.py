@@ -255,7 +255,7 @@ class General(Cog):
         result = []
         find_time = await utils.find_one("time_online", server)
         last_update = find_time["_headers"][-1]
-        embed.set_footer(text="last_update: " + last_update)
+        embed.set_footer(text="Last Update: " + last_update)
         for index, (citizen_id, v) in enumerate(find_time.items(), 1):
             if citizen_id == "_headers":
                 continue
@@ -269,7 +269,7 @@ class General(Cog):
             if row not in result:
                 result.append(row)
             if len(result) == 100:
-                embed.set_footer(text=embed.footer.text + "\nFirst 100")
+                embed.description("(First 100)")
                 break
 
         if not result:
