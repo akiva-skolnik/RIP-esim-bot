@@ -213,7 +213,7 @@ async def update_time(server: str) -> None:
             data = dict(sorted(data.items(), key=lambda x: (
                 x[1][month_minutes], x[1][total_minutes]), reverse=True)[:3000 if len(data) < 3000 else 2900])
             now = datetime.now().astimezone(pytz.timezone('Europe/Berlin')).strftime(date_format)
-            data["_headers"] = headers[1:] + now
+            data["_headers"] = headers[1:] + [now]
             await replace_one("time_online", server, data)
             del data["_headers"]
             if randint(1, 30) == 1:
