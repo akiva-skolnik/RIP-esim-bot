@@ -763,12 +763,16 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         embed = Embed(colour=0x3D85C6, title=link, description=f"[source]({get_url})")
         if not country:
             mm_db = await utils.find_one("mm", server)
+            embed.set_footer(text="Last update: " + mm_db['last_update'])
+            del mm_db['last_update']
             headers = ["Id", "Country", "Price"]
             data = [[f"[{k}](https://{server}.e-sim.org/monetaryMarket.html?buyerCurrencyId={k})",
                      utils.get_countries(server, int(k)).title(), v] for k, v in
                     sorted(mm_db.items(), key=lambda item: float(item[1]))]
             return await utils.send_long_embed(interaction, embed, headers, data)
-        mm_history = (await utils.find_one("mm_history", server))[str(country_id)]
+        mm_history = (await utils.find_one("mm_history", server))
+        last_update = mm_history['last_update']
+        mm_history = mm_history[str(country_id)]
         d = []
         d1 = []
         length = 0
@@ -805,7 +809,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 [f'[{x["seller"]}](https://{server}.e-sim.org/profile.html?id={x["seller_id"]})' for x in row[:5]]))
             embed.add_field(name="Stock", value="\n".join([x["amount"] for x in row[:5]]))
             embed.add_field(name="Price", value="\n".join([x["ratio"] for x in row[:5]]))
-            embed.set_footer(text=buy)
+            embed.set_footer(text=buy + f"\nLast update: {last_update}")
         except Exception:
             pass
         await utils.custom_followup(interaction, file=file, embed=await utils.convert_embed(interaction, embed))

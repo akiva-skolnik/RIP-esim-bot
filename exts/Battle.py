@@ -106,7 +106,8 @@ class Battle(Cog):
                       url=f"https://docs.google.com/spreadsheets/d/{self.bot.gids[server][0]}/edit#gid={self.bot.gids[server][2]}")
         embed.set_footer(text="\U00002b50 / \U0001f512 = Premium / Non Premium\n"
                               "\U0001f7e2 / \U0001f534 = Buff / Debuff\n"
-                              f"\U0001f505 / \U0001f506 = Below / Above median total dmg ({round(median):,})")
+                              f"\U0001f505 / \U0001f506 = Below / Above median total dmg ({round(median):,})\n"
+                              f"Last update: {find_buffs['Last update:'][0]}")
         headers = ["Nick, Citizenship" if not country else "Nick", "Last Seen (game time)", "Till Debuff (over)"]
         await utils.send_long_embed(interaction, embed, headers, result)
 
