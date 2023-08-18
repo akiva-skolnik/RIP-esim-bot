@@ -496,7 +496,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         else:
             message = "You can add optimal price and i will let you know once the price in market is below that price\n"
 
-        db_dict = await utils.find_one("prices_history", product_name)
+        db_dict = await utils.find_one("prices_history", product_name.replace(" ", "_"))
         db_dict = db_dict[server] if server in db_dict else {}
         if len(db_dict.keys()) > 2:
             def x(db_dict: dict) -> BytesIO:
