@@ -511,9 +511,11 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 if best_price:
                     d.append(datetime.now().astimezone(timezone('Europe/Berlin')))
                     d1.append(best_price)
+
+                temp_server = server in ('azura', 'zeta', 'delta')
                 med = statistics.median(d1)
                 std = statistics.stdev(d1)
-                window = 12
+                window = 12 if not temp_server else 7
                 average_y = []
                 for i, item in enumerate(d1):
                     d1[i] = min(item, med + 2 * std)
@@ -525,9 +527,10 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 ax.set_title(f"{product_name}, {server}")
                 ax.set_ylabel('Price')
                 ax.set_xlabel('Date')
-                ax.plot(d, d1)
+                ax.plot(d, d1, label="Daily Average" if temp_server else "Monthly Average")
                 if any(average_y):
-                    ax.plot(d, average_y, '.-')
+                    ax.plot(d, average_y, '.-', label="Moving Average")
+                ax.legend()
                 fig.autofmt_xdate()
                 ax.grid()
                 return utils.plt_to_bytes()
