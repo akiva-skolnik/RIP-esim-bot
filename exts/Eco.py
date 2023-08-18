@@ -819,7 +819,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
     @command()
     @describe(value="The eq parameter value (in case you didn't provide a link)",
               parameter="profile link / eq link / eq parameter (Avoid, Max, Crit, Damage, Miss, Flight, Eco, "
-                        "Str, Hit, Less, Find, Split, Production, Consume, Merging, Restore, Increase)")
+                        "Str, Hit, Less, Find, Split, Production, Consume, Merging, Restore, Increase, Evening/Noon...)")
     @rename(parameter="link_or_parameter")
     async def upgrade(self, interaction: Interaction, parameter: str, value: float = -1.0) -> None:
         """Displays estimated parameter value after upgrade, and how many needed until the maximum (90%)"""
@@ -928,6 +928,7 @@ async def calc_upgrades(bot, parameter: str, value: float, total: dict, ax, slot
     """calculate upgrades"""
     ranges = {"max": [0, 2, 4, 6, 8, 12, 16, 20],
               "core": [0, 0, 0, 0, 0, 0, 7, 8],  # must be before "damage"
+              "bonus damage": [0, 0, 0, 0, 0, 0, 3, 10],
               "damage": [0, 1, 2, 3, 4, 6, 8, 8.5],
               "miss": [0, 1.5, 3, 4.5, 6, 7.5, 9, 9.5],
               "flight": [0.5, 1, 1.5, 2, 3, 4, 5.5, 6],
@@ -939,11 +940,13 @@ async def calc_upgrades(bot, parameter: str, value: float, total: dict, ax, slot
               "production": [0, 0, 0, 0, 0, 0, 2.5, 3],
               "split": [0, 0, 0, 0, 0, 0, 4, 5],
               "increase": [0, 0, 0, 0, 0, 0, 10, 15],
-              "elixir": [0, 0, 0, 0, 0, 0, 6, 10]
+              "elixir": [0, 0, 0, 0, 0, 0, 6, 10],
               }
 
     if parameter in ("avoid", "crit", "dmg"):
         ranges = ranges["damage"]
+    elif parameter in ("morning", "noon", "evening", "night"):
+        ranges = ranges["bonus damage"]
     elif parameter in ("consume", "merge", "merging", "restore", "ammunition"):
         ranges = ranges["production"]
     else:

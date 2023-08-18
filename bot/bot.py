@@ -141,29 +141,33 @@ class MyClient(Bot):
 
         self.countries_by_name = {v.lower(): k for k, v in self.countries.items()}
 
-        self.all_parameters = {"avoid": "Chance to avoid damage",
-                              "max": "Increased maximum damage",
-                              "crit": "Increased critical hit chance",
-                              "core": "Increased damage for cores",  # must be before damage
-                              "damage": "Increased damage", "dmg": "Increased damage",
-                              "miss": "Miss chance reduction",
-                              "flight": "Chance for free flight",
-                              "consume": "Save ammunition",
-                              "eco": "Increased economy skill",
-                              "str": "Increased strength",
-                              "hit": "Increased hit",
-                              "less": "Less weapons for Berserk",
-                              "find": "Find a weapon",
-                              "split": "Improved split",
-                              "production": "Bonus * production",
-                              "merging": "Merge bonus",
-                              "merge": "Reduced equipment merge price",
-                              "restore": "Restoration",
-                              "increase": "Increase other parameters",
-                              "elixir": "Elixir time increased"}
+        self.all_parameters = {"morning": "Morning bonus damage",
+                               "noon": "Noon bonus damage",
+                               "evening": "Evening bonus damage",
+                               "night": "Night bonus damage",
+                               "avoid": "Chance to avoid damage",
+                               "max": "Increased maximum damage",
+                               "crit": "Increased critical hit chance",
+                               "core": "Increased damage for cores",  # must be before damage
+                               "damage": "Increased damage", "dmg": "Increased damage",
+                               "miss": "Miss chance reduction",
+                               "flight": "Chance for free flight",
+                               "consume": "Save ammunition",
+                               "eco": "Increased economy skill",
+                               "str": "Increased strength",
+                               "hit": "Increased hit",
+                               "less": "Less weapons for Berserk",
+                               "find": "Find a weapon",
+                               "split": "Improved split",
+                               "production": "Bonus * production",
+                               "merging": "Merge bonus",
+                               "merge": "Reduced equipment merge price",
+                               "restore": "Restoration",
+                               "increase": "Increase other parameters",
+                               "elixir": "Elixir time increased"}
 
         self.session = None
-        self.locked_session  = None
+        self.locked_session = None
         self.org_session = None
         self.phone_users = (find_one("collection", "phone") or {"users": []})["users"]
         self.default_nick_dict = find_one("collection", "default")
