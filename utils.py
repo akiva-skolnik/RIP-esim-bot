@@ -132,7 +132,8 @@ async def get_locked_content(link: str, test_login: bool = False):
     except:
         not_logged_in = True
     if not_logged_in:
-        payload = {'login': os.environ.get("NICK"), 'password': os.environ.get("PASSWORD"), "submit": "Login"}
+        payload = {'login': os.environ.get(server, os.environ.get("NICK")),
+                   'password': os.environ.get("PASSWORD"), "submit": "Login"}
         async with locked_session.get(base_url, ssl=False) as _:
             async with locked_session.post(base_url + "login.html", data=payload, ssl=False) as r:
                 if "index.html?act=login" not in str(r.url):
