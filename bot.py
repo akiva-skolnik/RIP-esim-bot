@@ -168,6 +168,7 @@ async def update_buffs(server: str) -> None:
 
 async def update_time(server: str) -> None:
     """update time db"""
+    date_format = "%d-%m-%Y %H:%M:%S"
     url = f'https://{server}.e-sim.org/'
     nick, cs, total_minutes, total_avg, month_minutes, month_avg = range(6)
     first_date = {
@@ -211,7 +212,8 @@ async def update_time(server: str) -> None:
                 data[k][month_avg] = str(timedelta(minutes=int((v[month_minutes] / end_date2) * 24 * 60)))[:-3]
             data = dict(sorted(data.items(), key=lambda x: (
                 x[1][month_minutes], x[1][total_minutes]), reverse=True)[:3000 if len(data) < 3000 else 2900])
-            data["_headers"] = headers[1:]
+            now = datetime.now().astimezone(pytz.timezone('Europe/Berlin')).strftime(date_format)
+            data["_headers"] = headers[1:] + now
             await replace_one("time_online", server, data)
             del data["_headers"]
             if randint(1, 30) == 1:
