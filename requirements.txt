@@ -1,4 +1,4 @@
-discord.py[speed]
+discord.py[speed]>=2.0.0
 git+https://github.com/Rapptz/discord-ext-menus
 sympy
 tabulate

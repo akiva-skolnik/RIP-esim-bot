@@ -95,7 +95,11 @@ class General(Cog):
             server = utils.server_validation(server)
             base_url = f"https://{server}.e-sim.org/"
             now = datetime.now().astimezone(timezone('Europe/Berlin')).replace(tzinfo=None)
-            tree = await utils.get_locked_content(f'{base_url}tournamentEvents.html')
+            try:
+                tree = await utils.get_locked_content(f'{base_url}tournamentEvents.html')
+            except:
+                embed.add_field(name=server, value="Error", inline=False)
+                continue
             events = []
             indexes = []
             for tr in range(2, 17):

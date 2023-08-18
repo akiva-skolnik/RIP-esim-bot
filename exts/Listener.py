@@ -48,7 +48,7 @@ class Listener(Cog):
             commands_count[str(command.name)] = 0
         commands_count[str(command.name)] += 1
 
-        await utils.replace_one("collection", "commands count", commands_count)
+        await utils.replace_one("collection", "commands_count", commands_count)
 
     @Cog.listener()
     async def on_app_command_error(self, interaction: Interaction, error: AppCommandError):

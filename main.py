@@ -20,6 +20,7 @@ from Help import utils
 
 matplotlib.use('Agg')
 
+
 @bot.event
 async def on_error(*args, **kwargs) -> None:
     """Error Handling"""
@@ -51,16 +52,16 @@ async def activate_reminder() -> None:
 
 async def activate_watch_and_ping() -> None:
     """Activating Watch, Auction and Ping Function at Restart"""
-    db_dict = await utils.find_one("collection", "auction") or {"auction": []}
-    for inner_dict in list(db_dict["auction"]):
+    db_dict = await utils.find_one("collection", "auctions") or {"auctions": []}
+    for inner_dict in list(db_dict["auctions"]):
         channel = bot.get_channel(int(inner_dict["channel"]))
         if channel:
             bot.loop.create_task(
                 watch_auction_func(bot, channel, inner_dict['link'], inner_dict['t'],
                                    inner_dict['custom'], inner_dict["author_id"]))
         else:
-            db_dict["auction"].remove(inner_dict)
-            await utils.replace_one("collection", "auction", db_dict)
+            db_dict["auctions"].remove(inner_dict)
+            await utils.replace_one("collection", "auctions", db_dict)
         await asyncio.sleep(5)
 
     db_dict = await utils.find_one("collection", "watch") or {"watch": []}

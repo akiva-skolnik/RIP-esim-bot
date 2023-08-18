@@ -1114,8 +1114,8 @@ class Battle(Cog):
         """Get the watch list for this channel"""
         data = []
         find_watch = await utils.find_one("collection", "watch") or {"watch": []}
-        find_auction = await utils.find_one("collection", "auction") or {"auction": []}
-        for watch_dict in find_watch["watch"] + find_auction["auction"]:
+        find_auctions = await utils.find_one("collection", "auctions") or {"auctions": []}
+        for watch_dict in find_watch["watch"] + find_auctions["auctions"]:
             if watch_dict["channel"] == str(interaction.channel.id):
                 data.append(f"<{watch_dict['link']}> (at T{watch_dict['t']})")
         await interaction.response.send_message('\n'.join(["**Watch List:**"] + data + [
@@ -1143,11 +1143,11 @@ class Battle(Cog):
             link = await AuctionLink().transform(interaction, link)
             server, auction_id = link["server"], link["id"]
             link = f'https://{server}.e-sim.org/auction.html?id={auction_id}'
-            find_auction = await utils.find_one("collection", "auction") or {"auction": []}
-            find_auction["auction"].append(
+            find_auctions = await utils.find_one("collection", "auctions") or {"auctions": []}
+            find_auctions["auctions"].append(
                 {"channel": str(interaction.channel.id), "link": link, "t": t, "custom": custom_msg,
                  "author_id": str(interaction.user.id)})
-            await utils.replace_one("collection", "auction", find_auction)
+            await utils.replace_one("collection", "auctions", find_auctions)
             await watch_auction_func(self.bot, interaction.channel, link, t, custom_msg)
 
         except Exception:
@@ -1183,7 +1183,7 @@ class Battle(Cog):
         """Stop watching a battle / auction"""
 
         find_watch = await utils.find_one("collection", "watch") or {"watch": []}
-        find_auction = await utils.find_one("collection", "auction") or {"auction": []}
+        find_auctions = await utils.find_one("collection", "auctions") or {"auctions": []}
         channel_id = ctx.channel.id if isinstance(ctx, Context) else ctx.id
 
         removed = []
@@ -1191,16 +1191,16 @@ class Battle(Cog):
             if auction_dict["channel"] == str(channel_id) and auction_dict["link"] == link:
                 find_watch["watch"].remove(auction_dict)
                 removed.append(f"<{link}>")
-        for auction_dict in list(find_auction["auction"]):
+        for auction_dict in list(find_auctions["auctions"]):
             if auction_dict["channel"] == str(channel_id) and auction_dict["link"] == link:
-                find_auction["auction"].remove(auction_dict)
+                find_auctions["auctions"].remove(auction_dict)
                 removed.append(f"<{link}>")
         if not removed:
             await ctx.send(f"I'm not watching {link} in this server")
         else:
             await ctx.send("Removed " + ", ".join(removed))
             await utils.replace_one("collection", "watch", find_watch)
-            await utils.replace_one("collection", "auction", find_auction)
+            await utils.replace_one("collection", "auctions", find_auctions)
 
     @staticmethod
     def normal_pdf(x, mean, std) -> float:
@@ -1635,11 +1635,11 @@ async def watch_auction_func(bot, channel: TextChannel, link: str, t: float, cus
 
 async def remove_auction(bot, link: str, channel_id: int) -> None:
     """Removes auction"""
-    find_auction = await utils.find_one("collection", "auction") or {"auction": []}
-    for auction_dict in list(find_auction["auction"]):
+    find_auctions = await utils.find_one("collection", "auctions") or {"auctions": []}
+    for auction_dict in list(find_auctions["auctions"]):
         if auction_dict["link"] == link and auction_dict["channel"] == channel_id:
-            find_auction["auction"].remove(auction_dict)
-    await utils.replace_one("collection", "auction", find_auction)
+            find_auctions["auctions"].remove(auction_dict)
+    await utils.replace_one("collection", "auctions", find_auctions)
 
 
 async def setup(bot) -> None:

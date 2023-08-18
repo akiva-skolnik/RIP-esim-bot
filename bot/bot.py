@@ -3,7 +3,7 @@ import json
 import os
 from datetime import date
 
-import aiosqlite
+# import aiosqlite
 from aiohttp import ClientSession, ClientTimeout
 from discord import (AllowedMentions, Forbidden, Game, HTTPException, Intents,
                      Interaction, Message, NotFound, app_commands)
@@ -20,6 +20,7 @@ async def load_extensions(reload: bool = False) -> None:
                 else:
                     await bot.load_extension(f'exts.{file_name.replace(".py", "")}')
         break
+
 
 def find_one(collection: str, _id: str) -> dict:
     """find one"""
@@ -43,7 +44,7 @@ class MyTree(app_commands.CommandTree):
             return True
         if bot.premium_users.get(str(interaction.user.id), {}).get("added_at", "") != today:
             bot.premium_users[str(interaction.user.id)] = {"added_at": today}
-            #await replace_one("collection", "donors", bot.premium_users)
+            # await replace_one("collection", "donors", bot.premium_users)
             return True
         try:
             await interaction.response.send_message(
@@ -54,12 +55,13 @@ class MyTree(app_commands.CommandTree):
             pass
         return False
 
+
 class MyClient(Bot):
     """Custom Client"""
     def __init__(self) -> None:
         super().__init__(command_prefix=when_mentioned, case_insensitive=True,
                          activity=Game("type /"), allowed_mentions=AllowedMentions(
-                replied_user=False), intents=Intents.default(), tree_cls=MyTree)
+                          replied_user=False), intents=Intents.default(), tree_cls=MyTree)
         with open("./config.json", 'r', encoding="utf-8") as file:
             self.config = json.load(file)
             # {"db_url": "", "TOKEN": ""}
@@ -97,7 +99,7 @@ class MyClient(Bot):
         self.all_servers = ['primera', 'secura', 'suna', 'alpha', 'luxia', 'azura', 'zeta', 'delta']
 
         self.products = ["iron", "grain", "oil", "stone", "wood", "diamonds",
-                        "weapon", "house", "gift", "food", "ticket", "defense_system", "hospital", "estate"]
+                         "weapon", "house", "gift", "food", "ticket", "defense_system", "hospital", "estate"]
 
         self.countries = {
             1: 'Poland', 2: 'Russia', 3: 'Germany', 4: 'France', 5: 'Spain', 6: 'United Kingdom',
@@ -160,7 +162,6 @@ class MyClient(Bot):
                               "increase": "Increase other parameters",
                               "elixir": "Elixir time increased"}
 
-
         self.session = None
         self.locked_session  = None
         self.org_session = None
@@ -194,7 +195,8 @@ async def should_cancel(interaction: Interaction, msg: Message = None) -> bool:
         return True
     return False
 
-#TODO: make it class functions
+
+# TODO: make it class functions
 async def reset_cancel(interaction: Interaction) -> None:
     """Reset the cancel option before each invoke"""
     if isinstance(interaction, Interaction) and await should_cancel(interaction):
