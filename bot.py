@@ -270,6 +270,8 @@ async def mm():
             history.clear()
 
             # update db
+            now = datetime.now().astimezone(pytz.timezone('Europe/Berlin')).strftime(date_format)
+            mm_per_server[server]["last_update"] = now
             await replace_one("mm", server, mm_per_server[server])
 
         now = datetime.now().astimezone(pytz.timezone('Europe/Berlin')).strftime(date_format)
