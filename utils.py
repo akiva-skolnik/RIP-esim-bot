@@ -7,10 +7,13 @@ from typing import Union
 
 import gspread_asyncio
 from aiohttp import ClientSession
+from dotenv import load_dotenv
 from google.oauth2.service_account import Credentials
 from lxml.html import fromstring
 
 from big_dicts import countries_per_id, countries_per_server
+
+load_dotenv()
 
 all_parameters: dict = {
     "avoid": "Chance to avoid damage",
@@ -48,7 +51,8 @@ def get_creds():
 
 agcm = gspread_asyncio.AsyncioGspreadClientManager(get_creds)
 
-async def spreadsheets(SPREADSHEET_ID: str, RANGE_NAME: str, columns:str = "!A:Z",
+
+async def spreadsheets(SPREADSHEET_ID: str, RANGE_NAME: str, columns: str = "!A:Z",
                        values: list = None, delete: bool = False) -> None:
     """Update spreadsheets"""
     agc = await agcm.authorize()
@@ -82,7 +86,8 @@ async def get_content(link: str, return_type: str = "", data: dict = None, sessi
     for _ in range(10):
         try:
             async with (
-            session.get(link, ssl=False) if data is None else session.post(link, data=data, ssl=False)) as respond:
+                    session.get(link, ssl=False) if data is None else session.post(link, data=data,
+                                                                                   ssl=False)) as respond:
                 if "google.com" in str(respond.url) or respond.status == 403:
                     await asyncio.sleep(randint(3, 10))
                     continue
@@ -113,9 +118,6 @@ async def get_locked_content(link: str, test_login: bool = False):
     """get locked content"""
     link = link.split("#")[0].replace("http://", "https://")
     server = link.split("https://", 1)[1].split(".e-sim.org", 1)[0]
-    nick, pw = "Whopper", "zfdgzsJKGH98"  # don't worry, it's not a secret
-    nicks = {"luxia": "whopper_69", "zeta": "Whopper1"}
-    nick = nicks.get(server, nick)
     base_url = f"https://{server}.e-sim.org/"
     not_logged_in = False
     tree = None
@@ -130,7 +132,7 @@ async def get_locked_content(link: str, test_login: bool = False):
     except:
         not_logged_in = True
     if not_logged_in:
-        payload = {'login': nick, 'password': pw, "submit": "Login"}
+        payload = {'login': os.environ.get("NICK"), 'password': os.environ.get("PASSWORD"), "submit": "Login"}
         async with locked_session.get(base_url, ssl=False) as _:
             async with locked_session.post(base_url + "login.html", data=payload, ssl=False) as r:
                 if "index.html?act=login" not in str(r.url):

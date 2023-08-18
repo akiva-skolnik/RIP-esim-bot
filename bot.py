@@ -10,7 +10,8 @@ from random import randint
 import pytz
 
 from big_dicts import countries_per_id, countries_per_server
-from utils import find_one, get_content, get_locked_content, get_countries, get_eqs, replace_one, spreadsheets
+from utils import (find_one, get_content, get_countries, get_eqs,
+                   get_locked_content, replace_one, spreadsheets)
 
 warnings.filterwarnings("ignore")
 
