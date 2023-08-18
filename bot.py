@@ -323,7 +323,7 @@ async def price(server: str) -> None:
                 # Delete 0 (no MM offers)
                 product = f"Q{quality} {product_type}" if product_type not in raw_products else product_type
                 DICT = sorted({k: v for k, v in DICT.items() if DICT[k]['price']}.items(), key=lambda x: x[1]["price"])[:5]
-                FIND: dict = await find_one("prices_history", product)
+                FIND: dict = await find_one("prices_history", product.replace(" ", "_"))
                 for count, (country, price_stock) in enumerate(DICT):
                     link = f"{url}productMarket.html?resource={product_type.upper()}&countryId={country}&quality={quality}"
                     MM = f"{url}monetaryMarket.html?buyerCurrencyId={country}"
@@ -340,7 +340,7 @@ async def price(server: str) -> None:
                         results[product] = []
                     results[product].append(
                         [price_stock["price"], price_stock["stock"], get_countries(server, country), link, MM])
-                await replace_one("prices_history", product, FIND)
+                await replace_one("prices_history", product.replace(" ", "_"), FIND)
                 FIND.clear()
             offers.clear()
 
