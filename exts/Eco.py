@@ -842,9 +842,32 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             embed.title = f"{utils.codes(api['citizenship'])} " + api['login'] + ", " + server
             embed.url = f"https://{server_nick['server']}.e-sim.org/profile.html?id={api['id']}"
             tree = await utils.get_content(embed.url)
-            array = []
 
-            for eq_type, parameters, values, _ in utils.get_eqs(tree):
+            # update values precision from the api (bad format)
+            api_items = []
+            api_values = []
+            for item in api["gearInfo"]:
+                if "slot" in item:
+                    api_items.append(item["slot"].lower().replace("personal", "").replace("charm", "").replace(
+                        "weapon upgrade", "WU").title().strip())
+                else:
+                    for p in item["parameters"]:
+                        api_values.append(p["value"])
+
+            profile_items = {eq_type.split()[1]: {"type": eq_type, "parameters": [list(x) for x in zip(parameters, values)]} for
+                             eq_type, parameters, values, eq_link in utils.get_eqs(tree)}
+            api_count = 0
+            for item in api_items:
+                for profile_count in range(len(profile_items[item]["parameters"])):
+                    profile_items[item]["parameters"][profile_count][1] = api_values[api_count]
+                    api_count += 1
+            # end update
+
+            array = []
+            for profile_items_values in profile_items.values():
+                eq_type = profile_items_values["type"]
+                parameters = [x[0] for x in profile_items_values["parameters"]]
+                values = [x[1] for x in profile_items_values["parameters"]]
                 increase = 1
                 if "increase" in parameters:
                     inc_index = parameters.index("increase")
