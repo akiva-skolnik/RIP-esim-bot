@@ -17,9 +17,8 @@ warnings.filterwarnings("ignore")
 
 PRODUCT_SHEET = "17y8qEU4aHQRTXKdnlM278z3SDzY16bmxMwrZ0RKWcEI"
 servers: dict = {
+    "nika": "141302UWgwAMoNO55NfWzeQkvCtq7IY_MAYSGnqfTy2I",
     "delta": "11v5Be8IDpVFHyLwd4pcIBa564KAzsp_FwATLVJmu08g",
-    "zeta": "1lYS3tG259h1NxS-I-KNwyTnkoSK1zQzmjaSyo1iWtzo",
-    "azura": "1xy8Ssj91q6z8vqmtnpbviY1pK44ed3FQrOI3KyVq2cg",
     "luxia": "1mx_JkHVnTVikNdTSxhvfFh4Pzuepp9ZGakCAtxnGxyY",
     "suna": "1imlsoLdaEb45NnJGmo5T7mQxsjzzTGbrkvqfcR8pMlE",
     "alpha": "1KqxbZ9LqS191wRf1VGLNl-aw6UId9kmUE0k7NfKQdI4",
@@ -174,9 +173,8 @@ async def update_time(server: str) -> None:
     first_date = {
         "primera": ["Minutes online (since 10/12/20)", "09/12/2020", "10/12/2020"],
         "luxia": ["Minutes online (since day 1)", "10/02/2022", "11/02/2022"],
-        "azura": ["Minutes online (since day 1)", "16/03/2023", "17/03/2023"],
-        "zeta": ["Minutes online (since day 1)", "11/05/2023", "12/05/2023"],
-        "delta": ["Minutes online (since day 1)", "06/07/2023", "07/07/2023"]}
+        "delta": ["Minutes online (since day 1)", "06/07/2023", "07/07/2023"],
+        "nika": ["Minutes online (since day 1)", "07/09/2023", "08/09/2023"]}
     headers = ["Link", "Nick", "Citizenship",
                "Minutes online (since 19/05/2020)" if server not in first_date else first_date[server][0],
                "Avg. per day", "Minutes online (this month)", "Avg. per day"]
@@ -316,7 +314,7 @@ async def price(server: str) -> None:
                     offers[product][country] = {"price": round(db_mm.get(str(country), 0) * float(offer["price"]), 4),
                                                 "stock": offer["quantity"]}
             db_mm.clear()
-            if server not in ('azura', 'zeta', 'delta'):
+            if server not in ('delta', 'nika'):
                 this_month = "01-" + datetime.now().astimezone(pytz.timezone('Europe/Berlin')).strftime("%m-%Y")
             else:
                 this_month = datetime.now().astimezone(pytz.timezone('Europe/Berlin')).strftime("%d-%m-%Y")
