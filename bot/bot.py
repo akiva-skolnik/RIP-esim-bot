@@ -36,7 +36,7 @@ class MyTree(app_commands.CommandTree):
     """Lock new server"""
     async def interaction_check(self, interaction: Interaction) -> bool:
         """Lock new server"""
-        if not any("nika" in str(v) for v in interaction.data.values()):
+        if not any("vega" in str(v) for v in interaction.data.values()):
             return True
         today = str(date.today())
         if bot.premium_users.get(str(interaction.user.id), {}).get("level", -1) >= 1 or (
@@ -48,7 +48,7 @@ class MyTree(app_commands.CommandTree):
             return True
         try:
             await interaction.response.send_message(
-                "nika server is for premium users only. You can use one command per day for free."
+                "vega server is for premium users only. You can use one command per day for free."
                 "\nGet premium at <https://www.buymeacoffee.com/RipEsim> :coffee:"
                 "\nSupport: https://discord.com/invite/q96wSd6")
         except HTTPException:
@@ -86,8 +86,8 @@ class MyClient(Bot):
             "secura": ["10en9SJVsIQz7uGhbXwb9GInnOdcDuE4p7L93un0q6xw", 1876322398, 1265748453],
             "suna": ["1imlsoLdaEb45NnJGmo5T7mQxsjzzTGbrkvqfcR8pMlE", 2061648609, 0],
             "alpha": ["1KqxbZ9LqS191wRf1VGLNl-aw6UId9kmUE0k7NfKQdI4", 1445005647, 0],
-            "delta": ["11v5Be8IDpVFHyLwd4pcIBa564KAzsp_FwATLVJmu08g", 1876322398, 1265748453],
-            "nika": ["141302UWgwAMoNO55NfWzeQkvCtq7IY_MAYSGnqfTy2I", 1876322398, 1265748453]
+            "nika": ["141302UWgwAMoNO55NfWzeQkvCtq7IY_MAYSGnqfTy2I", 1876322398, 1265748453],
+            "vega": ["19fmlmxwWrzA2PgvzKvB-tNhiSUDTfVBtooLIOnc38vI", 1876322398, 1265748453]
         }
 
         self.delay = {}
@@ -95,7 +95,7 @@ class MyClient(Bot):
         self.api = "http://23.95.130.52:5000/"
         self.date_format = "%d-%m-%Y %H:%M:%S"
 
-        self.all_servers = ['primera', 'secura', 'suna', 'alpha', 'luxia', 'delta', 'nika']
+        self.all_servers = ['primera', 'secura', 'suna', 'alpha', 'luxia', 'nika', 'vega']
 
         self.products = ["iron", "grain", "oil", "stone", "wood", "diamonds",
                          "weapon", "house", "gift", "food", "ticket", "defense_system", "hospital", "estate"]
