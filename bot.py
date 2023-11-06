@@ -10,13 +10,15 @@ from random import randint
 import pytz
 
 from big_dicts import countries_per_id, countries_per_server
-from utils import (find_one, get_content, get_countries, get_eqs,
-                   get_locked_content, replace_one, spreadsheets)
+import utils
 
 warnings.filterwarnings("ignore")
 
+TIMEZONE = 'Europe/Berlin'
+DATETIME_FORMAT = "%d-%m-%Y %H:%M:%S"
+
 PRODUCT_SHEET = "17y8qEU4aHQRTXKdnlM278z3SDzY16bmxMwrZ0RKWcEI"
-servers: dict = {
+servers = {
     "vega": "19fmlmxwWrzA2PgvzKvB-tNhiSUDTfVBtooLIOnc38vI",
     "nika": "141302UWgwAMoNO55NfWzeQkvCtq7IY_MAYSGnqfTy2I",
     "luxia": "1mx_JkHVnTVikNdTSxhvfFh4Pzuepp9ZGakCAtxnGxyY",
@@ -26,237 +28,276 @@ servers: dict = {
     "secura": "10en9SJVsIQz7uGhbXwb9GInnOdcDuE4p7L93un0q6xw"}
 
 
+# TODO: split into smaller functions.
 async def update_buffs(server: str) -> None:
     """update buffs db"""
-    url = f'https://{server}.e-sim.org/'
-    date_format = "%d-%m-%Y %H:%M:%S"
-    sizes = {"mili": 15, "mini": 30, "standard": 60,
-             "major": 2 * 60, "huge": 4 * 60, "exceptional": 8 * 60}
-    elixirs = ["jinxed", "finese", "bloodymess", "lucky"]
-    LINK, CITIZENSHIP, DMG, LAST_SEEN, PREMIUM, BUFFED_AT, DEBUFF_ENDS, TILL_CHANGE = range(8)
-
+    base_url = f'https://{server}.e-sim.org/'
+    BUFF_SIZES = {"mili": 15, "mini": 30, "standard": 60,
+                  "major": 2 * 60, "huge": 4 * 60, "exceptional": 8 * 60}
+    ELIXIRS = ["jinxed", "finese", "bloodymess", "lucky"]
+    base_columns = 8
+    LINK, CITIZENSHIP, DMG, LAST_SEEN, PREMIUM, BUFFED_AT, DEBUFF_ENDS, TILL_CHANGE = range(base_columns)
+    is_first_update = True
     while True:
-        start = time.time()
+        loop_start_time = time.time()
         try:
-            data: dict = await find_one("buffs", server)
-            now = datetime.now().astimezone(pytz.timezone('Europe/Berlin')).replace(tzinfo=None)
-            now_s = now.strftime(date_format)
-            last_update = data.get("Last update:", [now_s])[0]
-            if data:
-                try:
-                    del data["Nick"]
-                    del data["Last update:"]
-                except:
-                    pass
+            buffs_data = await utils.find_one("buffs", server) or {}
+            now = datetime.now().astimezone(pytz.timezone(TIMEZONE)).replace(tzinfo=None)
+            now_s = now.strftime(DATETIME_FORMAT)
+            last_update = buffs_data.get("Last update:", [now_s])[0]
+            buffs_data.pop("Nick", None)
+            buffs_data.pop("Last update", None)
 
-            for player in await get_content(f"{url}apiOnlinePlayers.html"):
-                row: dict = json.loads(player)
-                nick = row['login']
+            for player_info in await utils.get_content(f"{base_url}apiOnlinePlayers.html"):
+                player = json.loads(player_info)
+                nick = player['login']
+                player_profile_link = f"{base_url}profile.html?id={player['id']}"
 
-                link = url + f"profile.html?id={row['id']}"
+                # Pause to comply with server request limits
                 await asyncio.sleep(0.37)
-                tree = await get_content(link)
-                try:
-                    premium = len(tree.xpath('//*[@class="premium-account"]')) == 1
-                    CS = tree.xpath('//*[@class="profile-row" and span = "Citizenship"]/span/span/text()')[0]
-                    dmg = tree.xpath('//*[@class="profile-row" and span = "Damage"]/span/text()')[0]
-                except:
-                    continue
+                tree = await utils.get_content(player_profile_link)
+                player_details = utils.extract_player_details(tree)
 
-                buffs_debuffs = [x.split("/specialItems/")[-1].split(".png")[0] for x in tree.xpath(
-                    '//*[@class="profile-row" and (strong="Debuffs" or strong="Buffs")]//img/@src') if
-                                 "img/specialItems/" in x]
-                buffs = [x.split("_")[0].lower() for x in buffs_debuffs if "positive" in x.split("_")[1:]]
-                if any(a in buffs for a in ('steroids', 'tank', 'bunker', 'sewer')):
-                    if nick not in data:
-                        data[nick] = [link, CS, dmg, "", premium, "", "", "", "", "", "", "", "", "", "", ""]
-                    if not data[nick][BUFFED_AT]:
-                        data[nick][BUFFED_AT] = now_s
+                # Update the player data if they are buffed
+                if player_details["buffed"]:
+                    if nick not in buffs_data:
+                        buffs_data[nick] = [player_profile_link, player_details['citizenship'],
+                                            player_details['damage'],
+                                            now_s, player_details['premium']] + [""] * (
+                                                   3 + len(ELIXIRS) * 2)  # 3 = buffed at, debuff ends, till change
+                    if not buffs_data[nick][BUFFED_AT]:
+                        buffs_data[nick][BUFFED_AT] = now_s
 
+                # Calculate the elixir buff durations
                 elixir_bonus = 0
-                for eq_type, parameters, values, eq_link in get_eqs(tree):
-                    for val, p in zip(values, parameters):
+                for eq_type, parameters, sorted_data, eq_link in utils.get_eqs(tree):
+                    for val, p in zip(sorted_data, parameters):
                         if p == "elixir":
                             elixir_bonus += val
 
-                for buff in buffs:
+                # Update the times of the elixir buff
+                for buff in player_details["buffs"]:
                     if "elixir" in buff:
                         size = buff.split("elixir")[1].split("_")[0]
                         elixir = buff.split("elixir")[0]
-                        index = elixirs.index(elixir)
-                        if nick not in data:
-                            data[nick] = [link, CS, dmg, "", premium, "", "", "", "", "", "", "", "", "", "", ""]
-                        if not data[nick][index + 8]:
-                            data[nick][index + 8] = str(timedelta(minutes=(1 + elixir_bonus / 100) * sizes[size]))
-                        if not data[nick][index + 12]:
-                            data[nick][index + 12] = now_s
-                if row["login"] in data:
-                    data[row["login"]][LAST_SEEN] = now_s
+                        index = ELIXIRS.index(elixir)
+                        if nick not in buffs_data:
+                            buffs_data[nick] = [player_profile_link, player_details['citizenship'],
+                                                player_details['damage'],
+                                                now_s, player_details['premium']] + \
+                                               [""] * (3 + len(ELIXIRS) * 2)  # 3 = buffed at, debuff ends, till change
+                        if not buffs_data[nick][base_columns + index]:
+                            buffs_data[nick][base_columns + index] = str(
+                                timedelta(minutes=(1 + elixir_bonus / 100) * BUFF_SIZES[size]))
+                        if not buffs_data[nick][base_columns + index + len(ELIXIRS)]:
+                            buffs_data[nick][base_columns + index + len(ELIXIRS)] = now_s
 
-            for nick in list(data):
-                row: dict = data[nick]
-                days = 2  # if row[PREMIUM] else 3
-                day_seconds = 24 * 60 * 60
-                if row[BUFFED_AT]:
-                    buffed_seconds = (now - datetime.strptime(row[BUFFED_AT], date_format)).total_seconds()
-                    row[DEBUFF_ENDS] = (timedelta(days=days) + datetime.strptime(row[BUFFED_AT], date_format)).strftime(
-                        date_format)
+                if player["login"] in buffs_data:  # update last seen
+                    buffs_data[player["login"]][LAST_SEEN] = now_s
+
+            # Update the buffed and debuffed times
+            day_seconds = 24 * 60 * 60  # seconds in a day
+            for nick in list(buffs_data):  # Convert to list to avoid 'dictionary changed size during iteration' error
+                player = buffs_data[nick]
+                days = 2  # if row[PREMIUM] else 3  (non-premium debuff used to last for 3 days)
+
+                # Calculate the seconds since the player was buffed
+                if player[BUFFED_AT]:
+                    buffed_at = datetime.strptime(player[BUFFED_AT], DATETIME_FORMAT)
+                    buffed_seconds = (now - buffed_at).total_seconds()
+                    player[DEBUFF_ENDS] = (timedelta(days=days) + buffed_at).strftime(DATETIME_FORMAT)
                 else:
                     buffed_seconds = 0
 
-                if 0 < buffed_seconds < day_seconds:  # buff lasts 24h
-                    seconds = day_seconds - buffed_seconds
-                elif 0 < buffed_seconds < day_seconds * days:  # debuff ends
-                    seconds = (datetime.strptime(row[DEBUFF_ENDS], date_format) - now).total_seconds()
-                else:
-                    seconds = 0
+                # Determine time remaining until buff/debuff status changes
+                if 0 < buffed_seconds < day_seconds:  # If buffed within the last 24h
+                    seconds_until_change = day_seconds - buffed_seconds
+                elif 0 < buffed_seconds < day_seconds * days:  # If in debuff period
+                    seconds_until_change = (
+                            datetime.strptime(player[DEBUFF_ENDS], DATETIME_FORMAT) - now).total_seconds()
+                else:  # If no buffs/debuffs are active
+                    seconds_until_change = 0
 
-                m, s = divmod(seconds, 60)
-                h, m = divmod(m, 60)
-                if seconds > 0:
-                    row[TILL_CHANGE] = f'{int(h):02d}:{int(m):02d}:{int(s):02d}'
-                else:
-                    row[BUFFED_AT] = row[DEBUFF_ENDS] = row[TILL_CHANGE] = ""
+                # Update the time remaining until buff/debuff status changes
+                if seconds_until_change > 0:
+                    player[TILL_CHANGE] = utils.format_seconds(seconds_until_change)
+                else:  # Reset timers if no active buffs or debuffs
+                    player[BUFFED_AT] = player[DEBUFF_ENDS] = player[TILL_CHANGE] = ""
 
-                for elixir in range(8, 12):
-                    if not row[elixir]:
+                # Update elixir buff timers
+                for elixir in range(base_columns, base_columns + len(ELIXIRS)):
+                    if not player[elixir]:
                         continue
-                    time_from_update = now - datetime.strptime(last_update, date_format)
-                    is_negative = "-" in row[elixir]
-                    row[elixir] = row[elixir].replace("-", "")
+                    elapsed_since_update = now - datetime.strptime(last_update, DATETIME_FORMAT)
+                    is_negative = "-" in player[elixir]
+                    player[elixir] = player[elixir].replace("-", "")
                     try:
-                        t = datetime.strptime(row[elixir], "%H:%M:%S")
-                    except:
-                        row[elixir] = ""
+                        elixir_time = datetime.strptime(player[elixir], "%H:%M:%S")
+                    except ValueError:
+                        player[elixir] = ""
                         continue
-                    till_elixir_db = timedelta(hours=t.hour, minutes=t.minute, seconds=t.second)
-                    sec = (till_elixir_db - time_from_update).total_seconds()
-                    if not is_negative:
+
+                    elixir_duration = timedelta(hours=elixir_time.hour, minutes=elixir_time.minute,
+                                                seconds=elixir_time.second)
+                    remaining_seconds = (elixir_duration - elapsed_since_update).total_seconds()
+                    if not is_negative:  # TODO: is there a nicer way to replace this logic?
                         is_negative = False
-                        if sec < 0:
-                            sec += 24 * 60 * 60 - (
-                                        now - datetime.strptime(row[elixir + 4], date_format)).total_seconds()
+                        if remaining_seconds < 0:  # If the timer is negative, calculate the actual remaining time
+                            elixir_start = datetime.strptime(player[elixir + len(ELIXIRS)], DATETIME_FORMAT)
+                            remaining_seconds += day_seconds - (now - elixir_start).total_seconds()
                             is_negative = True
 
-                    m, s = divmod(sec, 60)
-                    h, m = divmod(m, 60)
-                    row[elixir] = ((
-                                       "-" if is_negative else "") + f'{int(h):0d}:{int(m):02d}:{int(s):02d}') if sec > 0 else ""
+                    player[elixir] = (("-" if is_negative else "") + utils.format_seconds(
+                        remaining_seconds)) if remaining_seconds > 0 else ""
 
-                if not any(row[i] for i in range(7, 12)):
-                    del data[nick]
+                # Remove the player if there are no active buffs or elixirs
+                if not any(player[i] for i in range(7, 12)):
+                    del buffs_data[nick]
 
-            values: dict = {"Last update:": [now_s, "(game time)."] + ([""] * 10),
-                            "Nick": ["Link", "Citizenship", "Total Dmg", "Last Seen", "Premium", "Buffed At",
-                                     "Debuff Ends", "Till Status Change"] + [x.title() for x in elixirs]}
-            values.update(dict(sorted(data.items(), key=lambda x: (x[1][1], x[0]))))
-            data.clear()
-            if randint(1, 10) == 1:
-                await spreadsheets(servers[server], "buffs", "!A1:M200",
-                                   [([v[0], k] + v[1:12]) if k != "Last update:" else [k] + v for k, v in values.items()],
-                                   delete=True)
-            await replace_one("buffs", server, values)
-            values.clear()
+            # Sort the data for presentation in the spreadsheet, and update the database
+            sorted_data = {"Last update:": [now_s, "(game time)."] + [""] * (base_columns - 2 + len(ELIXIRS)),
+                           "Nick": ["Link", "Citizenship", "Total Dmg", "Last Seen", "Premium", "Buffed At",
+                                    "Debuff Ends", "Till Status Change"] + [x.title() for x in ELIXIRS]}
+            sorted_data.update(dict(sorted(buffs_data.items(), key=lambda nick, data: (
+                data[CITIZENSHIP], nick))))  # sort by citizenship then nick
+            buffs_data.clear()  # Clear the data to free up memory
+            if is_first_update or randint(1, 10) == 1:
+                await utils.spreadsheets(
+                    servers[server], "buffs", "!A1:M200",
+                    [([v[0], k] + v[1:base_columns + len(ELIXIRS)]) if k != "Last update:" else [k] + v
+                     for k, v in sorted_data.items()], delete=True)
+                is_first_update = False
+            await utils.replace_one("buffs", server, sorted_data)
+            sorted_data.clear()
         except Exception as e:
-            if len(str(e)) < 1000:
-                traceback.print_exc()
-            else:
-                print("buffs long error")
-        await asyncio.sleep(max(300 - time.time() + start, 1))
+            error_traceback = traceback.format_exc()
+            print(error_traceback if len(error_traceback) < 1000 else "buffs long error")
+        await asyncio.sleep(max(300 - time.time() + loop_start_time, 1))
 
 
 async def update_time(server: str) -> None:
-    """update time db"""
-    date_format = "%d-%m-%Y %H:%M:%S"
-    url = f'https://{server}.e-sim.org/'
-    nick, cs, total_minutes, total_avg, month_minutes, month_avg = range(6)
-    first_date = {
+    """Asynchronously updates the online time statistics of players in the e-sim game."""
+    # Constants for indexes in the player data array
+    NICK, CITIZENSHIP, TOTAL_MINUTES, TOTAL_AVG, MONTH_MINUTES, MONTH_AVG = range(6)
+
+    base_url = f'https://{server}.e-sim.org/'
+    initial_date_info = {
         "primera": ["Minutes online (since 10/12/20)", "09/12/2020", "10/12/2020"],
         "luxia": ["Minutes online (since day 1)", "10/02/2022", "11/02/2022"],
         "nika": ["Minutes online (since day 1)", "07/09/2023", "08/09/2023"],
         "vega": ["Minutes online (since day 1)", "05/11/2023", "06/11/2023"]
     }
+
+    # Define the headers for the data collection
     headers = ["Link", "Nick", "Citizenship",
-               "Minutes online (since 19/05/2020)" if server not in first_date else first_date[server][0],
+               initial_date_info.get(server, ["Minutes online (since 19/05/2020)"])[0],
                "Avg. per day", "Minutes online (this month)", "Avg. per day"]
+
+    is_first_update = True
     while True:
-        start = time.time()
+        loop_start_time = time.time()
         try:
-            now = datetime.now().astimezone(pytz.timezone('Europe/Berlin'))
-            data: dict = await find_one("time_online", server)
-            if "_headers" in data:
-                del data["_headers"]
+            now = datetime.now().astimezone(pytz.timezone(TIMEZONE))
+            player_data = await utils.find_one("time_online", server)  # Retrieve current player time online data
+            player_data.pop("_headers", None)  # Remove headers if they are in the data already
+
+            # Reset monthly minutes at the start of each month
             if now.strftime("%d %H:%M") in ("01 00:00", "01 00:01"):
-                for k, v in data.items():
-                    data[k][month_minutes] = 0
+                for player_stats in player_data.values():
+                    player_stats[MONTH_MINUTES] = 0
 
-            for raw_player in await get_content(f"{url}apiOnlinePlayers.html"):
-                row: dict = json.loads(raw_player)
-                citizen_id = str(row['id'])
-                if citizen_id in data:
-                    data[citizen_id][total_minutes] += 1
-                    data[citizen_id][month_minutes] += 1
-                    data[citizen_id][cs] = get_countries(server, row['citizenship'])
-                    data[citizen_id][nick] = row['login']
-                else:
-                    data[citizen_id] = [row['login'], get_countries(server, row['citizenship']), 1, "", 1, ""]
+            # Update player data from the API content
+            for player_info in await utils.get_content(f"{base_url}apiOnlinePlayers.html"):
+                player = json.loads(player_info)
+                citizen_id = str(player['id'])
+                player_stats = player_data.setdefault(
+                    citizen_id, [player['login'], utils.get_countries(server, player['citizenship']), 0, "", 0, ""])
+                player_stats[TOTAL_MINUTES] += 1
+                player_stats[MONTH_MINUTES] += 1
+                player_stats[CITIZENSHIP] = utils.get_countries(server, player['citizenship'])
+                player_stats[NICK] = player['login']
 
-            date_1 = datetime.strptime("18/05/2020" if server not in first_date else first_date[server][1], "%d/%m/%Y")
-            date_2 = datetime.strptime(f"01/{now.strftime('%m')}/{now.strftime('%Y')}", "%d/%m/%Y")
-            today = datetime.strptime(now.strftime("%d/%m/%Y"), "%d/%m/%Y")
-            end_date1 = (today - date_1).total_seconds() / 60
-            end_date2 = (today - date_2 + (timedelta(days=1))).total_seconds() / 60
-            for k, v in data.items():
-                data[k][total_avg] = str(timedelta(minutes=int((v[total_minutes] / end_date1) * 24 * 60)))[:-3]
-                data[k][month_avg] = str(timedelta(minutes=int((v[month_minutes] / end_date2) * 24 * 60)))[:-3]
-            data = dict(sorted(data.items(), key=lambda x: (
-                x[1][month_minutes], x[1][total_minutes]), reverse=True)[:3000 if len(data) < 3000 else 2900])
-            now = datetime.now().astimezone(pytz.timezone('Europe/Berlin')).strftime(date_format)
-            data["_headers"] = headers[1:] + [now]
-            await replace_one("time_online", server, data)
-            del data["_headers"]
-            if randint(1, 30) == 1:
-                await spreadsheets(servers[server], "Time online", "!A1:G1000",
-                                   [headers] + [[f"{url}profile.html?id={k}"] + v for k, v in data.items()][:999])
-            data.clear()
-        except Exception as e:
-            tb = traceback.format_exc()
-            if len(tb) < 1000:
-                print(tb)
-            else:
-                print("time online long error")
-        await asyncio.sleep(max(60 - time.time() + start, 1))
+            # Calculate averages and update data
+            date_format = "%d/%m/%Y"
+            start_date = datetime.strptime(initial_date_info.get(server, ["", "18/05/2020"])[1], date_format)
+            start_of_month = datetime.strptime(f"01/{now.strftime('%m')}/{now.strftime('%Y')}", date_format)
+            today_date = datetime.strptime(now.strftime(date_format), date_format)
+            elapsed_since_start = (today_date - start_date).total_seconds() / 60
+            elapsed_since_month_start = (today_date - start_of_month + timedelta(days=1)).total_seconds() / 60
+            days_since_month_start = (today_date - start_of_month).days + 1  # Including today
+
+            # Update averages for each player
+            for player_stats in player_data.values():
+                # [:-3] to remove the seconds from the string
+                player_stats[TOTAL_AVG] = str(timedelta(
+                    minutes=int((player_stats[TOTAL_MINUTES] / elapsed_since_start) * 24 * 60)))[:-3]
+                player_stats[MONTH_AVG] = str(timedelta(
+                    minutes=int((player_stats[MONTH_MINUTES] / elapsed_since_month_start) * 24 * 60)))[:-3]
+                # Check if it's the first month to adjust the average calculation
+                if days_since_month_start > 0:
+                    player_stats[MONTH_AVG] = str(timedelta(minutes=int((player_stats[MONTH_MINUTES] / (
+                        elapsed_since_month_start if now.strftime("%m") != start_date.strftime(
+                            "%m") else days_since_month_start)) * 24 * 60)))[:-3]
+
+            # Sort and limit the data
+            player_data = dict(sorted(player_data.items(),
+                                      key=lambda item: (item[1][MONTH_MINUTES], item[1][TOTAL_MINUTES]),
+                                      reverse=True)[:3000 if len(player_data) < 3000 else 2900])
+
+            # Update the headers with the current time
+            current_time = datetime.now().astimezone(pytz.timezone(TIMEZONE)).strftime(DATETIME_FORMAT)
+            player_data["_headers"] = headers[1:] + [current_time]
+
+            # Persist the updated data
+            await utils.replace_one("time_online", server, player_data)
+
+            # Update the spreadsheet
+            if is_first_update or randint(1, 30) == 1:
+                del player_data["_headers"]
+                await utils.spreadsheets(servers[server], "Time online", "!A1:G1000",
+                                         [headers] + [[f"{base_url}profile.html?id={player_id}"] + stats for
+                                                      player_id, stats in player_data.items()][:999])
+                is_first_update = False
+
+            player_data.clear()
+        except Exception:
+            error_traceback = traceback.format_exc()
+            print(error_traceback if len(error_traceback) < 1000 else "time online long error")
+
+        await asyncio.sleep(max(60 - time.time() + loop_start_time, 1))
 
 
-async def mm():
-    date_format = "%d-%m-%Y %H:%M:%S"
+async def update_monetary_market():
     while True:
-        mm_per_server: dict = {server: {} for server in servers}
-        start = time.time()
+        mm_per_server = {server: {} for server in servers}
+        loop_start_time = time.time()
         for server in reversed(list(servers)):
-            url = f'https://{server}.e-sim.org/'
+            base_url = f'https://{server}.e-sim.org/'
             # get data
             for country_id in countries_per_server[server]:
-                MM = 0
+                monetary_market_ration = 0
                 try:
-                    func = get_locked_content if server == "primera" else get_content
-                    tree = await func(f'{url}monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1')
+                    func = utils.get_locked_content if server == "primera" else utils.get_content
+                    url = f'{base_url}monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1'
+                    tree = await func(url)
+
                     ratios = tree.xpath("//*[@class='ratio']//b/text()")
                     amounts = tree.xpath("//*[@class='amount']//b/text()")
+
                     for ratio, amount in zip(ratios, amounts):
                         if float(amount) > 1:
-                            MM = float(ratio)
+                            monetary_market_ration = float(ratio)
                             break
-                    if not MM and ratios:
-                        MM = float(ratios[-1])
+                    if not monetary_market_ration and ratios:
+                        monetary_market_ration = float(ratios[-1])
                 except:
                     pass
-                mm_per_server[server][str(country_id)] = min(1.4, MM)
+                mm_per_server[server][str(country_id)] = min(1.4, monetary_market_ration)
                 await asyncio.sleep(0.35)
 
             # update history
-            history: dict = await find_one("mm_history", server)
-            today = datetime.now().astimezone(pytz.timezone('Europe/Berlin')).strftime("%d-%m-%Y")
+            history = await utils.find_one("mm_history", server)
+            today = datetime.now().astimezone(pytz.timezone(TIMEZONE)).strftime(DATETIME_FORMAT.split()[0])
             for country_id, price in mm_per_server[server].items():
                 country_id = str(country_id)  # MongoDB forcing keys to be str
                 price = str(price)
@@ -267,15 +308,15 @@ async def mm():
                 if price not in history[country_id][today]:
                     history[country_id][today][price] = 0
                 history[country_id][today][price] += 1
-            await replace_one("mm_history", server, history)
+            await utils.replace_one("mm_history", server, history)
             history.clear()
 
             # update db
-            now = datetime.now().astimezone(pytz.timezone('Europe/Berlin')).strftime(date_format)
+            now = datetime.now().astimezone(pytz.timezone(TIMEZONE)).strftime(DATETIME_FORMAT)
             mm_per_server[server]["last_update"] = now
-            await replace_one("mm", server, mm_per_server[server])
+            await utils.replace_one("mm", server, mm_per_server[server])
 
-        now = datetime.now().astimezone(pytz.timezone('Europe/Berlin')).strftime(date_format)
+        now = datetime.now().astimezone(pytz.timezone(TIMEZONE)).strftime(DATETIME_FORMAT)
         values = [["Country Name", "Currency"] + list(servers) + [f"Last update: {now} (game time)."]]
 
         for country_id, country_details in countries_per_id.items():
@@ -288,90 +329,102 @@ async def mm():
         values[1:] = sorted(values[1:])
         if len(values) > 1:
             try:
-                await spreadsheets(PRODUCT_SHEET, "Monetary Market", "!A1:K200", values, True)
-            except Exception as e:
-                if len(str(e)) < 1000:
-                    traceback.print_exc()
-                else:
-                    print("MM long error")
+                await utils.spreadsheets(PRODUCT_SHEET, "Monetary Market", "!A1:K200", values, True)
+            except Exception:
+                error_traceback = traceback.format_exc()
+                print(error_traceback if len(error_traceback) < 1000 else "monetary_market long error")
+
         values.clear()
-        await asyncio.sleep(max(3600 - time.time() + start, 1))
+        await asyncio.sleep(max(3600 - time.time() + loop_start_time, 1))
 
 
-async def price(server: str) -> None:
-    """Update price db"""
-    url = f'https://{server}.e-sim.org/'
+async def update_prices(server: str) -> None:
+    """Continuously updates the product prices database from the e-sim game for a given server."""
+    base_url = f'https://{server}.e-sim.org/'
+    is_first_update = True
     while True:
-        start = time.time()
+        loop_start_time = time.time()
         try:
-            offers: dict = {}
-            db_mm: dict = await find_one("mm", server)
-            for offer in await get_content(f"{url}apiProductMarket.html?id=-1"):
-                country = offer["countryId"]
-                product = offer["quality"], offer["resource"].title()
-                if product not in offers:
-                    offers[product] = {}
-                if country not in offers[product]:
-                    offers[product][country] = {"price": round(db_mm.get(str(country), 0) * float(offer["price"]), 4),
-                                                "stock": offer["quantity"]}
+            offers = {}
+            db_mm = await utils.find_one("mm", server)
+            for offer in await utils.get_content(f"{base_url}apiProductMarket.html?id=-1"):
+                country_id = offer["countryId"]
+                product_key = offer["quality"], offer["resource"].title()
+                if product_key not in offers:
+                    offers[product_key] = {}
+                if country_id not in offers[product_key]:
+                    price = db_mm.get(str(country_id), 0) * float(offer["price"])
+                    offers[product_key][country_id] = {"price": round(price, 4), "stock": offer["quantity"]}
             db_mm.clear()
+
             if server not in ('nika', 'vega'):
-                this_month = "01-" + datetime.now().astimezone(pytz.timezone('Europe/Berlin')).strftime("%m-%Y")
+                this_month = "01-" + datetime.now().astimezone(pytz.timezone(TIMEZONE)).strftime("%m-%Y")
             else:
-                this_month = datetime.now().astimezone(pytz.timezone('Europe/Berlin')).strftime("%d-%m-%Y")
-            now = datetime.now().astimezone(pytz.timezone('Europe/Berlin')).strftime("%d-%m-%Y %H:%M:%S")
-            results: dict = {}
+                this_month = datetime.now().astimezone(pytz.timezone(TIMEZONE)).strftime("%d-%m-%Y")
+            now = datetime.now().astimezone(pytz.timezone(TIMEZONE)).strftime(DATETIME_FORMAT)
+            results = {}
             raw_products = ["Iron", "Diamonds", "Grain", "Oil", "Stone", "Wood"]
-            for (quality, product_type), DICT in offers.items():
-                # Delete 0 (no MM offers)
-                product = f"Q{quality} {product_type}" if product_type not in raw_products else product_type
-                DICT = sorted({k: v for k, v in DICT.items() if DICT[k]['price']}.items(), key=lambda x: x[1]["price"])[:5]
-                FIND: dict = await find_one("prices_history", product.replace(" ", "_"))
-                for count, (country, price_stock) in enumerate(DICT):
-                    link = f"{url}productMarket.html?resource={product_type.upper()}&countryId={country}&quality={quality}"
-                    MM = f"{url}monetaryMarket.html?buyerCurrencyId={country}"
-                    p_price = str(price_stock["price"])
+            for (quality, product_type), countries_offers in offers.items():
+                product_name = f"Q{quality} {product_type}" if product_type not in raw_products else product_type
+
+                # Delete 0 (no MM offers) and choose the 5 cheapest offers
+                countries_offers = sorted(
+                    ((c_id, details) for c_id, details in countries_offers.items() if details['price']),
+                    key=lambda c_id, details: details["price"])[:5]
+                history_key = product_name.replace(" ", "_")
+                history_entry = await utils.find_one("prices_history", history_key)
+                for count, (country_id, offer) in enumerate(countries_offers):
+                    link = f"{base_url}productMarket.html?resource={product_type.upper()}&countryId={country_id}&quality={quality}"
+                    monetary_market_link = f"{base_url}monetaryMarket.html?buyerCurrencyId={country_id}"
+
+                    # Update the history
                     if not count:  # First loop
-                        if server not in FIND:
-                            FIND[server] = {}
-                        if this_month not in FIND[server]:
-                            FIND[server][this_month] = {}
-                        if p_price not in FIND[server][this_month]:
-                            FIND[server][this_month][p_price] = 0
-                        FIND[server][this_month][p_price] += 1
-                    if product not in results:
-                        results[product] = []
-                    results[product].append(
-                        [price_stock["price"], price_stock["stock"], get_countries(server, country), link, MM])
-                await replace_one("prices_history", product.replace(" ", "_"), FIND)
-                FIND.clear()
+                        if server not in history_entry:
+                            history_entry[server] = {}
+                        if this_month not in history_entry[server]:
+                            history_entry[server][this_month] = {}
+                        price_s = str(offer["price"])
+                        if price_s not in history_entry[server][this_month]:
+                            history_entry[server][this_month][price_s] = 0
+                        history_entry[server][this_month][price_s] += 1
+
+                    if product_name not in results:
+                        results[product_name] = []
+                    results[product_name].append(
+                        [offer["price"], offer["stock"], utils.get_countries(server, country_id), link,
+                         monetary_market_link])
+                await utils.replace_one("prices_history", history_key, history_entry)
+                history_entry.clear()
+
             offers.clear()
 
-            new_values: list = []
-            headers: dict = {"Product": [
+            # Update the spreadsheet with processed data
+            new_values = []
+            headers = {"Product": [
                 ["Price", "Stock", "Country", "Link", "Monetary market", f"Last update: {now} (game time)."]]}
             headers.update(dict(sorted(results.items())))
             results = headers
             if len(results) > 1:
-                await replace_one("price", server, results)
-                for k, v in results.items():
-                    for index, row in enumerate(v[:5]):
-                        if index == 0:
-                            new_values.append([k] + row)
-                        else:
-                            new_values.append([""] + row)
+                await utils.replace_one("price", server, results)
+
+                # format results
+                for product, offers in results.items():
+                    for index, offer in enumerate(offers[:5]):
+                        row = ([product] if index == 0 else [""]) + offer
+                        new_values.append(row)
                     if len(new_values) > 1:
                         new_values.append(["", "-", "-", "-"])
-                if randint(1, 3) == 1:
-                    await spreadsheets(PRODUCT_SHEET, server, "!A1:G300", new_values, True)
+
+                if is_first_update or randint(1, 3) == 1:
+                    await utils.spreadsheets(PRODUCT_SHEET, server, "!A1:G300", new_values, True)
+                    is_first_update = False
             results.clear()
             new_values.clear()
-        except Exception as e:
-            if len(str(e)) < 1000:
-                traceback.print_exc()
-            else:
-                print("price long error")
-        await asyncio.sleep(max(1000 - time.time() + start, 1))
+        except Exception:
+            error_traceback = traceback.format_exc()
+            print(error_traceback if len(error_traceback) < 1000 else "price long error")
+
+        await asyncio.sleep(max(1000 - time.time() + loop_start_time, 1))
 
 
 loop = asyncio.get_event_loop()
@@ -387,10 +440,10 @@ async def start_time_buff() -> None:
 
 async def start_mm_price() -> None:
     """start mm and price"""
-    loop.create_task(mm())
+    loop.create_task(update_monetary_market())
     await asyncio.sleep(30)
     for server in servers:
-        loop.create_task(price(server))
+        loop.create_task(update_prices(server))
         await asyncio.sleep(int(900 / len(servers)))
 
 

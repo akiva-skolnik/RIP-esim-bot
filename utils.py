@@ -193,3 +193,35 @@ async def replace_one(collection: str, _id: str, data: dict) -> None:
     filename = f"../db/{collection}_{_id}.json"
     with open(filename, "w", encoding='utf-8', errors='ignore') as file:
         json.dump(data, file)
+
+
+def format_seconds(seconds):
+    """Helper function to convert seconds to HH:MM:SS format."""
+    m, s = divmod(seconds, 60)
+    h, m = divmod(m, 60)
+    return f'{int(h):02d}:{int(m):02d}:{int(s):02d}'
+
+
+def extract_player_details(tree):
+    """Extract player details such as whether they are premium and their buffs."""
+    try:
+        premium = len(tree.xpath('//*[@class="premium-account"]')) == 1
+        citizenship = tree.xpath('//*[@class="profile-row" and span = "Citizenship"]/span/span/text()')[0]
+        damage = tree.xpath('//*[@class="profile-row" and span = "Damage"]/span/text()')[0]
+        buffs_debuffs = [
+            x.split("/specialItems/")[-1].split(".png")[0] for x in tree.xpath(
+                '//*[@class="profile-row" and (strong="Debuffs" or strong="Buffs")]//img/@src') if
+            "img/specialItems/" in x]
+        buffs = [x.split("_")[0].lower() for x in buffs_debuffs if "positive" in x.split("_")[1:]]
+        buffed = any(a in buffs for a in ('steroids', 'tank', 'bunker', 'sewer'))
+    except Exception as e:
+        print(f"Error extracting player details: {e}")
+        return {}
+
+    return {
+        'premium': premium,
+        'citizenship': citizenship,
+        'damage': damage,
+        'buffs': buffs,
+        'buffed': buffed
+    }
