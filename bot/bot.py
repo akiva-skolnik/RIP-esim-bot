@@ -1,7 +1,7 @@
 """Bot.py"""
 import json
 import os
-from datetime import date
+from datetime import date, datetime
 
 # import aiosqlite
 from aiohttp import ClientSession, ClientTimeout
@@ -38,6 +38,12 @@ class MyTree(app_commands.CommandTree):
         """Lock new server"""
         if not any("vega" in str(v) for v in interaction.data.values()):
             return True
+
+        # remove expired users
+        expire_at = bot.premium_users.get(str(interaction.user.id), {}).get("expire_at", "")
+        if expire_at and datetime.strptime(expire_at, "%d/%m/%Y") < datetime.now():
+            del bot.premium_users[str(interaction.user.id)]
+
         today = str(date.today())
         if bot.premium_users.get(str(interaction.user.id), {}).get("level", -1) >= 1 or (
                 interaction.guild and str(interaction.guild.id) in bot.premium_servers):

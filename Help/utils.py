@@ -545,6 +545,11 @@ async def is_premium_level_0(interaction: Interaction) -> bool:  # reset cooldow
 
 async def is_premium_level_1(interaction: Interaction, send_error_msg: bool = True, allow_trial: bool = True) -> bool:
     """is premium"""
+    # remove expired users
+    expire_at = bot.premium_users.get(str(interaction.user.id), {}).get("expire_at", "")
+    if expire_at and datetime.strptime(expire_at, "%d/%m/%Y") < datetime.now():
+        del bot.premium_users[str(interaction.user.id)]
+
     today = str(date.today())
     if bot.premium_users.get(str(interaction.user.id), {}).get("level", -1) >= 1 or (
             interaction.guild and str(interaction.guild.id) in bot.premium_servers):
