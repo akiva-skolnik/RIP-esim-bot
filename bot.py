@@ -158,8 +158,8 @@ async def update_buffs(server: str) -> None:
             sorted_data = {"Last update:": [now_s, "(game time)."] + [""] * (base_columns - 2 + len(ELIXIRS)),
                            "Nick": ["Link", "Citizenship", "Total Dmg", "Last Seen", "Premium", "Buffed At",
                                     "Debuff Ends", "Till Status Change"] + [x.title() for x in ELIXIRS]}
-            sorted_data.update(dict(sorted(buffs_data.items(), key=lambda nick, data: (
-                data[CITIZENSHIP], nick))))  # sort by citizenship then nick
+            # sort by citizenship then nick
+            sorted_data.update(dict(sorted(buffs_data.items(), key=lambda x: (x[1][CITIZENSHIP], nick))))
             buffs_data.clear()  # Clear the data to free up memory
             if is_first_update or randint(1, 10) == 1:
                 await utils.spreadsheets(
@@ -370,7 +370,7 @@ async def update_prices(server: str) -> None:
                 # Delete 0 (no MM offers) and choose the 5 cheapest offers
                 countries_offers = sorted(
                     ((c_id, details) for c_id, details in countries_offers.items() if details['price']),
-                    key=lambda c_id, details: details["price"])[:5]
+                    key=lambda x: x[1]["price"])[:5]
                 history_key = product_name.replace(" ", "_")
                 history_entry = await utils.find_one("prices_history", history_key)
                 for count, (country_id, offer) in enumerate(countries_offers):
