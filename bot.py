@@ -1,16 +1,18 @@
 """bot.py"""
 import asyncio
+import heapq
 import json
 import time
 import traceback
 import warnings
+from collections import defaultdict
 from datetime import datetime, timedelta
 from random import randint
 
 import pytz
 
-from big_dicts import countries_per_id, countries_per_server
 import utils
+from big_dicts import countries_per_id, countries_per_server
 
 warnings.filterwarnings("ignore")
 
@@ -112,7 +114,7 @@ async def update_buffs(server: str) -> None:
                 # Determine time remaining until buff/debuff status changes
                 if 0 < buffed_seconds < day_seconds:  # If buffed within the last 24h
                     seconds_until_change = day_seconds - buffed_seconds
-                elif 0 < buffed_seconds < day_seconds * days:  # If in debuff period
+                elif day_seconds < buffed_seconds < day_seconds * days:  # If in debuff period
                     seconds_until_change = (
                             datetime.strptime(player[DEBUFF_ENDS], DATETIME_FORMAT) - now).total_seconds()
                 else:  # If no buffs/debuffs are active
@@ -271,6 +273,7 @@ async def update_monetary_market():
     while True:
         mm_per_server = {server: {} for server in servers}
         loop_start_time = time.time()
+
         for server in reversed(list(servers)):
             base_url = f'https://{server}.e-sim.org/'
             # get data
@@ -342,61 +345,82 @@ async def update_prices(server: str) -> None:
     """Continuously updates the product prices database from the e-sim game for a given server."""
     base_url = f'https://{server}.e-sim.org/'
     is_first_update = True
+    raw_products = ["Iron", "Diamonds", "Grain", "Oil", "Stone", "Wood"]
     while True:
         loop_start_time = time.time()
         try:
-            offers = {}
+            offers = defaultdict(list)
+            total_stock_per_product = defaultdict(int)
             db_mm = await utils.find_one("mm", server)
-            for offer in await utils.get_content(f"{base_url}apiProductMarket.html?id=-1"):
+            for index, offer in enumerate(await utils.get_content(f"{base_url}apiProductMarket.html?id=-1")):
                 country_id = offer["countryId"]
-                product_key = offer["quality"], offer["resource"].title()
-                if product_key not in offers:
-                    offers[product_key] = {}
-                if country_id not in offers[product_key]:
-                    price = db_mm.get(str(country_id), 0) * float(offer["price"])
-                    offers[product_key][country_id] = {"price": round(price, 4), "stock": offer["quantity"]}
+                product_type = offer["resource"].title()
+                product_key = f"Q{offer['quality']} {product_type}" if product_type not in raw_products else product_type
+                price = db_mm.get(str(country_id), 0) * float(offer["price"])
+                if not price:
+                    continue
+                total_stock_per_product[product_key] += offer["quantity"]
+
+                # keep only the 5 cheapest offers
+                offer = {"country_id": country_id, "price": round(price, 4), "stock": offer["quantity"]}
+                price = -offer["price"]
+                heap = offers[product_key]
+                if len(heap) < 5:
+                    heapq.heappush(heap, (price, index, offer))
+                elif price > heap[0][0]:
+                    heapq.heapreplace(heap, (price, index, offer))
+                # else ignore the offer
+
             db_mm.clear()
 
-            if server not in ('nika', 'vega'):
-                this_month = "01-" + datetime.now().astimezone(pytz.timezone(TIMEZONE)).strftime("%m-%Y")
-            else:
-                this_month = datetime.now().astimezone(pytz.timezone(TIMEZONE)).strftime("%d-%m-%Y")
-            now = datetime.now().astimezone(pytz.timezone(TIMEZONE)).strftime(DATETIME_FORMAT)
-            results = {}
-            raw_products = ["Iron", "Diamonds", "Grain", "Oil", "Stone", "Wood"]
-            for (quality, product_type), countries_offers in offers.items():
-                product_name = f"Q{quality} {product_type}" if product_type not in raw_products else product_type
+            # sort offers by price
+            for product_key, product_offers in offers.items():
+                offers[product_key] = sorted([x[-1] for x in product_offers], key=lambda x: x["price"])
 
-                # Delete 0 (no MM offers) and choose the 5 cheapest offers
-                countries_offers = sorted(
-                    ((c_id, details) for c_id, details in countries_offers.items() if details['price']),
-                    key=lambda x: x[1]["price"])[:5]
-                history_key = product_name.replace(" ", "_")
-                history_entry = await utils.find_one("prices_history", history_key)
-                for count, (country_id, offer) in enumerate(countries_offers):
+            # Update the history
+            now = datetime.now().astimezone(pytz.timezone(TIMEZONE))
+            if server not in ('nika', 'vega'):
+                this_month = "01-" + now.strftime("%m-%Y")
+            else:
+                this_month = now.strftime("%d-%m-%Y")
+            now = now.strftime(DATETIME_FORMAT)
+
+            results = defaultdict(list)
+            for product_key, product_offers in offers.items():
+                quality, product_type = product_key[1:].split() if product_key[0] == "Q" else (1, product_key)
+                n = 0
+                avg_price = 0
+                for offer in product_offers:
+                    country_id = offer["country_id"]
                     link = f"{base_url}productMarket.html?resource={product_type.upper()}&countryId={country_id}&quality={quality}"
                     monetary_market_link = f"{base_url}monetaryMarket.html?buyerCurrencyId={country_id}"
-
-                    # Update the history
-                    if not count:  # First loop
-                        if server not in history_entry:
-                            history_entry[server] = {}
-                        if this_month not in history_entry[server]:
-                            history_entry[server][this_month] = {}
-                        price_s = str(offer["price"])
-                        if price_s not in history_entry[server][this_month]:
-                            history_entry[server][this_month][price_s] = 0
-                        history_entry[server][this_month][price_s] += 1
-
-                    if product_name not in results:
-                        results[product_name] = []
-                    results[product_name].append(
+                    results[product_key].append(
                         [offer["price"], offer["stock"], utils.get_countries(server, country_id), link,
                          monetary_market_link])
+
+                    # Calculate the average price of the top 1% of total offers
+                    stock_left = int(total_stock_per_product[product_key] * 0.01 - n) + 1  # +1 to avoid division by 0 for <100 offers
+                    if stock_left > 0:
+                        stock = min(stock_left, offer["stock"])  # stock left to reach 1% of total stock
+                        avg_price += stock * offer["price"]
+                        n += stock
+
+                # Update history  TODO: use SQL
+                history_key = product_key.replace(" ", "_")
+                avg_price = str(round(avg_price / n if n else 0, 4))
+                history_entry = await utils.find_one("prices_history", history_key)
+                if server not in history_entry:
+                    history_entry[server] = {}
+                if this_month not in history_entry[server]:
+                    history_entry[server][this_month] = {}
+                if avg_price not in history_entry[server][this_month]:
+                    history_entry[server][this_month][avg_price] = 0
+                history_entry[server][this_month][avg_price] += 1
                 await utils.replace_one("prices_history", history_key, history_entry)
                 history_entry.clear()
 
             offers.clear()
+            total_stock_per_product.clear()
 
             # Update the spreadsheet with processed data
             new_values = []
