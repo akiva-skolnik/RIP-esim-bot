@@ -1303,7 +1303,7 @@ async def get_api_fights_sum(server: str, battle_ids: iter) -> pd.DataFrame:
              f"SUM(IF(weapon = 5, IF(berserk, 5, 1), 0)) AS Q5, "
              "SUM(IF(berserk, 5, 1)) AS hits "
              f"FROM {server}.apiFights WHERE (battle_id BETWEEN {start_id} AND {end_id}) " +
-             (f"AND battleId NOT IN {excluded_ids} " if excluded_ids else "") +
+             (f"AND battle_id NOT IN {excluded_ids} " if excluded_ids else "") +
              "GROUP BY citizenId "
              "ORDER BY damage DESC "  # TODO: parameter
              )

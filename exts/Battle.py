@@ -156,7 +156,20 @@ class Battle(Cog):
                 find_cup[link] = [
                     {str(interaction.channel.id): {"nick": nick, "author_id": str(interaction.user.id)}}]
                 await utils.replace_one("collection", interaction.command.name, find_cup)
-                await self.cup_func(interaction, link, server, ids)
+                try:
+                    await self.cup_func(interaction, link, server, ids)
+                except Exception as error:
+                    await utils.send_error(interaction, error)
+                    db_dict = await utils.find_one("collection", interaction.command.name)
+                    if link in db_dict:
+                        for cup_dict in db_dict[link]:
+                            for channel_id, _ in cup_dict.items():
+                                try:
+                                    channel = self.bot.get_channel(int(channel_id))
+                                    await channel.send("I am sorry, but it looks like e-sim rejected this request.")
+                                    await sleep(0.4)
+                                except Exception:
+                                    traceback.print_exc()
             else:
                 await interaction.edit_original_response(content="No IDs found. Consider using the `cup` command instead. Example: `/cup server: alpha first_battle_id: 40730 last_battle_id: 40751`")
                 return
@@ -185,13 +198,13 @@ class Battle(Cog):
         await interaction.response.send_message("Ok")
         await utils.default_nick(interaction, server, nick)
         find_cup = await utils.find_one("collection", interaction.command.name)
-        db_query = f"{server} {first_battle_id} {last_battle_id}"
-        if db_query not in find_cup and any(server in k for k in find_cup):
+        db_key = f"{server} {first_battle_id} {last_battle_id}"
+        if db_key not in find_cup and any(server in k for k in find_cup):
             for query in find_cup:
-                if server in query and query != db_query:
+                if server in query and query != db_key:
                     view = utils.Confirm()
                     await interaction.edit_original_response(
-                        content=f"Would you like to change your request (`{db_query}`) into `{query}`? It will be much faster.\n"
+                        content=f"Would you like to change your request (`{db_key}`) into `{query}`? It will be much faster.\n"
                                 f"(Someone else is running the command right now, and you can get their result)",
                         view=view)
 
@@ -207,17 +220,30 @@ class Battle(Cog):
                     else:
                         await interaction.edit_original_response(content="Ok.", view=view)
                     break
-        if db_query not in find_cup or len(find_cup[db_query]) >= 10:
-            find_cup[db_query] = [
+        if db_key not in find_cup or len(find_cup[db_key]) >= 10:
+            find_cup[db_key] = [
                 {str(interaction.channel.id): {"nick": nick, "author_id": str(interaction.user.id)}}]
             await utils.replace_one("collection", interaction.command.name, find_cup)
 
         else:
-            find_cup[db_query].append(
+            find_cup[db_key].append(
                 {str(interaction.channel.id): {"nick": nick, "author_id": str(interaction.user.id)}})
             return await utils.replace_one("collection", interaction.command.name, find_cup)
         ids = range(first_battle_id, last_battle_id + 1)
-        await self.cup_func(interaction, db_query, server, ids)
+        try:
+            await self.cup_func(interaction, db_key, server, ids)
+        except Exception as error:
+            await utils.send_error(interaction, error)
+            db_dict = await utils.find_one("collection", interaction.command.name)
+            if db_key in db_dict:
+                for cup_dict in db_dict[db_key]:
+                    for channel_id, _ in cup_dict.items():
+                        try:
+                            channel = self.bot.get_channel(int(channel_id))
+                            await channel.send("I am sorry, but it looks like e-sim rejected this request.")
+                            await sleep(0.4)
+                        except Exception:
+                            traceback.print_exc()
 
     @checks.dynamic_cooldown(CoolDownModified(15))
     @command()
