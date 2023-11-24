@@ -117,12 +117,14 @@ async def start() -> None:
 
 @bot.tree.command()
 @guilds(utils.hidden_guild)
-async def update_from_source(interaction: Interaction) -> None:
+async def update_from_source(interaction: Interaction, pull: bool = True) -> None:
     """Updates the code from the source."""
-
-    process = subprocess.Popen(["git", "pull"], stdout=subprocess.PIPE)
-    output = process.communicate()[0]
-    await interaction.response.send_message(output.decode("utf-8"))
+    if pull:
+        process = subprocess.Popen(["git", "pull"], stdout=subprocess.PIPE)
+        output = process.communicate()[0]
+        await interaction.response.send_message(output.decode("utf-8"))
+    else:  # local
+        await interaction.response.send_message("Reloading all extensions...")
     for (_, _, filenames) in walk("exts"):
         for file_name in filenames:
             if file_name.endswith(".py"):

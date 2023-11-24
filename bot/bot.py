@@ -2,8 +2,9 @@
 import json
 import os
 from datetime import date, datetime
+import asyncio
 
-# import aiosqlite
+import asyncmy
 from aiohttp import ClientSession, ClientTimeout
 from discord import (AllowedMentions, Forbidden, Game, HTTPException, Intents,
                      Interaction, Message, NotFound, app_commands)
@@ -179,15 +180,15 @@ class MyClient(Bot):
         self.premium_users = find_one("collection", "donors")
         self.premium_servers = (find_one("collection", "premium_guilds") or {"guilds": []})["guilds"]
         self.custom_delay_dict = find_one("collection", "delay")
-        self.dbs = {}
+        self.conn: asyncmy.Connection = None
+        self.db_lock = asyncio.Lock()
 
     async def setup_hook(self) -> None:
-        headers = {"User-Agent": 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:84.0)'
-                                 ' Gecko/20100101 Firefox/84.0'}
+        headers = {"User-Agent": 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0'}
         self.session = ClientSession(timeout=ClientTimeout(total=100), headers=headers)
         self.locked_session = ClientSession(timeout=ClientTimeout(total=150), headers=headers)
         self.org_session = ClientSession(timeout=ClientTimeout(total=150), headers=headers)
-        #self.dbs = {server: await aiosqlite.connect(f'../db/{server}.db') for server in self.all_servers}
+        self.conn = await asyncmy.connect(host="localhost", user="root", password="root")
 
         await load_extensions()
 

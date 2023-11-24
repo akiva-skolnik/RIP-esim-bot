@@ -33,6 +33,7 @@ from .paginator import FieldPageSource, Pages
 
 class CoolDownModified:
     """CoolDownModified"""
+
     def __init__(self, per, rate=1) -> None:
         self.rate = rate
         self.per = per
@@ -132,6 +133,7 @@ async def dmg_trend(hit_time: dict, server: str, battle_id: str) -> BytesIO:
     ax.grid()
     return plt_to_bytes()
 
+
 async def get_auction(link: str) -> dict:
     """get auction"""
     tree = await get_content(link)
@@ -156,7 +158,7 @@ async def get_auction(link: str) -> dict:
             "price": price, "time": time1[0], "bidders": bidders, "remaining_seconds": remaining_seconds}
 
 
-async def save_dmg_time(api_fights: str, attacker:str, defender: str) -> (dict, dict):
+async def save_dmg_time(api_fights: str, attacker: str, defender: str) -> (dict, dict):
     """save dmg time"""
     my_dict = {defender: 0, attacker: 0}
     hit_time = {defender: {"dmg": [], "time": []}, attacker: {"dmg": [], "time": []}}
@@ -169,6 +171,7 @@ async def save_dmg_time(api_fights: str, attacker:str, defender: str) -> (dict, 
         else:
             hit_time[side]["dmg"].append(hit['damage'])
     return my_dict, hit_time
+
 
 def plt_to_bytes() -> BytesIO:
     """plt to bytes"""
@@ -425,7 +428,7 @@ def camel_case_merge(identifier: str) -> str:
     return " ".join([m.group(0) for m in matches]).title()
 
 
-async def get_content(link: str, return_type: str = "", method: str = "get", session = None, throw: bool = False):
+async def get_content(link: str, return_type: str = "", method: str = "get", session=None, throw: bool = False):
     """get content"""
     if not return_type:
         if "api" in link or link.startswith(bot.api):
@@ -486,7 +489,8 @@ async def get_locked_content(link: str, test_login: bool = False, method: str = 
     link = link.split("#")[0].replace("http://", "https://")
     server = link.split("https://", 1)[1].split(".e-sim.org", 1)[0]
     if not org:
-        nick, password = bot.config.get(server, bot.config['nick']), bot.config.get(server+"_password", bot.config['password'])
+        nick, password = bot.config.get(server, bot.config['nick']), bot.config.get(server + "_password",
+                                                                                    bot.config['password'])
         session = bot.locked_session
     else:
         nick = bot.orgs[server][0]
@@ -603,11 +607,12 @@ async def send_error(interaction: Optional[Interaction], error: Exception, cmd: 
         return
     custom_error = f"```{str(error).strip() or 'Timeout!'}\n```\n `The program {cmd if cmd else interaction.command.name} has halted.`"
     await custom_followup(interaction, custom_error if not cmd else
-                            custom_error + f"The following results do not include ID {cmd} onwards")
+    custom_error + f"The following results do not include ID {cmd} onwards")
 
 
 class Confirm(ui.View):
     """Confirm"""
+
     def __init__(self) -> None:
         super().__init__()
         self.value = None
@@ -629,6 +634,7 @@ class Confirm(ui.View):
 
 class StopNext(ui.View):
     """Stop and next"""
+
     def __init__(self, interaction: Interaction) -> None:
         super().__init__()
         self.canceled = None
@@ -655,6 +661,7 @@ class StopNext(ui.View):
 
 class WaitForNext(ui.View):
     """Wait for next button"""
+
     def __init__(self) -> None:
         super().__init__()
         self.value = None
@@ -698,7 +705,8 @@ async def convert_embed(interaction_or_author: Union[Interaction, int], embed: E
 
     if author_id not in bot.phone_users:
         for index in my_range:
-            if not isinstance(interaction, int) and not interaction.channel.permissions_for(interaction.user).external_emojis:
+            if not isinstance(interaction, int) and not interaction.channel.permissions_for(
+                    interaction.user).external_emojis:
                 break
             try:
                 first_item = embed_fields[index].value.splitlines()[0]
@@ -755,7 +763,8 @@ async def convert_embed(interaction_or_author: Union[Interaction, int], embed: E
     return embed
 
 
-async def send_long_embed(interaction: Interaction, embed: Embed, headers: list, result: list, files: List[File] = MISSING) -> None:
+async def send_long_embed(interaction: Interaction, embed: Embed, headers: list, result: list,
+                          files: List[File] = MISSING) -> None:
     """send long embed"""
     for index, header in enumerate(headers):
         embed.add_field(name=header, value="\n".join([str(x[index]) for x in result]))
@@ -1052,7 +1061,7 @@ def get_id(string: str) -> str:
 
 
 def get_ids_from_path(tree, xpath: str) -> list:
-    """get ids from path"""
+    """get battle_ids from path"""
     ids = tree.xpath(xpath + "/@href")
     if ids and all("#" == x for x in ids):
         ids = [get_id(x.values()[-1]) for x in tree.xpath(xpath)]
@@ -1084,7 +1093,8 @@ async def custom_followup(interaction: Interaction, content: str = None, **kwarg
     return msg
 
 
-async def get_battles(base_url: str, country_id: int = 0, filtering: iter = ('Normal battle', 'Resistance war')) -> list:
+async def get_battles(base_url: str, country_id: int = 0,
+                      filtering: iter = ('Normal battle', 'Resistance war')) -> list:
     """Get battles data"""
     battles = []
     link = f'{base_url}battles.html?countryId={country_id}'
@@ -1141,103 +1151,180 @@ async def replace_one(collection: str, _id: str, data: dict) -> None:
         json.dump(data, file)
 
 
+api_battles_columns = ('battle_id', 'currentRound', 'attackerScore', 'regionId', 'defenderScore',
+                       'frozen', 'type', 'defenderId', 'attackerId', 'totalSecondsRemaining')
+api_fights_columns = ('battle_id', 'round_id', 'damage', 'weapon', 'berserk', 'defenderSide', 'citizenship',
+                      'citizenId', 'time', 'militaryUnit')
 inserted_api_fights = {server: {} for server in bot.all_servers}
 
-async def insert_api_battles(server: str, battle_id: int, columns: iter) -> dict:
-    r = await get_content(f'https://{server}.e-sim.org/apiBattles.html?battleId={battle_id}')
-    r['totalSecondsRemaining'] = r["hoursRemaining"] * 3600 + r["minutesRemaining"] * 60 + r["secondsRemaining"]
-    r['battle_id'] = battle_id
-    r = {k: r[k] for k in columns}
-    await bot.dbs[server].execute(f"INSERT OR REPLACE INTO apiBattles VALUES (?,?,?,?,?,?,?,?,?,?)",
-                                  tuple(r[k] for k in columns))
-    await bot.dbs[server].commit()
+
+async def cache_api_battles(interaction: Interaction, server: str, battle_ids: iter) -> None:
+    """Verify all battles are in db, if not, insert them"""
+    start_id, end_id = min(battle_ids), max(battle_ids)
+    excluded_ids = tuple(i for i in range(start_id, end_id + 1) if i not in battle_ids)
+    query = f"SELECT battle_id FROM {server}.apiBattles " \
+            f"WHERE (battle_id BETWEEN {start_id} AND {end_id}) " + \
+            (f"AND battle_id NOT IN {excluded_ids}" if excluded_ids else "") + \
+            " AND (defenderScore = 8 OR attackerScore = 8)"
+
+    async with bot.conn.cursor() as cursor:
+        await cursor.execute(query)
+        existing_battles = [x[0] for x in await cursor.fetchall()]  # x[0] = battle_id
+    for battle_id in battle_ids:
+        if battle_id not in existing_battles:
+            await insert_into_api_battles(server, battle_id)
+            await custom_delay(interaction)
+
+
+async def insert_into_api_battles(server: str, battle_id: int) -> dict:
+    """insert_into_api_battles"""
+    api_battles = await get_content(f'https://{server}.e-sim.org/apiBattles.html?battleId={battle_id}')
+    api_battles['totalSecondsRemaining'] = (api_battles["hoursRemaining"] * 3600 +
+                                            api_battles["minutesRemaining"] * 60 + api_battles["secondsRemaining"])
+    api_battles['battle_id'] = battle_id
+    filtered_api_battles = {k: api_battles[k] for k in api_battles_columns}
+    async with bot.conn.cursor() as cursor:
+        placeholders = ', '.join(['%s'] * len(filtered_api_battles))
+        await cursor.execute(f"REPLACE INTO {server}.apiBattles VALUES ({placeholders})",
+                             tuple(filtered_api_battles.values()))
+        await bot.conn.commit()
+    return filtered_api_battles
+
+
+async def find_many_api_battles(server: str, battle_ids: iter, columns: tuple = None,
+                                custom_condition: str = None) -> pd.DataFrame:
+    """find_many_api_battles"""
+    columns = columns or api_battles_columns
+    start_id, end_id = min(battle_ids), max(battle_ids)
+    excluded_ids = tuple(i for i in range(start_id, end_id + 1) if i not in battle_ids)
+    query = f"SELECT {', '.join(columns)} FROM {server}.apiBattles " \
+            f"WHERE (battle_id BETWEEN {start_id} AND {end_id}) " + \
+            (f"AND battle_id NOT IN {excluded_ids} " if excluded_ids else "") + \
+            ("" if not custom_condition else f"AND {custom_condition}")
+
+    async with bot.conn.cursor() as cursor:
+        await cursor.execute(query)
+        api_battles = await cursor.fetchall()
+    return pd.DataFrame(api_battles, columns=list(columns), index=[x[0] for x in api_battles])
+
+
+async def find_one_api_battles(server: str, battle_id: int, columns: tuple = None) -> dict:
+    """find_one_api_battles"""
+    columns = columns or api_battles_columns
+    # TODO: ensure columns contains defenderScore and attackerScore or add them
+    async with bot.conn.cursor() as cursor:
+        query = f"SELECT {', '.join(columns)} FROM {server}.apiBattles WHERE battle_id = {battle_id} LIMIT 1"
+
+        await cursor.execute(query)
+        r = await cursor.fetchone()
+    r = dict(zip(columns, r)) if r else {}
+
+    if not r or 8 not in (r['defenderScore'], r['attackerScore']):
+        r = await insert_into_api_battles(server, battle_id)
     return r
 
 
-async def find_many_api_battles(interaction: Interaction, server: str, ids: iter) -> pd.DataFrame:
-    """find_many_api_battles"""
-    columns = ['battle_id', 'currentRound', 'attackerScore', 'regionId', 'defenderScore',
-               'frozen', 'type', 'defenderId', 'attackerId', 'totalSecondsRemaining']
-    first, last = min(ids), max(ids)
-    get_range = len(ids) / (last - first + 1) > 0.5 # get_range=True when ids~=range(min(ids), max(ids))
-    cursor = await bot.dbs[server].execute(f"SELECT * FROM apiBattles WHERE battle_id " + (
-        f"BETWEEN {first} AND {last}" if get_range else f"IN {tuple(ids)}"))
-    values = [x for x in await cursor.fetchall() if x[0] in ids] if get_range else await cursor.fetchall()  # x[0] = battle_id
-    df = pd.DataFrame(values, columns=columns)
-    df['last_round_in_db'] = df['currentRound']
-    values = []
-    for battle_id in ids:
-        row = df.loc[df['battle_id'] == battle_id]
-        if row.empty or 8 not in (row['defenderScore'].iloc[0], row['attackerScore'].iloc[0]):
-            r = await insert_api_battles(server, battle_id, columns)
-            r['last_round_in_db'] = 0
-            if row.empty:
-                values.append(r)
-            else:
-                df.iloc[row.index[0]] = pd.Series(r)
-            await custom_delay(interaction)
-    return pd.concat([df, pd.DataFrame(values)], ignore_index=True, copy=False)
+async def insert_into_api_fights(server: str, battle_id: int, round_id: int) -> None:
+    """insert_into_api_fights"""
+    api_fights = await get_content(f'https://{server}.e-sim.org/apiFights.html?battleId={battle_id}&roundId={round_id}')
+    if not api_fights:
+        # insert dummy hit to avoid rechecking this round
+        api_fights = [{'damage': 0, 'weapon': 0, 'berserk': False, 'defenderSide': False, 'citizenship': None,
+                       'citizenId': 0, 'time': datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[
+                                               :-3]}]  # TODO: Will those values cause problems?
+    # time can be %d-%m-%Y %H:%M:%S:%f or %Y-%m-%d %H:%M:%S:%f or %Y-%m-%d %H:%M:%S.%f or %Y-%m-%d %H:%M:%S
+    # so we should replace last : with . if the count of : is 3
+    api_fights = [(battle_id, round_id, hit['damage'], hit['weapon'], hit['berserk'], hit['defenderSide'],
+                   hit['citizenship'], hit['citizenId'],
+                   ".".join(hit["time"].strip().rsplit(":", 1)) if hit["time"].count(":") == 3 else hit["time"].strip(),
+                   hit.get('militaryUnit')) for hit in reversed(api_fights)]
+
+    async with bot.conn.cursor() as cursor:
+        placeholders = ', '.join(['%s'] * len(api_fights[0]))
+        query = f"INSERT IGNORE INTO {server}.apiFights VALUES ({placeholders})"
+
+        await cursor.executemany(query, api_fights)
+        await bot.conn.commit()
 
 
-async def find_many_api_fights(interaction: Interaction, server: str, api_battles_df: pd.DataFrame) -> pd.DataFrame:
-    columns = ['battle_id', 'round_id', 'damage', 'weapon', 'berserk', 'defenderSide', 'citizenship',
-               'citizenId', 'time', 'militaryUnit']
-    ids = api_battles_df["battle_id"].values
-    first, last = min(ids), max(ids)
-    get_range = len(ids) / (last - first + 1) > 0.5 # get_range=True when ids~=range(min(ids), max(ids))
-    cursor = await bot.dbs[server].execute(f"SELECT * FROM apiFights WHERE battle_id " + (
-        f"BETWEEN {first} AND {last}" if get_range else f"IN {tuple(ids)}"))
-    values = [x for x in await cursor.fetchall() if x[1] in ids] if get_range else await cursor.fetchall()  # x[1] = battle_id
-    dfs = []
-    if values:
-        dfs.append(pd.DataFrame(values, columns=["index"] + columns))
-        dfs[0].drop('index', axis=1, inplace=True)
+async def cache_api_fights(interaction: Interaction, server: str, api_battles_df: pd.DataFrame) -> None:
+    """Verify all fights are in db, if not, insert them"""
+    # get last inserted round per battle:
+    start_id, end_id = min(api_battles_df["battle_id"].values), max(api_battles_df["battle_id"].values)
+    excluded_ids = tuple(i for i in range(start_id, end_id + 1) if i not in api_battles_df["battle_id"].values)
+
+    async with bot.conn.cursor() as cursor:
+        query = f"SELECT battle_id, MAX(round_id) FROM {server}.apiFights " + \
+                f"WHERE (battle_id BETWEEN {start_id} AND {end_id}) " + \
+                (f"AND battle_id NOT IN {excluded_ids} " if excluded_ids else "") + \
+                f"GROUP BY battle_id"
+
+        await cursor.execute(query)
+        last_round_per_battle = {x[0]: x[1] for x in await cursor.fetchall()}
+
     for i, api in api_battles_df.iterrows():
         current_round = api["currentRound"]
         if 8 in (api['defenderScore'], api['attackerScore']):
             last_round = current_round
         else:
             last_round = current_round + 1
-        for round_id in range(api["last_round_in_db"] + 1, last_round):
-            r = await get_content(f'https://{server}.e-sim.org/apiFights.html?battleId={api["battle_id"]}&roundId={round_id}')
-            if not r:
-                continue
-            r = [(api["battle_id"], round_id, hit['damage'], hit['weapon'], hit['berserk'], hit['defenderSide'], hit['citizenship'],
-                  hit['citizenId'], hit['time'], hit.get('militaryUnit', 0)) for hit in reversed(r)]
-            if api["battle_id"] not in inserted_api_fights[server]:
-                inserted_api_fights[server][api["battle_id"]] = []
-            if round_id != current_round and round_id not in inserted_api_fights[server][api["battle_id"]]:
-                await bot.dbs[server].executemany(f"INSERT INTO apiFights {tuple(columns)} VALUES (?,?,?,?,?,?,?,?,?,?)", r)
-                await bot.dbs[server].commit()
-                inserted_api_fights[server][api["battle_id"]].append(round_id)
-            dfs.append(pd.DataFrame(r, columns=columns))
+        for round_id in range(last_round_per_battle.get(api["battle_id"], 0) + 1, last_round):
+            await insert_into_api_fights(server, int(api["battle_id"]), round_id)
             await custom_delay(interaction)
 
-    return pd.concat(dfs, ignore_index=True, copy=False)
+
+async def find_many_api_fights(server: str, battle_ids: iter, columns: tuple = None,
+                               custom_condition: str = None) -> pd.DataFrame:
+    """find_many_api_fights"""
+    columns = columns or api_fights_columns
+    start_id, end_id = min(battle_ids), max(battle_ids)
+    excluded_ids = tuple(i for i in range(start_id, end_id + 1) if i not in battle_ids)
+
+    query = f"SELECT {', '.join(columns)} FROM {server}.apiFights " \
+            f"WHERE (battle_id BETWEEN {start_id} AND {end_id}) " + \
+            (f"AND battle_id NOT IN {excluded_ids} " if excluded_ids else "") + \
+            ("" if not custom_condition else f"AND {custom_condition}")
+
+    async with bot.conn.cursor() as cursor:
+        await cursor.execute(query)
+        api_fights = await cursor.fetchall()
+    return pd.DataFrame(api_fights, columns=list(columns))
 
 
-async def find_one_api_battles(server: str, battle_id: int) -> dict:
-    columns = ['battle_id', 'currentRound', 'attackerScore', 'regionId', 'defenderScore',
-               'frozen', 'type', 'defenderId', 'attackerId', 'totalSecondsRemaining']
-    cursor = await bot.dbs[server].execute(f"SELECT * FROM apiBattles WHERE battle_id = {battle_id}")
-    r = await cursor.fetchone()
-    r = dict(zip(columns, r)) if r else {}
-    last_round_in_db = r.get('currentRound', 0)
+async def get_api_fights_sum(server: str, battle_ids: iter) -> pd.DataFrame:
+    start_id, end_id = min(battle_ids), max(battle_ids)
+    excluded_ids = tuple(i for i in range(start_id, end_id + 1) if i not in battle_ids)
+    query = ("SELECT citizenId, SUM(damage) AS damage, "
+             f"SUM(IF(weapon = 0, IF(berserk, 5, 1), 0)) AS Q0, "
+             f"SUM(IF(weapon = 1, IF(berserk, 5, 1), 0)) AS Q1, "
+             f"SUM(IF(weapon = 2, IF(berserk, 5, 1), 0)) AS Q2, "
+             f"SUM(IF(weapon = 3, IF(berserk, 5, 1), 0)) AS Q3, "
+             f"SUM(IF(weapon = 4, IF(berserk, 5, 1), 0)) AS Q4, "
+             f"SUM(IF(weapon = 5, IF(berserk, 5, 1), 0)) AS Q5, "
+             "SUM(IF(berserk, 5, 1)) AS hits "
+             f"FROM {server}.apiFights WHERE (battle_id BETWEEN {start_id} AND {end_id}) " +
+             (f"AND battleId NOT IN {excluded_ids} " if excluded_ids else "") +
+             "GROUP BY citizenId "
+             "ORDER BY damage DESC "  # TODO: parameter
+             )
 
-    if not r or 8 not in (r['defenderScore'], r['attackerScore']):
-        r = await insert_api_battles(server, battle_id, columns)
-    r["last_round_in_db"] = last_round_in_db
-    return r
+    async with bot.conn.cursor() as cursor:
+        await cursor.execute(query)
+        api_fights = await cursor.fetchall()
+    columns = ["citizenId", "damage", "Q0", "Q1", "Q2", "Q3", "Q4", "Q5", "hits"]
+    return pd.DataFrame(api_fights, columns=columns, index=[x[0] for x in api_fights])
 
 
-async def find_one_api_fights(server: str, api: dict, round_id:int = 0) -> pd.DataFrame:
+async def find_one_api_fights(server: str, api: dict, round_id: int = 0) -> pd.DataFrame:
+    # TODO: rewrite
     columns = ['battle_id', 'round_id', 'damage', 'weapon', 'berserk', 'defenderSide', 'citizenship',
                'citizenId', 'time', 'militaryUnit']
     battle_id = api["battle_id"]
-    cursor = await bot.dbs[server].execute(f"SELECT * FROM apiFights WHERE battle_id = {battle_id}" +
-                                           (f" AND round_id = {round_id}" if round_id else ""))
+    async with bot.conn.cursor() as cursor:
+        cursor.execute(f"SELECT * FROM {server}.apiFights WHERE battle_id = {battle_id}" +
+                       (f" AND round_id = {round_id}" if round_id else ""))
+        values = await cursor.fetchall()
     dfs = []
-    values = await cursor.fetchall()
     if values:
         dfs.append(pd.DataFrame(values, columns=["index"] + columns))
 
@@ -1250,13 +1337,18 @@ async def find_one_api_fights(server: str, api: dict, round_id:int = 0) -> pd.Da
         r = await get_content(f'https://{server}.e-sim.org/apiFights.html?battleId={battle_id}&roundId={round_id}')
         if not r:
             continue
-        r = [(battle_id, round_id, hit['damage'], hit['weapon'], hit['berserk'], hit['defenderSide'], hit['citizenship'],
-              hit['citizenId'], hit['time'], hit.get('militaryUnit', 0)) for hit in reversed(r)]
+        r = [
+            (battle_id, round_id, hit['damage'], hit['weapon'], hit['berserk'], hit['defenderSide'], hit['citizenship'],
+             hit['citizenId'], hit['time'], hit.get('militaryUnit', 0)) for hit in reversed(r)]
         if battle_id not in inserted_api_fights[server]:
             inserted_api_fights[server][battle_id] = []
         if round_id != current_round and round_id not in inserted_api_fights[server][battle_id]:
-            await bot.dbs[server].executemany(f"INSERT INTO apiFights {tuple(columns)} VALUES (?,?,?,?,?,?,?,?,?,?)", r)
-            await bot.dbs[server].commit()
+            async with bot.conn.cursor() as cursor:
+                placeholders = ', '.join(['%s'] * len(r[0]))
+                query = f"INSERT IGNORE INTO {server}.apiFights {tuple(columns)} VALUES ({placeholders})"
+
+                await cursor.executemany(query, r)
+                await bot.conn.commit()
             inserted_api_fights[server][battle_id].append(round_id)
         dfs.append(pd.DataFrame(r, columns=columns))
     return pd.concat(dfs, ignore_index=True, copy=False) if dfs else None

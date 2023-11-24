@@ -21,41 +21,46 @@ class Admin(Cog):
     @guilds(utils.hidden_guild)
     async def create_tables(self, interaction: Interaction, servers: str = ""):
         for server in servers.split(",") if servers else self.bot.all_servers:
-            db = self.bot.dbs[server]
-            await db.execute('''CREATE TABLE IF NOT EXISTS apiFights
-                                  (ID INTEGER PRIMARY KEY,
-                                  battle_id int UNSIGNED,
-                                  round_id tinyint,
-                                  damage int UNSIGNED,
-                                  weapon tinyint,
-                                  berserk boolean,
-                                  defenderSide boolean,
-                                  citizenship tinyint UNSIGNED,
-                                  citizenId INT,
-                                  time DATETIME,
-                                  militaryUnit smallint UNSIGNED
-                                  )''')
-            await db.execute("CREATE INDEX IF NOT EXISTS battle_id_index ON apiFights (battle_id)")
-            await db.execute('''CREATE TABLE IF NOT EXISTS apiBattles
-                                  (battle_id int UNSIGNED PRIMARY KEY,
-                                  currentRound tinyint,
-                                  attackerScore tinyint,
-                                  regionId smallint UNSIGNED,
-                                  defenderScore tinyint,
-                                  frozen boolean,
-                                  type VARCHAR(32),
-                                  defenderId tinyint UNSIGNED,
-                                  attackerId smallint UNSIGNED,
-                                  totalSecondsRemaining smallint UNSIGNED
-                                  )''')
+            async with self.bot.conn.cursor() as cursor:
+                await cursor.execute("CREATE DATABASE " + server)
+
+                await cursor.execute(f'''CREATE TABLE {server}.apiBattles
+                                      (battle_id INT UNSIGNED PRIMARY KEY,
+                                      currentRound TINYINT,
+                                      attackerScore TINYINT,
+                                      regionId SMALLINT UNSIGNED,
+                                      defenderScore TINYINT,
+                                      frozen BOOLEAN,
+                                      type VARCHAR(32),
+                                      defenderId TINYINT UNSIGNED,
+                                      attackerId SMALLINT UNSIGNED,
+                                      totalSecondsRemaining SMALLINT UNSIGNED
+                                      )''')
+
+                await cursor.execute(f'''CREATE TABLE {server}.apiFights
+                                      (battle_id INT UNSIGNED,
+                                      round_id TINYINT,
+                                      damage INT UNSIGNED,
+                                      weapon TINYINT,
+                                      berserk BOOLEAN,
+                                      defenderSide BOOLEAN,
+                                      citizenship TINYINT UNSIGNED,
+                                      citizenId INT,
+                                      time DATETIME(3),  -- 3 for milliseconds
+                                      militaryUnit SMALLINT UNSIGNED,
+                                      PRIMARY KEY (citizenId, time),
+                                      FOREIGN KEY (battle_id) REFERENCES apiBattles(battle_id)
+                                      )''')
+
+                await cursor.execute(f"CREATE INDEX battle_id_index ON {server}.apiFights (battle_id)")
         await interaction.response.send_message("done")
 
     @command()
     @guilds(utils.hidden_guild)
     async def logout(self, interaction: Interaction) -> None:
-        for server, db in self.bot.dbs.items():
-            await db.commit()
-            await db.close()
+        conn = self.bot.conn
+        if conn:
+            conn.close()
         await self.bot.session.close()
         await self.bot.locked_session.close()
         await self.bot.org_session.close()
