@@ -9,7 +9,8 @@ from discord.app_commands import (CheckFailure, Choice, Transformer,
 from bot.bot import bot
 from Help import utils
 
-from .constants import all_countries, all_countries_by_name, all_servers
+from .constants import (all_countries, all_countries_by_name, all_products,
+                        all_servers)
 
 
 def fix_link(link: str) -> str:
@@ -189,7 +190,7 @@ class BattleLink(Transformer):  # noqa
 
 class Product(Transformer):  # noqa
     """Product"""
-    def __init__(self, products_list: list = bot.products):
+    def __init__(self, products_list: list = all_products):
         self.products = products_list
 
     async def transform(self, interaction: Interaction, product: str) -> str:
@@ -197,7 +198,7 @@ class Product(Transformer):  # noqa
 
     @property
     def choices(self) -> List[Choice]:
-        return [Choice(name=x, value=x.upper()) for x in self.products]
+        return [Choice(name=x, value=x.upper()) for x in all_products]
 
 
 class Slots(Transformer):  # noqa

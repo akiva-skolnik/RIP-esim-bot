@@ -26,8 +26,9 @@ from tabulate import tabulate
 
 from bot.bot import bot
 
-from .constants import (all_parameters, all_servers, api_url, countries_per_id,
-                        countries_per_server, date_format, flags_codes, config_ids)
+from .constants import (all_parameters, all_servers, api_url, config_ids,
+                        countries_per_id, countries_per_server, date_format,
+                        flags_codes)
 from .paginator import FieldPageSource, Pages
 
 

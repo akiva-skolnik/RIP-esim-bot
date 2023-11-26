@@ -14,7 +14,7 @@ from wolframalpha import Client
 
 from Help import utils
 from Help.constants import (all_countries, all_products, all_servers, api_url,
-                            date_format, config_ids)
+                            config_ids, date_format)
 from Help.transformers import Country, Server
 from Help.utils import CoolDownModified, camel_case_merge
 
