@@ -27,7 +27,7 @@ from tabulate import tabulate
 from bot.bot import bot
 
 from .constants import (all_parameters, all_servers, api_url, countries_per_id,
-                        countries_per_server, date_format, flags_codes)
+                        countries_per_server, date_format, flags_codes, config_ids)
 from .paginator import FieldPageSource, Pages
 
 
@@ -44,7 +44,7 @@ class CoolDownModified:
         return Cooldown(self.rate, self.per)
 
 
-hidden_guild = int(bot.config_ids["commands_server"])
+hidden_guild = int(config_ids["commands_server"])
 font = path.join(path.dirname(__file__), "DejaVuSansMono.ttf")
 
 
@@ -204,7 +204,7 @@ async def _stop_alert(channel_id: str) -> None:
 @tasks.loop(seconds=900)
 async def update_donors():
     now = datetime.utcnow()
-    guild = bot.get_guild(int(bot.config_ids["support_server"]))
+    guild = bot.get_guild(int(config_ids["support_server"]))
     patreon = bot.get_user(216303189073461248)
     async for entry in guild.audit_logs(user=patreon):
         if entry.user.name == 'Patreon' and (now-entry.created_at).total_seconds() < 5*24*3600:  # 5 days
@@ -243,7 +243,7 @@ async def alert() -> None:
 
 async def not_support(interaction: Interaction) -> bool:
     """not support channel"""
-    if interaction.guild and str(interaction.guild.id) == bot.config_ids["support_server"]:
+    if interaction.guild and str(interaction.guild.id) == config_ids["support_server"]:
         await custom_followup(interaction, "You can't use this command on support channel. Go spam somewhere else!")
         return False
     return True
@@ -603,7 +603,7 @@ async def send_error(interaction: Optional[Interaction], error: Exception, cmd: 
     else:
         data = cmd
     msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)}] : {data}"
-    error_channel = bot.get_channel(int(bot.config_ids["error_channel"]))
+    error_channel = bot.get_channel(int(config_ids["error_channel"]))
     try:
         await error_channel.send(
             f"{msg}\n```{''.join(format_exception(type(error), error, error.__traceback__))}```")

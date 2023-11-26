@@ -19,7 +19,7 @@ from exts.Battle import (motivate_func, ping_func, watch_auction_func,
                          watch_func)
 from exts.General import remind_func
 from Help import utils
-from Help.constants import all_servers, date_format
+from Help.constants import all_servers, date_format, config_ids
 
 matplotlib.use('Agg')
 
@@ -33,7 +33,7 @@ async def on_error(*args, **kwargs) -> None:
     else:
         msg = " "
     msg += kwargs.get('msg', '')
-    channel = bot.get_channel(int(bot.config_ids["error_channel"]))
+    channel = bot.get_channel(int(config_ids["error_channel"]))
     await channel.send(f"{msg}\n```{format_exc()}"[:1900] + "```")
 
 

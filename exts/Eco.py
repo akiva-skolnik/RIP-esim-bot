@@ -18,7 +18,7 @@ from pytz import timezone
 
 from Help import utils
 from Help.constants import (all_countries, all_countries_by_name,
-                            all_parameters, all_products, api_url, date_format)
+                            all_parameters, all_products, api_url, date_format, config_ids)
 from Help.transformers import Country, Product, ProfileLink, Server
 from Help.utils import CoolDownModified, draw_pil_table, split_list
 
@@ -419,7 +419,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 seconds_from_update = (datetime.strptime(now, date_format) -
                                        datetime.strptime(last, date_format)).total_seconds()
                 if seconds_from_update > 3600:
-                    channel = self.bot.get_channel(int(self.bot.config_ids["warnings_channel"]))
+                    channel = self.bot.get_channel(int(config_ids["warnings_channel"]))
                     await channel.send(f'Prices for {server} updated {seconds_from_update} seconds ago.')
                     if await utils.is_premium_level_1(interaction, False):
                         real_time = True

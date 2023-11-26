@@ -10,7 +10,7 @@ from discord.ext.commands import Cog, CommandOnCooldown
 from pytz import timezone
 
 from Help import utils
-from Help.constants import date_format
+from Help.constants import date_format, config_ids
 
 
 class Listener(Cog):
@@ -31,7 +31,7 @@ class Listener(Cog):
 
         my_cogs = sorted([cog for cog in self.bot.cogs if cog != "Listener"] + ["BlackMarket"])
         channel_name = f"{str(command.name).lower().split()[-1].replace('+', '-plus')}"
-        guild = self.bot.get_guild(int(self.bot.config_ids["commands_server"]))
+        guild = self.bot.get_guild(int(config_ids["commands_server"]))
         cog_name = command.module.split(".")[-1]
         if cog_name == "__main__":
             return
@@ -59,7 +59,7 @@ class Listener(Cog):
             f"**{x['name']}**: {x.get('value')}" for x in interaction.data.get('options', []))
         msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)}] : {data}"
         if not isinstance(error, CheckFailure):
-            error_channel = self.bot.get_channel(int(self.bot.config_ids["error_channel"]))
+            error_channel = self.bot.get_channel(int(config_ids["error_channel"]))
             try:
                 await error_channel.send(
                     f"{msg}\n```{''.join(format_exception(type(error), error, error.__traceback__))}```")
@@ -90,7 +90,7 @@ class Listener(Cog):
             error1 = "Server takes too long to respond"
 
         embed = Embed(colour=0xFF0000, title="There was an error.", timestamp=interaction.created_at,
-                      description=f"- [Support Server]({self.bot.config_ids['support_invite']})\n\n" +
+                      description=f"- [Support Server]({config_ids['support_invite']})\n\n" +
                                   (f"Command - `{interaction.command.name}`" if interaction.command else ""))
         embed.add_field(name="Error:", value=error1, inline=False)
         try:
