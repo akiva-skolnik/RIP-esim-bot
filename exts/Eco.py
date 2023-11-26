@@ -8,7 +8,8 @@ from typing import Optional
 
 import pandas as pd
 from discord import Embed, File, Interaction
-from discord.app_commands import Range, Transform, check, checks, command, describe, rename
+from discord.app_commands import (Range, Transform, check, checks, command,
+                                  describe, rename)
 from discord.ext.commands import BadArgument, Cog
 from lxml import html
 from matplotlib import pyplot as plt
@@ -16,6 +17,8 @@ from matplotlib.ticker import MultipleLocator
 from pytz import timezone
 
 from Help import utils
+from Help.constants import (all_countries, all_countries_by_name,
+                            all_parameters, all_products, api_url, date_format)
 from Help.transformers import Country, Product, ProfileLink, Server
 from Help.utils import CoolDownModified, draw_pil_table, split_list
 
@@ -51,7 +54,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         ecos = [[k] * v for k, v in workers_dict.items()]
         ecos = [j for i in ecos for j in i]
 
-        raw = company_type.lower() in self.bot.products[:6]
+        raw = company_type.lower() in all_products[:6]
         high_raw = high_product = False
         if high_resource:
             if raw:
@@ -295,7 +298,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             return
 
         await interaction.response.defer()
-        country_name, country = country, self.bot.countries_by_name.get(country.lower())
+        country_name, country = country, all_countries_by_name.get(country.lower())
 
         data = []
         for i in await utils.get_content(f'https://{server}.e-sim.org/apiMap.html'):
@@ -357,7 +360,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         db_dict = await utils.find_one("price", server)
         embed = Embed(colour=0x3D85C6, title=server,
                       description=f"[All products](https://docs.google.com/spreadsheets/d/17y8qEU4aHQRTXKdnlM278z3SDzY16bmxMwrZ0RKWcEI/edit#gid={product_gids.get(server, '')}),"
-                                  f" [API For developers]({self.bot.api}/https:/{server}.e-sim.org/prices.html)")
+                                  f" [API For developers]({api_url}/https:/{server}.e-sim.org/prices.html)")
         headers = ["Cheapest Item", "Price", "Stock"]
         results = []
         for item, row in db_dict.items():
@@ -383,7 +386,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         if not quality:
             quality = 5
         base_url = f'https://{server}.e-sim.org/'
-        product_name = f"Q{quality} {item.title()}" if item.lower() not in self.bot.products[:6] else item.title()
+        product_name = f"Q{quality} {item.title()}" if item.lower() not in all_products[:6] else item.title()
         best_price = 0
         if not real_time:
             db_dict = await utils.find_one("price", server)
@@ -401,7 +404,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             if not real_time:
                 embed = Embed(colour=0x3D85C6, title=f"{product_name}, {server}",
                               description=f"[All products](https://docs.google.com/spreadsheets/d/17y8qEU4aHQRTXKdnlM278z3SDzY16bmxMwrZ0RKWcEI/edit#gid={product_gids.get(server, '')}),"
-                                          f" [API For developers]({self.bot.api}/https:/{server}.e-sim.org/prices.html)")
+                                          f" [API For developers]({api_url}/https:/{server}.e-sim.org/prices.html)")
                 embed.set_footer(text=db_dict["Product"][0][-1])
                 if results:
                     embed.add_field(name="**Link**", value="\n".join(
@@ -412,9 +415,9 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 else:
                     embed.add_field(name="Error", value="No offers found in the market.")
                 last = db_dict["Product"][0][-1].replace("Last update: ", "").replace(" (game time).", "")
-                now = datetime.now().astimezone(timezone('Europe/Berlin')).strftime(self.bot.date_format)
-                seconds_from_update = (datetime.strptime(now, self.bot.date_format) -
-                                       datetime.strptime(last, self.bot.date_format)).total_seconds()
+                now = datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)
+                seconds_from_update = (datetime.strptime(now, date_format) -
+                                       datetime.strptime(last, date_format)).total_seconds()
                 if seconds_from_update > 3600:
                     channel = self.bot.get_channel(int(self.bot.config_ids["warnings_channel"]))
                     await channel.send(f'Prices for {server} updated {seconds_from_update} seconds ago.')
@@ -449,7 +452,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                             pass
                         price = round(float(mm_ratio) * float(raw_price), 4)
                         final[country_id] = {"price": price, "stock": stock,
-                                             "country": self.bot.countries[country_id]}
+                                             "country": all_countries[country_id]}
                 if len(raw_prices) < 20:  # last page
                     break
                 await utils.custom_delay(interaction)
@@ -533,7 +536,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 ax.legend()
                 fig.autofmt_xdate()
                 ax.grid()
-                return utils.plt_to_bytes()
+                return utils.plt_to_bytes(fig)
 
             output_buffer = await self.bot.loop.run_in_executor(None, x, db_dict)
             file = File(fp=output_buffer, filename=f"{interaction.id}.png")
@@ -675,7 +678,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         ax.plot(list(per_day.keys())[:-1],
                 [val['worth'] - val['cost'] for val in per_day.values()][:-1])
         ax.grid()
-        output_buffer = utils.plt_to_bytes()
+        output_buffer = utils.plt_to_bytes(fig)
         file = File(fp=output_buffer, filename=f"{interaction.id}.png")
         embed.set_thumbnail(url=f"attachment://{interaction.id}.png")
 
@@ -760,9 +763,9 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
     async def mm(self, interaction: Interaction, server: Transform[str, Server], country: Transform[str, Country] = "") -> None:
         """Shows monetary market stats per server/country."""
         await interaction.response.defer()
-        country_id = self.bot.countries_by_name.get(country.lower(), 0)
+        country_id = all_countries_by_name.get(country.lower(), 0)
         link = f"https://{server}.e-sim.org/monetaryMarket.html?buyerCurrencyId={country_id}"
-        get_url = self.bot.api + link.replace("https://", "https:/")
+        get_url = api_url + link.replace("https://", "https:/")
         embed = Embed(colour=0x3D85C6, title=link, description=f"[source]({get_url})")
         if not country:
             mm_db = await utils.find_one("mm", server)
@@ -792,7 +795,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         ax.plot(d, d1)
         fig.autofmt_xdate()
         ax.grid()
-        output_buffer = utils.plt_to_bytes()
+        output_buffer = utils.plt_to_bytes(fig)
         file = File(fp=output_buffer, filename=f"{interaction.id}.png")
         embed.set_thumbnail(url=f"attachment://{interaction.id}.png")
         try:
@@ -827,7 +830,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
 
         embed = Embed(colour=0x3D85C6)
         files = []
-        _, ax = plt.subplots()
+        fig, ax = plt.subplots()
         func = interaction.response.send_message
         if "/profile.html?id=" in parameter:
             await interaction.response.defer()
@@ -906,7 +909,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 increase = values[inc_index] / 100 + 1
                 values[inc_index] *= values[inc_index] / 100 + 1  # Will be fixed later when dividing back
 
-            all_parameters1 = {v: k for k, v in self.bot.all_parameters.items()}
+            all_parameters1 = {v: k for k, v in all_parameters.items()}
             for name, value in zip(parameters, values):
                 parameter = all_parameters1.get(name, "production")
                 data, percentages, quality = await calc_upgrades(self.bot, parameter, value / increase, total, ax)
@@ -920,9 +923,9 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                     embed.add_field(name="\u200B", value=f"**{parameter.title()}**\nThere's nothing to upgrade!")
 
         else:
-            if parameter.lower() not in self.bot.all_parameters:
+            if parameter.lower() not in all_parameters:
                 await utils.custom_followup(
-                    interaction, f"Possible parameters: {', '.join(self.bot.all_parameters.keys()).title()}.\n"
+                    interaction, f"Possible parameters: {', '.join(all_parameters.keys()).title()}.\n"
                                  f"You can also use `<profile link>` or `<eq link>`", ephemeral=True)
                 return
             data, percentages, quality = await calc_upgrades(self.bot, parameter.lower(), value, total, ax)
@@ -941,7 +944,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         ax.set_yticklabels([f'{x * 100:.0f}%' for x in ax.get_yticks()])
         ax.legend()
         ax.set_xlabel('Upgrades Count')
-        output_buffer = utils.plt_to_bytes()
+        output_buffer = utils.plt_to_bytes(fig)
         files.append(File(fp=output_buffer, filename=f"{interaction.id}.png"))
         embed.set_thumbnail(url=f"attachment://{interaction.id}.png")
         await func(files=files, embed=await utils.convert_embed(interaction, embed))

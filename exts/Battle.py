@@ -12,16 +12,21 @@ from json import loads
 from random import randint
 from typing import Optional
 
+import pandas as pd
 from discord import Embed, File, Interaction, Role, TextChannel
-from discord.app_commands import Transform, check, checks, command, describe, guild_only
+from discord.app_commands import (Transform, check, checks, command, describe,
+                                  guild_only)
 from discord.ext.commands import Cog, Context, hybrid_command
 from discord.utils import MISSING
 from matplotlib import pyplot as plt
 from matplotlib.dates import DateFormatter
 from pytz import timezone
 
-from Help import utils
-from Help.transformers import AuctionLink, BattleLink, Country, Server, TournamentLink
+from Help import db_utils, utils
+from Help.constants import (all_countries, all_countries_by_name, all_servers,
+                            date_format)
+from Help.transformers import (AuctionLink, BattleLink, Country, Server,
+                               TournamentLink)
 from Help.utils import (CoolDownModified, bar, camel_case_merge,
                         dmg_calculator, dmg_trend, draw_pil_table,
                         human_format, not_support)
@@ -51,7 +56,8 @@ class Battle(Cog):
         """Displays buffed players per server and country or military unit."""
 
         if server not in self.bot.gids:
-            return await interaction.response.send_message("You can not use this server in this command", ephemeral=True)
+            return await interaction.response.send_message("You can not use this server in this command",
+                                                           ephemeral=True)
 
         await interaction.response.defer()
         if military_unit_id:
@@ -65,7 +71,7 @@ class Battle(Cog):
 
         result = []
         find_buffs = await utils.find_one("buffs", server)
-        now = datetime.now().astimezone(timezone('Europe/Berlin')).strftime(self.bot.date_format)
+        now = datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)
         total_buff = 0
         total_debuff = 0
         for current_nick, row in find_buffs.items():
@@ -78,8 +84,8 @@ class Battle(Cog):
                 continue
 
             hyperlink = (":star:" if premium else ":lock:") + f" {utils.codes(citizenship) if not country else ''} [{current_nick[:12]}]({link})"
-            if (datetime.strptime(now, self.bot.date_format) - datetime.strptime(
-                    buffed, self.bot.date_format)).total_seconds() < 24 * 60 * 60:
+            if (datetime.strptime(now, date_format) - datetime.strptime(
+                    buffed, date_format)).total_seconds() < 24 * 60 * 60:
                 buff = ":green_circle: "
                 total_buff += 1
             else:
@@ -158,7 +164,8 @@ class Battle(Cog):
                 await utils.replace_one("collection", interaction.command.name, find_cup)
                 await self.cup_func(interaction, link, server, ids)
             else:
-                await interaction.edit_original_response(content="No IDs found. Consider using the `cup` command instead. Example: `/cup server: alpha first_battle_id: 40730 last_battle_id: 40751`")
+                await interaction.edit_original_response(
+                    content="No IDs found. Consider using the `cup` command instead. Example: `/cup server: alpha first_battle_id: 40730 last_battle_id: 40751`")
                 return
         else:
             find_cup[link].append({str(interaction.channel.id): {"nick": nick, "author_id": str(interaction.user.id)}})
@@ -175,13 +182,13 @@ class Battle(Cog):
         """Displays the top 10 players in a cup tournament."""
         if last_battle_id - first_battle_id > 1000:
             return await interaction.response.send_message(
-                                           f"You are asking me to check {last_battle_id - first_battle_id} battles.\n"
-                                           "I have a reason to believe that you should recheck your request.",
-                                           ephemeral=True)
+                f"You are asking me to check {last_battle_id - first_battle_id} battles.\n"
+                "I have a reason to believe that you should recheck your request.",
+                ephemeral=True)
         if last_battle_id - first_battle_id < 1:
             return await interaction.response.send_message(
-                                           "You can find the first and last id on the `news` -> `military events` page.",
-                                           ephemeral=True)
+                "You can find the first and last id on the `news` -> `military events` page.",
+                ephemeral=True)
         await interaction.response.send_message("Ok")
         await utils.default_nick(interaction, server, nick)
         find_cup = await utils.find_one("collection", interaction.command.name)
@@ -199,7 +206,8 @@ class Battle(Cog):
                     if view.value:
                         find_cup = await utils.find_one("collection", interaction.command.name)
                         if query in find_cup:
-                            await interaction.edit_original_response(content="I'm on it, Sir. Thank you very much.", view=view)
+                            await interaction.edit_original_response(content="I'm on it, Sir. Thank you very much.",
+                                                                     view=view)
                             find_cup[query].append(
                                 {str(interaction.channel.id): {"nick": nick, "author_id": str(interaction.user.id)}})
                             await utils.replace_one("collection", interaction.command.name, find_cup)
@@ -251,7 +259,7 @@ class Battle(Cog):
         key = None
         if country:
             nick = country
-            key_id = self.bot.countries_by_name[country.lower()]
+            key_id = all_countries_by_name[country.lower()]
             key = 'citizenship'
             header = ["Country", "Q0 wep", "Q1", "Q5", "DMG"]
         elif mu_id:
@@ -277,16 +285,18 @@ class Battle(Cog):
             key = "citizenId"
             if api["type"] == "MILITARY_UNIT_CUP_EVENT_BATTLE" and not range_of_battles:
                 header = ["Military unit", "Q0 wep", "Q1", "Q5", "DMG"]
-                attacker = (await utils.get_content(f'{base_url}apiMilitaryUnitById.html?id={api["attackerId"]}'))["name"]
-                defender = (await utils.get_content(f'{base_url}apiMilitaryUnitById.html?id={api["defenderId"]}'))["name"]
+                attacker = (await utils.get_content(f'{base_url}apiMilitaryUnitById.html?id={api["attackerId"]}'))[
+                    "name"]
+                defender = (await utils.get_content(f'{base_url}apiMilitaryUnitById.html?id={api["defenderId"]}'))[
+                    "name"]
             else:
                 attacker = api["attackerId"]
                 defender = api["defenderId"]
                 header = ["Side", "Q0 wep", "Q1", "Q5", "DMG"]
 
         if attacker != defender and api["type"] != "MILITARY_UNIT_CUP_EVENT_BATTLE":
-            attacker = self.bot.countries.get(attacker, "attacker")
-            defender = self.bot.countries.get(defender, "defender")
+            attacker = all_countries.get(attacker, "attacker")
+            defender = all_countries.get(defender, "defender")
         else:
             attacker, defender = "Attacker", "Defender"
 
@@ -388,7 +398,8 @@ class Battle(Cog):
                             hit_time[name]["dmg"].append(hit['damage'])
                 if not hit and not range_of_battles:
                     await utils.custom_followup(
-                        interaction, f'Nothing found at <{base_url}apiFights.html?battleId={battle_id}&roundId={round_id}>')
+                        interaction,
+                        f'Nothing found at <{base_url}apiFights.html?battleId={battle_id}&roundId={round_id}>')
                     return
                 if index > 0:
                     await utils.custom_delay(interaction)
@@ -405,7 +416,7 @@ class Battle(Cog):
         table = []
         embed_name = "Citizen Id"
         for name, value in sorted(my_dict.items(), key=lambda x: x[1]["dmg"], reverse=True):
-            row = [name if key != "citizenship" else self.bot.countries.get(name, name), value["dmg"]] + value["weps"]
+            row = [name if key != "citizenship" else all_countries.get(name, name), value["dmg"]] + value["weps"]
             if "tops" in value:
                 row.extend(value["tops"])
             if value["dmg"]:
@@ -413,7 +424,7 @@ class Battle(Cog):
             if len(new_dict) < 10 and isinstance(name, int):
                 if key == "citizenship":
                     embed_name = "Country"
-                    filed = self.bot.countries[name]
+                    filed = all_countries[name]
                     filed = f"{utils.codes(filed)} " + filed
                 elif key == "militaryUnit":
                     embed_name = "Military Unit Id"
@@ -425,28 +436,36 @@ class Battle(Cog):
                 if isinstance(name, str):
                     if not range_of_battles:
                         table.append(
-                            [name, f"{value['weps'][0]:,}", f"{value['weps'][1]:,}", f"{value['weps'][-1]:,}", f"{value['dmg']:,}"])
+                            [name, f"{value['weps'][0]:,}", f"{value['weps'][1]:,}", f"{value['weps'][-1]:,}",
+                             f"{value['dmg']:,}"])
                     else:
                         table.append(
-                            [name, f"{value['weps'][0]:,}", f"{value['weps'][1]:,}", f"{value['weps'][-1]:,}", f"{value['dmg']:,}"])
+                            [name, f"{value['weps'][0]:,}", f"{value['weps'][1]:,}", f"{value['weps'][-1]:,}",
+                             f"{value['dmg']:,}"])
             else:
                 if name == key_id:
                     if key == 'militaryUnit':
                         table.append(
-                            [mu_name, f"{value['weps'][0]:,}", f"{value['weps'][1]:,}", f"{value['weps'][-1]:,}", f"{value['dmg']:,}"])
+                            [mu_name, f"{value['weps'][0]:,}", f"{value['weps'][1]:,}", f"{value['weps'][-1]:,}",
+                             f"{value['dmg']:,}"])
                     elif round_id:
                         table.append([nick, f"{value['weps'][0]:,}", f"{value['weps'][1]:,}", f"{value['weps'][-1]:,}",
-                                      f"{value['dmg']:,}", f'x{value.get("tops", [0])[0]} times'] + value.get("tops", [0] * 4)[1:])
+                                      f"{value['dmg']:,}", f'x{value.get("tops", [0])[0]} times'] + value.get("tops",
+                                                                                                              [0] * 4)[
+                                                                                                    1:])
                     elif key == 'citizenId':
                         table.append(
-                            [nick, f"{value['weps'][0]:,}", f"{value['weps'][1]:,}", f"{value['weps'][-1]:,}", f"{value['dmg']:,}"])
+                            [nick, f"{value['weps'][0]:,}", f"{value['weps'][1]:,}", f"{value['weps'][-1]:,}",
+                             f"{value['dmg']:,}"])
                     else:
                         table.append(
-                            [nick, f"{value['weps'][0]:,}", f"{value['weps'][1]:,}", f"{value['weps'][-1]:,}", f"{value['dmg']:,}"])
+                            [nick, f"{value['weps'][0]:,}", f"{value['weps'][1]:,}", f"{value['weps'][-1]:,}",
+                             f"{value['dmg']:,}"])
         output.seek(0)
         if not table:
             await utils.custom_followup(
-                interaction, f"I did not find {key.replace('Id', '')} `{nick}` at <{base_url}battle.html?id={battle_id}>\n"
+                interaction,
+                f"I did not find {key.replace('Id', '')} `{nick}` at <{base_url}battle.html?id={battle_id}>\n"
                 "**Remember:** for __nick__ use `-nick`, for __MU__ use the MU id, and for __country__ - write the country name.")
             return
         embed = Embed(colour=0x3D85C6)
@@ -465,7 +484,8 @@ class Battle(Cog):
         view = utils.WaitForNext() if "Id" in embed_name else MISSING
         if len(table) == 1 and not range_of_battles:
             if key != 'citizenship':
-                citizenship = self.bot.countries[(citizen if embed_name == "Citizen Id" else mu_api)[keys[embed_name]['cs_key']]]
+                citizenship = all_countries[
+                    (citizen if embed_name == "Citizen Id" else mu_api)[keys[embed_name]['cs_key']]]
                 embed.url = f"{base_url}{key.replace('citizenId', 'profile')}.html?id={key_id}"
             else:
                 citizenship = table[0][0]
@@ -495,7 +515,7 @@ class Battle(Cog):
                 for num, value in enumerate(values):
                     value = value.split("[")[1].split("]")[0]
                     api = await utils.get_content(f'{base_url}{keys[embed_name]["api_url"]}.html?id={value}')
-                    flag = utils.codes(self.bot.countries[api[keys[embed_name]['cs_key']]])
+                    flag = utils.codes(all_countries[api[keys[embed_name]['cs_key']]])
                     values[
                         num] = f"{flag} [{api[keys[embed_name]['api_key'][:20]]}]({base_url}{keys[embed_name]['final_link']}.html?id={value})"
                     await utils.custom_delay(interaction)
@@ -560,11 +580,13 @@ class Battle(Cog):
                        hits_for_q.items()}
         drops_per_q["Elixir"] = [int(hits_with_bonus / 150), (hits_with_bonus // 150 + 1) * 150 - hits_with_bonus]
         drops_per_q["upg. + shuffle"] = [hits // 1500, next_upgrade]
-        embed.add_field(name="**Item : Drops**", value="\n".join([f"**{k} :** {v[0]:,}" for k, v in drops_per_q.items()]))
+        embed.add_field(name="**Item : Drops**",
+                        value="\n".join([f"**{k} :** {v[0]:,}" for k, v in drops_per_q.items()]))
         embed.add_field(name="**Hits For Next**", value="\n".join([f"{int(v[1]):,}" for v in drops_per_q.values()]))
         if nick:
             try:
-                given_user_id = (await utils.get_content(f"https://{server}.e-sim.org/apiCitizenByName.html?name={nick.lower()}"))['id']
+                given_user_id = \
+                (await utils.get_content(f"https://{server}.e-sim.org/apiCitizenByName.html?name={nick.lower()}"))['id']
                 if given_user_id not in hits_per_player:
                     nick = ""
             except Exception:
@@ -573,7 +595,7 @@ class Battle(Cog):
         final = defaultdict(lambda: defaultdict(lambda: []))
         qualities = set()
         all_total_tops = {index: sum(x['tops'][index] for x in tops_per_player.values()) for index in range(3)}
-        _, ax = plt.subplots()
+        fig, ax = plt.subplots()
 
         indexes = {"Q3": top10, "Q4": top3, "Q5": top1, "Q6": top1}
 
@@ -608,14 +630,14 @@ class Battle(Cog):
                         if total_chances > 0.99:
                             break
 
-                    first, last = round(mean-std), round(mean+std)
+                    first, last = round(mean - std), round(mean + std)
                     if total_drops and my_tops:
                         if first == 0:
                             drops_range = "1" if total_drops == 1 else "1+"
                             chances = 100 - x[0]
                         else:
                             drops_range = f"{first}-{last}" if first != last else str(first)
-                            chances = sum(x[first:last+1])
+                            chances = sum(x[first:last + 1])
                         final[player][quality] = [drops_range, f"{round(chances)}%"]
                         qualities.add(quality)
                     else:
@@ -645,7 +667,7 @@ class Battle(Cog):
                     ax.set_ylabel('%')
                     ax.set_xlabel('Drops Amount')
                     ax.xaxis.get_major_locator().set_params(integer=True)
-                    return utils.plt_to_bytes()
+                    return utils.plt_to_bytes(fig)
 
                 output_buffer = await self.bot.loop.run_in_executor(None, plot_drops)
                 file = File(fp=output_buffer, filename=f"{interaction.id}.png")
@@ -721,14 +743,15 @@ class Battle(Cog):
         elif str(interaction.channel.id) not in db_dict[server]:
             db_dict[server].append(str(interaction.channel.id))
             await utils.replace_one("collection", "motivate", db_dict)
-        await interaction.edit_original_response(content=f"I will check every 5 minutes if there is a new player at `{server}`")
+        await interaction.edit_original_response(
+            content=f"I will check every 5 minutes if there is a new player at `{server}`")
 
     @command()
     @describe(servers="Default to all servers")
     async def got(self, interaction: Interaction, servers: str = "") -> None:
         """Stops motivate program."""
         if not servers or servers.lower() == "all":
-            servers = " ".join(self.bot.all_servers)
+            servers = " ".join(all_servers)
         db_dict = await utils.find_one("collection", "motivate")
         changed_servers = []
         for server in servers.replace(",", " ").split():
@@ -825,7 +848,7 @@ class Battle(Cog):
 
         await interaction.response.defer()
         base_url = f'https://{server}.e-sim.org/'
-        battles = await utils.get_battles(base_url, self.bot.countries_by_name.get(country.lower(), 0))
+        battles = await utils.get_battles(base_url, all_countries_by_name.get(country.lower(), 0))
 
         if not battles:
             await utils.custom_followup(interaction, "There are currently no active RWs or attacks.")
@@ -879,8 +902,9 @@ class Battle(Cog):
 
         if extra_premium_info and not await utils.is_premium_level_1(interaction, False):
             await utils.custom_followup(
-                interaction, "`extra_premium_info` is a premium parameter! If you wish to use it, along with many other premium commands, please visit https://www.buymeacoffee.com/RipEsim"
-                             "\n\nOtherwise, try again, but this time with `extra_premium_info=False`", ephemeral=True)
+                interaction,
+                "`extra_premium_info` is a premium parameter! If you wish to use it, along with many other premium commands, please visit https://www.buymeacoffee.com/RipEsim"
+                "\n\nOtherwise, try again, but this time with `extra_premium_info=False`", ephemeral=True)
             return
 
         check_battle = False
@@ -896,7 +920,7 @@ class Battle(Cog):
         await interaction.response.defer()
 
         members = []
-        country = self.bot.countries_by_name.get(country.lower(), 0)
+        country = all_countries_by_name.get(country.lower(), 0)
 
         if military_unit_id:
             members = await utils.get_content(
@@ -925,7 +949,7 @@ class Battle(Cog):
         api_map.clear()
         table1 = []
         find_buff = await utils.find_one("buffs", server)
-        now = datetime.now().astimezone(timezone('Europe/Berlin')).strftime(self.bot.date_format)
+        now = datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)
         header = []
         for row in await utils.get_content(f"{base_url}apiOnlinePlayers.html?countryId={country}"):
             row = loads(row)
@@ -935,7 +959,7 @@ class Battle(Cog):
                 continue
             citizenship = row['citizenship']
             level = row['level']
-            location = self.bot.countries[occupant_id[location_id]]
+            location = all_countries[occupant_id[location_id]]
             if extra_premium_info:
                 tree = await utils.get_content(f"{base_url}profile.html?id={row['id']}")
                 try:
@@ -944,33 +968,33 @@ class Battle(Cog):
                     continue
                 buffs_debuffs = [camel_case_merge(x.split("/specialItems/")[-1].split(".png")[0]).replace("Elixir", "")
                                  for x in tree.xpath(
-                                     '//*[@class="profile-row" and (strong="Debuffs" or strong="Buffs")]//img/@src') if
+                        '//*[@class="profile-row" and (strong="Debuffs" or strong="Buffs")]//img/@src') if
                                  "img/specialItems/" in x]
                 buffs = ', '.join([x.split("_")[0].replace("Vacations", "Vac").replace("Resistance", "Sewer").replace(
                     "Pain Dealer", "PD ").replace("Bonus Damage", "") + ("% Bonus" if "Bonus Damage" in x.split(
-                     "_")[0] else "") for x in buffs_debuffs if "Positive" in x.split("_")[1:]]).title()
+                    "_")[0] else "") for x in buffs_debuffs if "Positive" in x.split("_")[1:]]).title()
                 debuffs = ', '.join([x.split("_")[0].lower().replace("Vacation", "Vac").replace(
                     "Resistance", "Sewer") for x in buffs_debuffs if "Negative" in x.split("_")[1:]]).title()
                 if check_battle and api_battles['type'] != "ATTACK":
                     header = "Nick", "Citizenship", "lvl", "Total DMG", "Buffs", "Debuffs"
-                    row = [name, self.bot.countries[citizenship], level, dmg, buffs, debuffs]
+                    row = [name, all_countries[citizenship], level, dmg, buffs, debuffs]
                 else:
                     if not country:
                         header = "Nick", "Citizenship", "lvl", "Total DMG", "Location", "Buffs", "Debuffs"
-                        row = [name, self.bot.countries[citizenship], level, dmg, location, buffs, debuffs]
+                        row = [name, all_countries[citizenship], level, dmg, location, buffs, debuffs]
                     else:
                         header = "Nick", "lvl", "Total DMG", "Location", "Buffs", "Debuffs"
                         row = [name, level, dmg, location, buffs, debuffs]
             else:
                 if name in find_buff and find_buff[name][5]:
-                    buff = ":red_circle: " if not (datetime.strptime(now, self.bot.date_format) - datetime.strptime(
-                        find_buff[name][5], self.bot.date_format)).total_seconds() < 86400 else ":green_circle: "
+                    buff = ":red_circle: " if not (datetime.strptime(now, date_format) - datetime.strptime(
+                        find_buff[name][5], date_format)).total_seconds() < 86400 else ":green_circle: "
                     level = buff + str(level)
                     citizenship_name = find_buff[name][1]
                     name = f"{utils.codes(citizenship_name)} [{name}]({find_buff[name][0]})"
 
                 else:
-                    citizenship_name = self.bot.countries[citizenship]
+                    citizenship_name = all_countries[citizenship]
                     name = f"{utils.codes(citizenship_name)} [{name}]({base_url}profile.html?id={row['id']})"
                     level = f":unlock: {level}"
 
@@ -1000,8 +1024,8 @@ class Battle(Cog):
 
                     db_row = find_buffs[row[0]]
                     index = None
-                    if (datetime.strptime(now, self.bot.date_format) - datetime.strptime(db_row[5],
-                                                                                         self.bot.date_format)).total_seconds() < 86400:
+                    if (datetime.strptime(now, date_format) - datetime.strptime(db_row[5],
+                                                                                         date_format)).total_seconds() < 86400:
                         index = -2
                     if not db_row[5]:
                         index = -1
@@ -1119,9 +1143,9 @@ class Battle(Cog):
             if watch_dict["channel"] == str(interaction.channel.id):
                 data.append(f"<{watch_dict['link']}> (at T{watch_dict['t']})")
         await interaction.response.send_message('\n'.join(["**Watch List:**"] + data + [
-                "\nIf you want to remove any, write `/unwatch link: <link>`",
-                f"Example: `/unwatch link: {data[0].split()[0]}`"]) if data else
-            "Currently, I'm not watching any battle. Type `/watch` if you want to watch one.")
+            "\nIf you want to remove any, write `/unwatch link: <link>`",
+            f"Example: `/unwatch link: {data[0].split()[0]}`"]) if data else
+                                                "Currently, I'm not watching any battle. Type `/watch` if you want to watch one.")
 
     @checks.dynamic_cooldown(CoolDownModified(10))
     @command()
@@ -1129,7 +1153,8 @@ class Battle(Cog):
     @check(not_support)
     @describe(link="The battle or auction link you want to watch",
               t="How many minutes before the end should I ping you? (default: 5)",
-              role="Which role should I mention? (default: @here)", custom_msg="Would you like to add a message to the ping?")
+              role="Which role should I mention? (default: @here)",
+              custom_msg="Would you like to add a message to the ping?")
     async def watch(self, interaction: Interaction, link: str, t: float = 5.0,
                     role: Role = None, custom_msg: str = "") -> None:
         """Watching a given battle (or auction) and pinging at a specific time."""
@@ -1163,7 +1188,7 @@ class Battle(Cog):
                               f"{custom_msg}" if custom_msg else "None"))
             embed.add_field(name="Time Remaining",
                             value=f'{api_battles["hoursRemaining"]:02d}:{api_battles["minutesRemaining"]:02d}:{api_battles["secondsRemaining"]:02d}')
-            defender, attacker = self.bot.countries.get(api_battles["defenderId"], "defender"), self.bot.countries.get(
+            defender, attacker = all_countries.get(api_battles["defenderId"], "defender"), all_countries.get(
                 api_battles["attackerId"], "attacker")
             embed.add_field(name="Sides", value=f"{utils.codes(defender)} {defender} vs "
                                                 f"{utils.codes(attacker)} {attacker}")
@@ -1207,7 +1232,7 @@ class Battle(Cog):
         """Probability Density Function - a good binomial approximation for big numbers
         X ~ N(mu=mean=np, sigma=std=sqrt(np(1-p))
         PDF(X) = e^(-(x-np)^2/(2np(1-p))) / sqrt(2*PI*np(1-p))"""
-        return math.exp(- math.pow((x - mean)/std, 2) / 2) / (math.sqrt(2 * math.pi) * std)
+        return math.exp(- math.pow((x - mean) / std, 2) / 2) / (math.sqrt(2 * math.pi) * std)
 
     async def old_cup_func(self, interaction: Interaction, db_key: str, server: str, ids: iter, new_cup: bool) -> None:
         """cup func"""
@@ -1230,11 +1255,13 @@ class Battle(Cog):
                         battle_type = api_battles['type']
                         if battle_type not in ['TEAM_TOURNAMENT', "COUNTRY_TOURNAMENT", "LEAGUE", "CUP_EVENT_BATTLE",
                                                "MILITARY_UNIT_CUP_EVENT_BATTLE", "TEAM_NATIONAL_CUP_BATTLE"]:
-                            await interaction.edit_original_response(content=f"First battle must be a cup (not `{battle_type}`)")
+                            await interaction.edit_original_response(
+                                content=f"First battle must be a cup (not `{battle_type}`)")
                             db_dict = await utils.find_one("collection", interaction.command.name)
                             del db_dict[db_key]
                             return await utils.replace_one("collection", interaction.command.name, db_dict)
-                        await interaction.edit_original_response(content=f"\nChecking battles of type {battle_type} (id {first}) from id {first} to id {last}")
+                        await interaction.edit_original_response(
+                            content=f"\nChecking battles of type {battle_type} (id {first}) from id {first} to id {last}")
                 if new_cup or api_battles['type'] == battle_type:
                     if api_battles['defenderScore'] == 8 or api_battles['attackerScore'] == 8:
                         last_round = api_battles['currentRound']
@@ -1296,7 +1323,8 @@ class Battle(Cog):
                     added_fields = False
                     if data["nick"] and data["nick"] != "-":
                         try:
-                            api = await utils.get_content(f'{base_url}apiCitizenByName.html?name={data["nick"].lower()}')
+                            api = await utils.get_content(
+                                f'{base_url}apiCitizenByName.html?name={data["nick"].lower()}')
                             key = f"{utils.codes(api['citizenship'])} [{api['login']}]({base_url}profile.html?id={api['id']})"
                             if key not in final:
                                 embed.add_field(name="\u200B",
@@ -1342,20 +1370,20 @@ class Battle(Cog):
         try:
             base_url = f"https://{server}.e-sim.org/"
             start_id, end_id = min(battle_ids), max(battle_ids)
-            battle_type = (await utils.find_one_api_battles(server, start_id))['type']
+            battle_type = (await db_utils.select_one_api_battles(server, start_id))['type']
             if battle_type not in ('TEAM_TOURNAMENT', "COUNTRY_TOURNAMENT", "LEAGUE", "CUP_EVENT_BATTLE",
                                    "MILITARY_UNIT_CUP_EVENT_BATTLE", "TEAM_NATIONAL_CUP_BATTLE"):
                 await utils.custom_followup(interaction, f"First battle must be a cup (not `{battle_type}`)")
                 db_dict = await utils.find_one("collection", interaction.command.name)
                 del db_dict[db_key]
                 return await utils.replace_one("collection", interaction.command.name, db_dict)
-            await utils.cache_api_battles(interaction, server, battle_ids)
-            api_battles_df = await utils.find_many_api_battles(
+            await db_utils.cache_api_battles(interaction, server, battle_ids)
+            api_battles_df = await db_utils.select_many_api_battles(
                 server, battle_ids, columns=("battle_id", "currentRound", "defenderScore", "attackerScore"),
                 custom_condition=f"type = '{battle_type}'")
-            await utils.cache_api_fights(interaction, server, api_battles_df)
+            await db_utils.cache_api_fights(interaction, server, api_battles_df)
 
-            api_fights_df = await utils.get_api_fights_sum(server, battle_ids)
+            api_fights_df = await db_utils.get_api_fights_sum(server, battle_ids)
             del api_battles_df  # free memory
 
             output = BytesIO()
@@ -1366,7 +1394,8 @@ class Battle(Cog):
             for i, (citizen_id, row) in enumerate(api_fights_df.iterrows()):
                 if i == 10:
                     break
-                api_citizen = await utils.get_content(f'{base_url}apiCitizenById.html?id={citizen_id}')  # TODO: cache to db
+                api_citizen = await utils.get_content(
+                    f'{base_url}apiCitizenById.html?id={citizen_id}')  # TODO: cache to db
                 hyperlink = f"{utils.codes(api_citizen['citizenship'])}" \
                             f" [{api_citizen['login'][:25]}]({base_url}profile.html?id={citizen_id})"
                 final[hyperlink]['damage'] = row['damage']
@@ -1375,23 +1404,10 @@ class Battle(Cog):
                     top5[citizen_id] = api_citizen['login']
                 await utils.custom_delay(interaction)
 
-            # TODO: rewrite cup_trend to use pandas
-            hit_time_df = await utils.find_many_api_fights(server, battle_ids, columns=("citizenId", "time", "damage"),
-                                                           custom_condition=f"citizenId in {tuple(top5)}")
-            hit_time = defaultdict(lambda: {"dmg": [], "time": []})
-            for i, row in hit_time_df.iterrows():
-                citizen_name = top5[row['citizenId']]
-                if hit_time[citizen_name]["dmg"]:
-                    hit_time[citizen_name]["dmg"].append(hit_time[citizen_name]["dmg"][-1] + row['damage'])
-                else:
-                    hit_time[citizen_name]["dmg"].append(row['damage'])
-                hit_time[citizen_name]["time"].append(row['time'])
-
-            # for v in hit_time.values():
-            #     v["time"].sort()
-            output_buffer = await Battle.cup_trend(self.bot, hit_time)
-            if not output_buffer:
-                output_buffer = await dmg_trend(hit_time, server, f"{start_id} - {end_id}")
+            hit_time_df = await db_utils.select_many_api_fights(server, battle_ids,
+                                                                columns=("citizenId", "time", "damage"),
+                                                                custom_condition=f"citizenId in {tuple(top5)}")
+            output_buffer = generate_cup_plot(hit_time_df, top5)
             embed = Embed(colour=0x3D85C6, title=f"{server}, {start_id}-{end_id}")
             embed.add_field(name="**CS, Nick**", value="\n".join(final.keys()))
             embed.add_field(name="**Damage**", value="\n".join([f'{v["damage"]:,}' for v in final.values()]))
@@ -1406,7 +1422,8 @@ class Battle(Cog):
                     added_fields = False
                     if data["nick"] and data["nick"] != "-":
                         try:
-                            api = await utils.get_content(f'{base_url}apiCitizenByName.html?name={data["nick"].lower()}')
+                            api = await utils.get_content(
+                                f'{base_url}apiCitizenByName.html?name={data["nick"].lower()}')
                             key = f"{utils.codes(api['citizenship'])} [{api['login']}]({base_url}profile.html?id={api['id']})"
                             if key not in final:
                                 i = api_fights_df.index.get_loc(api['id'])
@@ -1437,54 +1454,64 @@ class Battle(Cog):
             del db_dict[db_key]
             await utils.replace_one("collection", interaction.command.name, db_dict)
 
-    @staticmethod
-    async def cup_trend(bot, hit_time: dict) -> Optional[BytesIO]:
-        """cup trend"""
-        hit_time1 = defaultdict(lambda: {"dmg": [], "time": []})
-        hit_time2 = defaultdict(lambda: {"dmg": [], "time": []})
-        for k in hit_time:
-            for index in range(len(hit_time[k]["time"])):
-                if hit_time2[k]["time"] or (index and (
-                        hit_time[k]["time"][index] - hit_time[k]["time"][index - 1]).total_seconds() > 12 * 3600):
-                    hit_time2[k]["time"].append(hit_time[k]["time"][index])
-                    hit_time2[k]["dmg"].append(hit_time[k]["dmg"][index])
-                else:
-                    hit_time1[k]["time"].append(hit_time[k]["time"][index])
-                    hit_time1[k]["dmg"].append(hit_time[k]["dmg"][index])
-        hit_time2 = {k: v for k, v in hit_time2.items() if v["dmg"]}
-        if hit_time2:
-            def my_func() -> BytesIO:
-                fig, (ax1, ax2) = plt.subplots(1, 2, sharey='all', tight_layout=True)
-                fig.subplots_adjust(wspace=0.05)
-                colors = {}
-                for player, dmg_time in hit_time1.items():
-                    lines = ax1.plot(dmg_time["time"], dmg_time["dmg"], label=player)
-                    colors[player] = lines[-1].get_color()
 
-                for player, dmg_time in hit_time2.items():
-                    ax2.plot(dmg_time["time"], dmg_time["dmg"], label=player, color=colors.get(player))
+def generate_cup_plot(df: pd.DataFrame, names: dict) -> Optional[BytesIO]:
+    # Calculate total_damage for each row
+    df['total_damage'] = df.groupby('citizenId')['damage'].cumsum()
 
-                if hit_time1:
-                    ax1.legend()
-                else:
-                    ax2.legend()
-                max_dmg = max(x["dmg"][-1] for x in hit_time.values())
-                ax1.set_ylim(0, max_dmg + max_dmg / 10)
-                ax1.set_xlim(min(x["time"][0] for x in hit_time1.values()),
-                            max(x["time"][-1] for x in hit_time1.values()))
-                ax2.set_xlim(min(x["time"][0] for x in hit_time2.values()),
-                             max(x["time"][-1] for x in hit_time2.values()))
-                ax1.set_yticklabels([human_format(int(x)) for x in ax1.get_yticks().tolist()])
+    # Identify the day changes (more than 12h) and plot them directly
+    fig, axs = plt.subplots(1, 2, sharey='all', tight_layout=True)
 
-                ax1.xaxis.set_major_formatter(DateFormatter("%d-%m %H:%M"))
-                ax2.xaxis.set_major_formatter(DateFormatter("%d-%m %H:%M"))
-                fig.autofmt_xdate()
+    has_second_day = False
 
-                ax1.spines['right'].set_visible(False)
-                ax2.spines['left'].set_visible(False)
-                ax2.yaxis.tick_right()
-                return utils.plt_to_bytes()
-            return await bot.loop.run_in_executor(None, my_func)
+    colors = ['red', 'blue', 'green', 'orange', 'purple', 'brown', 'pink', 'gray', 'olive', 'cyan']
+
+    for i, (citizen_id, group) in enumerate(df.groupby('citizenId')):
+        color = colors[i]
+
+        # Filter and plot points corresponding to day changes
+        second_day_points = group[group['time'] - group['time'].shift() > pd.Timedelta(hours=12)]
+
+        # Plot the first subplot (before the day change)
+        if not second_day_points.empty:
+            axs[0].plot(group['time'][group['time'] < second_day_points.iloc[0]['time']],
+                        group['total_damage'][group['time'] < second_day_points.iloc[0]['time']],
+                        label=names[citizen_id], color=color)
+        else:
+            axs[0].plot(group['time'], group['total_damage'], label=names[citizen_id], color=color)
+
+        # Plot the second subplot (after the day change)
+        if not second_day_points.empty:
+            has_second_day = True
+            axs[1].plot(group['time'][group['time'] >= second_day_points.iloc[0]['time']],
+                        group['total_damage'][group['time'] >= second_day_points.iloc[0]['time']],
+                        label=names[citizen_id], color=color)
+
+    axs[0].yaxis.set_ticks(axs[0].get_yticks()[1 if axs[0].get_yticks()[0] < 0 else 0:])
+    axs[0].set_yticklabels([human_format(x) for x in axs[0].get_yticks().tolist()])
+
+    axs[0].xaxis.set_major_formatter(DateFormatter("%d-%m %H:%M"))
+    axs[1].xaxis.set_major_formatter(DateFormatter("%d-%m %H:%M"))
+
+    if has_second_day:
+        axs[0].spines['right'].set_visible(False)
+        axs[1].spines['left'].set_visible(False)
+        axs[1].yaxis.tick_right()
+    else:
+        # remove axs[1] and expand axs[0]
+        fig.delaxes(axs[1])
+        axs[0].change_geometry(1, 1, 1)
+
+    fig.suptitle('Total Damage vs Time')
+
+    # set_xlabel
+    axs[0].set_ylabel('Total Damage')
+    axs[0].set_xlabel('Time')
+
+    axs[0].legend()
+    fig.autofmt_xdate()
+
+    return utils.plt_to_bytes(fig)
 
 
 async def motivate_func(bot, server: str, data: dict) -> None:
@@ -1530,11 +1557,13 @@ async def ping_func(channel: TextChannel, t: float, server: str, ping_id: str, c
     while ping_id in find_ping:
         battles = await utils.get_battles(base_url)
         if country:
-            battles = [x for x in battles if country.lower() in (x['defender']['name'].lower(), x['attacker']['name'].lower())]
+            battles = [x for x in battles if
+                       country.lower() in (x['defender']['name'].lower(), x['attacker']['name'].lower())]
 
         if not battles:
-            await channel.send("The program has stopped, because there are currently no active RWs or attacks in this " +
-                               (f"country (`{country}`)." if country else f"server (`{server}`)."))
+            await channel.send(
+                "The program has stopped, because there are currently no active RWs or attacks in this " +
+                (f"country (`{country}`)." if country else f"server (`{server}`)."))
             find_ping = await utils.find_one("collection", "ping")
             if ping_id in find_ping:
                 del find_ping[ping_id]
@@ -1585,7 +1614,8 @@ async def ping_func(channel: TextChannel, t: float, server: str, ping_id: str, c
         find_ping = await utils.find_one("collection", "ping")
 
 
-async def watch_func(bot, channel: TextChannel, link: str, t: float, role: str, custom: str, author_id: int = 0) -> None:
+async def watch_func(bot, channel: TextChannel, link: str, t: float, role: str, custom: str,
+                     author_id: int = 0) -> None:
     """watch func"""
     while any(DICT["channel"] == str(channel.id) and DICT["link"] == link for DICT in
               (await utils.find_one("collection", "watch"))["watch"]):
@@ -1610,13 +1640,14 @@ async def watch_func(bot, channel: TextChannel, link: str, t: float, role: str, 
             continue
         attacker = api_battles["attackerId"]
         defender = api_battles["defenderId"]
-        if attacker != defender and attacker in bot.countries and defender in bot.countries and \
+        if attacker != defender and attacker in all_countries and defender in all_countries and \
                 api_battles["type"] != "MILITARY_UNIT_CUP_EVENT_BATTLE":
-            attacker = bot.countries[attacker]
-            defender = bot.countries[defender]
+            attacker = all_countries[attacker]
+            defender = all_countries[defender]
         else:
             attacker, defender = "Attacker", "Defender"
-        api_fights = link.replace("battle", "apiFights").replace("id", "battleId") + f"&roundId={api_battles['currentRound']}"
+        api_fights = link.replace("battle", "apiFights").replace("id",
+                                                                 "battleId") + f"&roundId={api_battles['currentRound']}"
         my_dict, hit_time = await utils.save_dmg_time(api_fights, attacker, defender)
         output_buffer = await dmg_trend(hit_time, link.split("//")[1].split(".e-sim.org")[0],
                                         f'{link.split("=")[1].split("&")[0]}-{api_battles["currentRound"]}')
@@ -1643,7 +1674,8 @@ async def watch_func(bot, channel: TextChannel, link: str, t: float, role: str, 
         await sleep(t * 60 + 150)
 
 
-async def watch_auction_func(bot, channel: TextChannel, link: str, t: float, custom_msg: str, author_id: int = 0) -> None:
+async def watch_auction_func(bot, channel: TextChannel, link: str, t: float, custom_msg: str,
+                             author_id: int = 0) -> None:
     """Activate watch/auction function"""
     row = await utils.get_auction(link)
 

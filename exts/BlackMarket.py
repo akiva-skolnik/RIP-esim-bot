@@ -8,6 +8,7 @@ from discord.app_commands import Range, Transform, checks, command, describe
 from discord.ext.commands import GroupCog
 
 from Help import utils
+from Help.constants import all_products, all_servers
 from Help.transformers import Product, ProfileLink, Server, Slots
 
 
@@ -33,7 +34,7 @@ class BlackMarket(GroupCog, name="black-market"):
             by_servers = {}
             for offer_dict in sorted(data.values(), key=lambda y: y["server"]):
                 if (server and server != offer_dict["server"]) or (
-                        offer_dict.get("buy") or offer_dict["server"] not in self.bot.all_servers):
+                        offer_dict.get("buy") or offer_dict["server"] not in all_servers):
                     continue
                 if offer_dict["server"] not in by_servers:
                     by_servers[offer_dict["server"]] = []
@@ -52,7 +53,7 @@ class BlackMarket(GroupCog, name="black-market"):
 
         else:
             item = product or equipment
-            full_item = f"Q{item_quality} {item}" if item.lower() not in self.bot.products[:6] else item
+            full_item = f"Q{item_quality} {item}" if item.lower() not in all_products[:6] else item
             rates_db = await utils.find_one("collection", "rates")
             rates = {}
             offers = []
@@ -103,7 +104,7 @@ class BlackMarket(GroupCog, name="black-market"):
             await utils.custom_followup(interaction, "You must provide product or eq", ephemeral=True)
             return
         item = (product or equipment).lower()
-        if item not in self.bot.products[:6] and not item_quality:
+        if item not in all_products[:6] and not item_quality:
             await utils.custom_followup(interaction, "You must provide the item's quality", ephemeral=True)
             return
         server = your_profile_link["server"]
@@ -127,11 +128,11 @@ class BlackMarket(GroupCog, name="black-market"):
         while offer_id in data:
             offer_id = str(randint(10000, 99999))
         data[offer_id] = {"server": server, "price": round(price, 4), "buy": action == "buy",
-                        "item": (f"Q{item_quality or 5} {item}" if item.lower() not in self.bot.products[
-                                                                                       :6] else item).lower(),
-                        "stock_or_eq_link": stock_or_eq_link, "discord": str(interaction.user),
-                        "discord_id": str(interaction.user.id), "nick": nick, "link": link,
-                        "created_at": str(date.today())}
+                          "item": (f"Q{item_quality or 5} {item}" if item.lower() not in
+                                                                     all_products[:6] else item).lower(),
+                          "stock_or_eq_link": stock_or_eq_link, "discord": str(interaction.user),
+                          "discord_id": str(interaction.user.id), "nick": nick, "link": link,
+                          "created_at": str(date.today())}
         data = dict(sorted(data.items(), key=lambda x: x[1]["price"]))
         await utils.replace_one("collection", __name__, data)
         await utils.custom_followup(interaction,
@@ -198,7 +199,7 @@ class BlackMarket(GroupCog, name="black-market"):
         results = {}
         for offer_id, offer_dict in data.items():
             if str(user.id) == offer_dict["discord_id"] and (not server or server == offer_dict["server"]) and (
-                    offer_dict["server"] in self.bot.all_servers):
+                    offer_dict["server"] in all_servers):
                 results[offer_id] = offer_dict
         results = sorted(results.items(), key=lambda x: x[1]['server'])
         embed = Embed(colour=0x3D85C6, title=f"{user}'s offers")

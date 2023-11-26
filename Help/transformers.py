@@ -3,15 +3,19 @@ from difflib import SequenceMatcher
 from typing import List
 
 from discord import Interaction
-from discord.app_commands import CheckFailure, Choice, Transformer, TransformerError
+from discord.app_commands import (CheckFailure, Choice, Transformer,
+                                  TransformerError)
 
 from bot.bot import bot
 from Help import utils
+
+from .constants import all_countries, all_countries_by_name, all_servers
 
 
 def fix_link(link: str) -> str:
     """fix link"""
     return link.split("#")[0].replace("http://", "https://").split("&actionStatus=")[0].replace("*", "")
+
 
 def get_server(link: str) -> str:
     """get server"""
@@ -29,19 +33,19 @@ class Server(Transformer): # noqa
 
     @property
     def choices(self) -> List[Choice]:
-        return [Choice(name=x, value=x) for x in bot.all_servers]
+        return [Choice(name=x, value=x) for x in all_servers]
 
 
 class Country(Transformer):
     """Country"""
     async def transform(self, interaction: Interaction, country: str) -> str:
-        if country.lower() in bot.countries_by_name:
-            return bot.countries[bot.countries_by_name[country.lower()]]
+        if country.lower() in all_countries_by_name:
+            return all_countries[all_countries_by_name[country.lower()]]
         raise TransformerError(country, self.type, self)
 
     async def autocomplete(self, interaction: Interaction, value: str, /) -> list:
         return [Choice(name=k, value=k) for k in sorted(
-            bot.countries.values(), key=lambda x: SequenceMatcher(None, x.lower(), value.lower()).ratio(), reverse=True)][:10]
+            all_countries.values(), key=lambda x: SequenceMatcher(None, x.lower(), value.lower()).ratio(), reverse=True)][:10]
 
 
 class BattleTypes(Transformer):  # noqa
@@ -119,7 +123,7 @@ class ProfileLink(Transformer):  # noqa
     async def transform(self, interaction: Interaction, link: str) -> dict:
         result = {"base": "profile"}
         link = link.replace("_", "-")
-        if link in bot.all_servers:
+        if link in all_servers:
             link = link + "-" + await utils.default_nick(interaction, link)
         if link.startswith("http") and "profile" in link:
             link = fix_link(link)

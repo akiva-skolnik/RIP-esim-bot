@@ -1,6 +1,7 @@
 """Main Module"""
 import asyncio
 import importlib
+import os
 import subprocess
 from datetime import datetime
 from os import walk
@@ -14,9 +15,11 @@ from discord.utils import setup_logging
 from pytz import timezone
 
 from bot.bot import bot
-from exts.Battle import motivate_func, ping_func, watch_auction_func, watch_func
+from exts.Battle import (motivate_func, ping_func, watch_auction_func,
+                         watch_func)
 from exts.General import remind_func
 from Help import utils
+from Help.constants import all_servers, date_format
 
 matplotlib.use('Agg')
 
@@ -26,7 +29,7 @@ async def on_error(*args, **kwargs) -> None:
     """Error Handling"""
     if len(args) > 1 and hasattr(args[1], "clean_content"):
         now = datetime.now().astimezone(timezone('Europe/Berlin'))
-        msg = f"[{now.strftime(bot.date_format)}] {args[1].clean_content}"
+        msg = f"[{now.strftime(date_format)}] {args[1].clean_content}"
     else:
         msg = " "
     msg += kwargs.get('msg', '')
@@ -96,7 +99,7 @@ async def activate_motivate() -> None:
     """Activating Motivate Function at Restart"""
     db_dict = await utils.find_one("collection", "motivate")
     for server in db_dict:
-        if server in bot.all_servers:
+        if server in all_servers:
             bot.loop.create_task(motivate_func(bot, server, db_dict))
             await asyncio.sleep(20)
 
@@ -117,9 +120,9 @@ async def start() -> None:
 
 @bot.tree.command()
 @guilds(utils.hidden_guild)
-async def update_from_source(interaction: Interaction, pull: bool = True) -> None:
+async def update_from_source(interaction: Interaction) -> None:
     """Updates the code from the source."""
-    if pull:
+    if not os.environ.get("test_mode"):
         process = subprocess.Popen(["git", "pull"], stdout=subprocess.PIPE)
         output = process.communicate()[0]
         await interaction.response.send_message(output.decode("utf-8"))
@@ -129,7 +132,7 @@ async def update_from_source(interaction: Interaction, pull: bool = True) -> Non
         for file_name in filenames:
             if file_name.endswith(".py"):
                 await bot.reload_extension(f'exts.{file_name.replace(".py", "")}')
-    importlib.reload(modules["Help.utils"])
+    importlib.reload(modules["Help"])
 
 
 async def main() -> None:

@@ -5,13 +5,16 @@ from io import BytesIO
 from random import randint
 
 from discord import Attachment, Embed, File, Interaction, TextChannel
-from discord.app_commands import Transform, check, checks, command, describe, guild_only
+from discord.app_commands import (Transform, check, checks, command, describe,
+                                  guild_only)
 from discord.ext.commands import Cog
 from pytz import timezone
 from sympy import sympify
 from wolframalpha import Client
 
 from Help import utils
+from Help.constants import (all_countries, all_products, all_servers, api_url,
+                            date_format)
 from Help.transformers import Country, Server
 from Help.utils import CoolDownModified, camel_case_merge
 
@@ -29,7 +32,7 @@ class General(Cog):
     async def bug(self, interaction: Interaction, your_bug_report: str) -> None:
         """Sends a bug report."""
 
-        msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(self.bot.date_format)}] " \
+        msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)}] " \
               f"**{interaction.user.name}** has sent the following bug report: \n{your_bug_report}"
         channel = self.bot.get_channel(int(self.bot.config_ids["bugs_channel"]))
         await channel.send(msg)
@@ -87,7 +90,7 @@ class General(Cog):
 
         await interaction.response.defer()
         if not servers or servers.lower() == "all":
-            servers = " ".join(self.bot.all_servers)
+            servers = " ".join(all_servers)
         embed = Embed(colour=0x3D85C6, title="Events")
         for server in servers.replace(",", " ").replace(" and ", " ").split():
             if not server.strip():
@@ -185,9 +188,9 @@ class General(Cog):
             if api["login"] in find_buffs and find_buffs[api["login"]][5]:
                 db_row = find_buffs[api["login"]]
                 buffs_link = f"https://docs.google.com/spreadsheets/d/{self.bot.gids[server][0]}/edit#gid={self.bot.gids[server][2]}"
-                now = datetime.now().astimezone(timezone('Europe/Berlin')).strftime(self.bot.date_format)
-                if (datetime.strptime(now, self.bot.date_format) - datetime.strptime(db_row[5],
-                                                                                     self.bot.date_format)).total_seconds() < 86400:
+                now = datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)
+                if (datetime.strptime(now, date_format) - datetime.strptime(db_row[5],
+                                                                                     date_format)).total_seconds() < 86400:
                     buffs += f" [(*Time left:* {db_row[7].strip()})]({buffs_link})"
                 else:
                     debuffs += f" [(*Time left:* {db_row[7].strip()})]({buffs_link})"
@@ -368,7 +371,7 @@ class General(Cog):
     async def feedback(self, interaction: Interaction, your_feedback: str) -> None:
         """Send a feedback about the bot."""
 
-        msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(self.bot.date_format)}] **{interaction.user.name}** has sent the following feedback: \n{your_feedback}"
+        msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)}] **{interaction.user.name}** has sent the following feedback: \n{your_feedback}"
         channel = self.bot.get_channel(int(self.bot.config_ids["feedback_channel"]))
         await channel.send(msg)
         await utils.custom_followup(
@@ -395,8 +398,8 @@ class General(Cog):
         await interaction.response.defer()
         get_url = link.replace("http://", "https://")
         server = get_url.split("https://")[-1].split(".e-sim.org/")[0]
-        if not link.startswith(self.bot.api):
-            get_url = self.bot.api + link.replace("https://", "https:/")
+        if not link.startswith(api_url):
+            get_url = api_url + link.replace("https://", "https:/")
         base_url = f"https://{server}.e-sim.org/"
         embed = Embed(colour=0x3D85C6, title=link, description=f"[source]({get_url})")
         if "/statistics.html" in link:  # locked to registered users.
@@ -551,7 +554,7 @@ class General(Cog):
             row = await utils.get_content(get_url)
             penalty = "100%"
             for v in row["active_companies_stats"]:
-                if v["type"].split()[-1].lower() in self.bot.products[:6]:
+                if v["type"].split()[-1].lower() in all_products[:6]:
                     penalty = v["penalty"]
             row["penalty"] = penalty
             row["buildings"] = len(row["buildings"])
@@ -639,11 +642,11 @@ class General(Cog):
             api1 = await utils.get_content(link.replace("militaryUnit", "apiMilitaryUnitById"))
             api2 = await utils.get_content(link.replace("militaryUnit", "apiMilitaryUnit"))
             row = {"Name": api1['name'], "Total Damage": f"{api1['totalDamage']:,}", "Today Damage": f"{api2['todayDamage']:,}",
-                   "Max Members": api1['maxMembers'], "Citizenship": self.bot.countries[api1['countryId']],
+                   "Max Members": api1['maxMembers'], "Citizenship": all_countries[api1['countryId']],
                    "Type": api1['militaryUnitType'], "Value": api2['value']}
             row['Citizenship'] = f"{utils.codes(row['Citizenship'])}" + row['Citizenship']
             embed.add_field(name="Info", value="\n".join([f"**{k}:** {v}" for k, v in row.items()]))
-            row = {f"Battle Order: {self.bot.countries[api2['todayBattleAttacker']]} VS {self.bot.countries[api2['todayBattleDefender']]}": f"{base_url}battle.html?id={api2['todayBattleId']}",
+            row = {f"Battle Order: {all_countries[api2['todayBattleAttacker']]} VS {all_countries[api2['todayBattleDefender']]}": f"{base_url}battle.html?id={api2['todayBattleId']}",
                    "Recruitment": link.replace("militaryUnit", "militaryUnitRecrutation"),
                    "Donate products": link.replace("militaryUnit", "donateProductsToMilitaryUnit"),
                    "Donate money": link.replace("militaryUnit", "donateMoneyToMilitaryUnit"),
@@ -705,8 +708,8 @@ class General(Cog):
             t = f"{(api_battle['minutesRemaining'] + api_battle['hoursRemaining'] * 60):02d}:{api_battle['secondsRemaining']:02d}"
             attacker, defender = api_battle["attackerId"], api_battle["defenderId"]
             if attacker != defender and api_battle["type"] != "MILITARY_UNIT_CUP_EVENT_BATTLE":
-                attacker = self.bot.countries.get(attacker, "Attacker")
-                defender = self.bot.countries.get(defender, "Defender")
+                attacker = all_countries.get(attacker, "Attacker")
+                defender = all_countries.get(defender, "Defender")
 
             else:
                 attacker, defender = "Attacker", "Defender"

@@ -10,6 +10,7 @@ from discord.ext.commands import Cog, CommandOnCooldown
 from pytz import timezone
 
 from Help import utils
+from Help.constants import date_format
 
 
 class Listener(Cog):
@@ -26,7 +27,7 @@ class Listener(Cog):
         data = interaction.data["name"] + " " + " ".join(
             f"**{x['name']}**: {x.get('value')}" for x in interaction.data.get('options', []))
 
-        msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(self.bot.date_format)}] : {data}"
+        msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)}] : {data}"
 
         my_cogs = sorted([cog for cog in self.bot.cogs if cog != "Listener"] + ["BlackMarket"])
         channel_name = f"{str(command.name).lower().split()[-1].replace('+', '-plus')}"
@@ -56,7 +57,7 @@ class Listener(Cog):
         error = getattr(error, 'original', error)
         data = interaction.data["name"] + " " + " ".join(
             f"**{x['name']}**: {x.get('value')}" for x in interaction.data.get('options', []))
-        msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(self.bot.date_format)}] : {data}"
+        msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)}] : {data}"
         if not isinstance(error, CheckFailure):
             error_channel = self.bot.get_channel(int(self.bot.config_ids["error_channel"]))
             try:

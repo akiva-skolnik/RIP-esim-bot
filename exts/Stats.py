@@ -14,6 +14,7 @@ from discord.app_commands import Transform, check, checks, command, describe
 from discord.ext.commands import Cog
 
 from Help import utils
+from Help.constants import all_countries, all_countries_by_name, api_url
 from Help.transformers import BattleTypes, Ids, Server
 from Help.utils import CoolDownModified, dmg_calculator
 
@@ -161,7 +162,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
             if await self.bot.should_cancel(interaction, msg):
                 break
             if "citizenship" in key:
-                csv_writer.writerow([self.bot.countries[int(current_id)]])
+                csv_writer.writerow([all_countries[int(current_id)]])
                 continue
             if current_id == "0" or not current_id.strip():
                 continue
@@ -175,7 +176,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                 if name == "name":
                     csv_writer.writerow(
                         [current_id, api[name], api["totalDamage"], api["maxMembers"], api["goldValue"],
-                         self.bot.countries[api["countryId"]],
+                         all_countries[api["countryId"]],
                          api["militaryUnitType"]])
                 else:
                     csv_writer.writerow(
@@ -258,7 +259,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
             included_countries = [country.split(",") for country in included_countries.lower().split("vs")]
         if included_countries and included_countries[0][0]:
             for country in included_countries:
-                side_count.append([self.bot.countries_by_name[x.strip().lower()] for x in country if x.strip()])
+                side_count.append([all_countries_by_name[x.strip().lower()] for x in country if x.strip()])
 
         await interaction.response.defer()
         msg = await utils.custom_followup(interaction,
@@ -294,8 +295,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
             if not condition or (battles_types and api_battles['type'] not in battles_types):
                 continue
             if attacker != defender and api_battles["type"] != "MILITARY_UNIT_CUP_EVENT_BATTLE":
-                defender, attacker = self.bot.countries.get(defender, "Defender"), self.bot.countries.get(attacker,
-                                                                                                          "Attacker")
+                defender, attacker = all_countries.get(defender, "Defender"), all_countries.get(attacker, "Attacker")
 
             if api_battles["type"] in ('ATTACK', 'RESISTANCE'):
                 if api_battles["attackerScore"] == 8:
@@ -350,7 +350,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                     keys = [("Date", hit['time'][:10]),
                             ("MU ID", hit['militaryUnit']) if 'militaryUnit' in hit else tuple(),
                             ("Side", defender if hit['defenderSide'] else attacker),
-                            ("Country", self.bot.countries[hit['citizenship']]),
+                            ("Country", all_countries[hit['citizenship']]),
                             ("Battle-Defender-Attacker",
                              f"[url]battleStatistics.html?id={battle_id}[/url]*{defender}*{attacker}")]
                     for key1 in keys:
@@ -610,8 +610,8 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                 custom_api = custom_api.replace("battle", "apiFights").replace("id", "battleId").replace("round", "roundId")
             else:
                 custom_api = custom_api.replace("battle", "apiBattles").replace("id", "battleId")
-        if ".e-sim.org/" in custom_api and not custom_api.startswith(self.bot.api) and "api" not in custom_api:
-            custom_api = self.bot.api + custom_api.replace("//", "/")
+        if ".e-sim.org/" in custom_api and not custom_api.startswith(api_url) and "api" not in custom_api:
+            custom_api = api_url + custom_api.replace("//", "/")
         files = []
         base_url = f"https://{server}.e-sim.org/"
         links = ["apiRegions", "apiMap", "apiRanks", "apiCountries", "apiOnlinePlayers"]

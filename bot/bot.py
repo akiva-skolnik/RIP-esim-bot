@@ -1,8 +1,8 @@
 """Bot.py"""
+import asyncio
 import json
 import os
 from datetime import date, datetime
-import asyncio
 
 import asyncmy
 from aiohttp import ClientSession, ClientTimeout
@@ -76,101 +76,7 @@ class MyClient(Bot):
         self.should_cancel = should_cancel
         self.cancel_command = {}
         self.orgs = {}
-
-        self.config_ids = {
-            "commands_server": "1032367697503199357",
-            "support_server": "584948608097452032",
-            "error_channel": "1032367698258169879",
-            "warnings_channel": "1032367971970072619",
-            "bugs_channel": "694436164979130420",
-            "feedback_channel": "584950255238512660",
-            "support_invite": "https://discord.com/invite/q96wSd6"
-        }
-
-        self.gids = {
-            "primera": ["1laY2aYa5_TcaDPCZ4FrFjZnbvVkxRIrGdm7ZRaO41nY", 0, 1364472548],
-            "luxia": ["1mx_JkHVnTVikNdTSxhvfFh4Pzuepp9ZGakCAtxnGxyY", 1876322398, 1265748453],
-            "secura": ["10en9SJVsIQz7uGhbXwb9GInnOdcDuE4p7L93un0q6xw", 1876322398, 1265748453],
-            "suna": ["1imlsoLdaEb45NnJGmo5T7mQxsjzzTGbrkvqfcR8pMlE", 2061648609, 0],
-            "alpha": ["1KqxbZ9LqS191wRf1VGLNl-aw6UId9kmUE0k7NfKQdI4", 1445005647, 0],
-            "nika": ["141302UWgwAMoNO55NfWzeQkvCtq7IY_MAYSGnqfTy2I", 1876322398, 1265748453],
-            "vega": ["19fmlmxwWrzA2PgvzKvB-tNhiSUDTfVBtooLIOnc38vI", 1876322398, 1265748453]
-        }
-
         self.delay = {}
-
-        self.api = "http://23.95.130.52:5000/"
-        self.date_format = "%d-%m-%Y %H:%M:%S"
-
-        self.all_servers = ['primera', 'secura', 'suna', 'alpha', 'luxia', 'nika', 'vega']
-
-        self.products = ["iron", "grain", "oil", "stone", "wood", "diamonds",
-                         "weapon", "house", "gift", "food", "ticket", "defense_system", "hospital", "estate"]
-
-        self.countries = {
-            1: 'Poland', 2: 'Russia', 3: 'Germany', 4: 'France', 5: 'Spain', 6: 'United Kingdom',
-            7: 'Italy', 8: 'Hungary', 9: 'Romania', 10: 'Bulgaria', 11: 'Serbia', 12: 'Croatia',
-            13: 'Bosnia and Herzegovina', 14: 'Greece', 15: 'Republic of Macedonia', 16: 'Ukraine',
-            17: 'Sweden', 18: 'Portugal', 19: 'Lithuania', 20: 'Latvia', 21: 'Slovenia',
-            22: 'Turkey', 23: 'Brazil', 24: 'Argentina', 25: 'Mexico', 26: 'USA', 27: 'Canada',
-            28: 'China', 29: 'Indonesia', 30: 'Iran', 31: 'South Korea', 32: 'Taiwan', 33: 'Israel',
-            34: 'India', 35: 'Australia', 36: 'Netherlands', 37: 'Finland', 38: 'Ireland',
-            39: 'Switzerland', 40: 'Belgium', 41: 'Pakistan', 42: 'Malaysia', 43: 'Norway',
-            44: 'Peru', 45: 'Chile', 46: 'Colombia', 47: 'Montenegro', 48: 'Austria',
-            49: 'Slovakia', 50: 'Denmark', 51: 'Czech Republic', 52: 'Belarus', 53: 'Estonia',
-            54: 'Philippines', 55: 'Albania', 56: 'Venezuela', 57: 'Egypt', 58: 'Japan',
-            59: 'Bangladesh', 60: 'Vietnam', 61: 'Yemen', 62: 'Saudi Arabia', 63: 'Thailand',
-            64: 'Algeria', 65: 'Angola', 66: 'Cameroon', 67: 'Ivory Coast', 68: 'Ethiopia',
-            69: 'Ghana', 70: 'Kenya', 71: 'Libya', 72: 'Morocco', 73: 'Mozambique', 74: 'Nigeria',
-            75: 'Senegal', 76: 'South Africa', 77: 'Sudan', 78: 'Tanzania', 79: 'Togo',
-            80: 'Tunisia', 81: 'Uganda', 82: 'Zambia', 83: 'Zimbabwe', 84: 'Botswana', 85: 'Benin',
-            86: 'Burkina Faso', 87: 'Congo', 88: 'Central African Republic', 89: 'DR of the Congo',
-            90: 'Eritrea', 91: 'Gabon', 92: 'Chad', 93: 'Niger', 94: 'Mali', 95: 'Mauritania',
-            96: 'Guinea', 97: 'Guinea Bissau', 98: 'Sierra Leone', 99: 'Liberia',
-            100: 'Equatorial Guinea', 101: 'Namibia', 102: 'Lesotho', 103: 'Swaziland',
-            104: 'Madagascar', 105: 'Malawi', 106: 'Somalia', 107: 'Djibouti', 108: 'Rwanda',
-            109: 'Burundi', 110: 'United Arab Emirates', 111: 'Syria', 112: 'Iraq', 113: 'Oman',
-            114: 'Qatar', 115: 'Jordan', 116: 'Western Sahara', 117: 'The Gambia',
-            118: 'South Sudan', 119: 'Cambodia', 120: 'Nepal', 121: 'Bolivia', 122: 'Ecuador',
-            123: 'Paraguay', 124: 'Uruguay', 125: 'Honduras', 126: 'Dominican Republic',
-            127: 'Guatemala', 128: 'Kazakhstan', 129: 'Sri Lanka', 130: 'Afghanistan',
-            131: 'Armenia', 132: 'Azerbaijan', 133: 'Georgia', 134: 'Kyrgyzstan', 135: 'Laos',
-            136: 'Tajikistan', 137: 'Turkmenistan', 138: 'Uzbekistan', 139: 'New Zealand',
-            140: 'Guyana', 141: 'Suriname', 142: 'Nicaragua', 143: 'Panama', 144: 'Costa Rica',
-            145: 'Mongolia', 146: 'Papua New Guinea', 147: 'Cuba', 148: 'Lebanon',
-            149: 'Puerto Rico', 150: 'Moldova', 151: 'Jamaica', 152: 'El Salvador', 153: 'Haiti',
-            154: 'Bahrain', 155: 'Kuwait', 156: 'Cyprus', 157: 'Belize', 158: 'Kosovo',
-            159: 'East Timor', 160: 'Bahamas', 161: 'Solomon Islands', 162: 'Myanmar',
-            163: 'North Korea', 164: 'Bhutan', 165: 'Iceland', 166: 'Vanuatu', 167: 'San Marino',
-            168: 'Palestine', 169: 'Soviet Union', 170: 'Czechoslovakia',
-            171: 'Yugoslavia', 172: 'Weimar Republic', 173: 'Republic Of China', 174: 'Persia'}
-
-        self.countries_by_name = {v.lower(): k for k, v in self.countries.items()}
-
-        self.all_parameters = {"morning": "Morning bonus damage",
-                               "noon": "Noon bonus damage",
-                               "evening": "Evening bonus damage",
-                               "night": "Night bonus damage",
-                               "avoid": "Chance to avoid damage",
-                               "max": "Increased maximum damage",
-                               "crit": "Increased critical hit chance",
-                               "core": "Increased damage for cores",  # must be before damage
-                               "damage": "Increased damage", "dmg": "Increased damage",
-                               "miss": "Miss chance reduction",
-                               "flight": "Chance for free flight",
-                               "consume": "Save ammunition",
-                               "eco": "Increased economy skill",
-                               "str": "Increased strength",
-                               "hit": "Increased hit",
-                               "less": "Less weapons for Berserk",
-                               "find": "Find a weapon",
-                               "split": "Improved split",
-                               "production": "Bonus * production",
-                               "merging": "Merge bonus",
-                               "merge": "Reduced equipment merge price",
-                               "restore": "Restoration",
-                               "increase": "Increase other parameters",
-                               "elixir": "Elixir time increased"}
 
         self.session = None
         self.locked_session = None
@@ -180,7 +86,7 @@ class MyClient(Bot):
         self.premium_users = find_one("collection", "donors")
         self.premium_servers = (find_one("collection", "premium_guilds") or {"guilds": []})["guilds"]
         self.custom_delay_dict = find_one("collection", "delay")
-        self.conn: asyncmy.Connection = None
+        self.pool: asyncmy.Pool = None
         self.db_lock = asyncio.Lock()
 
     async def setup_hook(self) -> None:
@@ -188,7 +94,7 @@ class MyClient(Bot):
         self.session = ClientSession(timeout=ClientTimeout(total=100), headers=headers)
         self.locked_session = ClientSession(timeout=ClientTimeout(total=150), headers=headers)
         self.org_session = ClientSession(timeout=ClientTimeout(total=150), headers=headers)
-        self.conn = await asyncmy.connect(host="localhost", user="root", password="root")
+        self.pool = await asyncmy.create_pool(host="localhost", user="root", password="root", autocommit=True)
 
         await load_extensions()
 

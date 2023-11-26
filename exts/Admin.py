@@ -1,4 +1,5 @@
 """Admin.py"""
+import os
 import textwrap
 import traceback
 from contextlib import redirect_stdout
@@ -10,6 +11,7 @@ from discord.app_commands import command, guilds
 from discord.ext.commands import Cog
 
 from Help import utils
+from Help.constants import all_servers
 
 
 class Admin(Cog):
@@ -20,47 +22,45 @@ class Admin(Cog):
     @command()
     @guilds(utils.hidden_guild)
     async def create_tables(self, interaction: Interaction, servers: str = ""):
-        for server in servers.split(",") if servers else self.bot.all_servers:
-            async with self.bot.conn.cursor() as cursor:
-                await cursor.execute("CREATE DATABASE " + server)
+        for server in servers.split(",") if servers else all_servers:
+            async with self.bot.pool.acquire() as connection:
+                async with connection.cursor() as cursor:
+                    await cursor.execute("CREATE DATABASE " + server)
 
-                await cursor.execute(f'''CREATE TABLE {server}.apiBattles
-                                      (battle_id INT UNSIGNED PRIMARY KEY,
-                                      currentRound TINYINT,
-                                      attackerScore TINYINT,
-                                      regionId SMALLINT UNSIGNED,
-                                      defenderScore TINYINT,
-                                      frozen BOOLEAN,
-                                      type VARCHAR(32),
-                                      defenderId SMALLINT UNSIGNED,
-                                      attackerId SMALLINT UNSIGNED,
-                                      totalSecondsRemaining SMALLINT UNSIGNED
-                                      )''')
+                    await cursor.execute(f'''CREATE TABLE {server}.apiBattles
+                                          (battle_id INT UNSIGNED PRIMARY KEY,
+                                          currentRound TINYINT,
+                                          attackerScore TINYINT,
+                                          regionId SMALLINT UNSIGNED,
+                                          defenderScore TINYINT,
+                                          frozen BOOLEAN,
+                                          type VARCHAR(32),
+                                          defenderId SMALLINT UNSIGNED,
+                                          attackerId SMALLINT UNSIGNED,
+                                          totalSecondsRemaining SMALLINT UNSIGNED
+                                          )''')
 
-                await cursor.execute(f'''CREATE TABLE {server}.apiFights
-                                      (battle_id INT UNSIGNED,
-                                      round_id TINYINT,
-                                      damage INT UNSIGNED,
-                                      weapon TINYINT,
-                                      berserk BOOLEAN,
-                                      defenderSide BOOLEAN,
-                                      citizenship TINYINT UNSIGNED,
-                                      citizenId INT,
-                                      time DATETIME(3),  -- 3 for milliseconds
-                                      militaryUnit SMALLINT UNSIGNED,
-                                      PRIMARY KEY (citizenId, time),
-                                      FOREIGN KEY (battle_id) REFERENCES apiBattles(battle_id)
-                                      )''')
+                    await cursor.execute(f'''CREATE TABLE {server}.apiFights
+                                          (battle_id INT UNSIGNED,
+                                          round_id TINYINT,
+                                          damage INT UNSIGNED,
+                                          weapon TINYINT,
+                                          berserk BOOLEAN,
+                                          defenderSide BOOLEAN,
+                                          citizenship TINYINT UNSIGNED,
+                                          citizenId INT,
+                                          time DATETIME(3),  -- 3 for milliseconds
+                                          militaryUnit SMALLINT UNSIGNED,
+                                          PRIMARY KEY (citizenId, time),
+                                          FOREIGN KEY (battle_id) REFERENCES apiBattles(battle_id)
+                                          )''')
 
-                await cursor.execute(f"CREATE INDEX battle_id_index ON {server}.apiFights (battle_id)")
+                    await cursor.execute(f"CREATE INDEX battle_id_index ON {server}.apiFights (battle_id)")
         await interaction.response.send_message("done")
 
     @command()
     @guilds(utils.hidden_guild)
     async def logout(self, interaction: Interaction) -> None:
-        conn = self.bot.conn
-        if conn:
-            conn.close()
         await self.bot.session.close()
         await self.bot.locked_session.close()
         await self.bot.org_session.close()
@@ -72,7 +72,7 @@ class Admin(Cog):
     async def execute(self, interaction: Interaction, code: str) -> None:
         # https://github.com/Rapptz/RoboDanny/blob/rewrite/cogs/admin.py#L215
         """Executes a given code"""
-        if interaction.user.id != 309449683426607104:  # owner
+        if interaction.user.id != os.environ.get("OWNER_ID"):
             return
         await interaction.response.defer()
         env = {

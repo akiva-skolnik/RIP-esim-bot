@@ -11,9 +11,7 @@ from os import path
 from re import findall, finditer
 from traceback import format_exception
 from typing import List, Optional, Union
-from warnings import filterwarnings
 
-import pandas as pd
 from discord import ButtonStyle, Embed, File, Interaction, Message, ui
 from discord.app_commands import CheckFailure
 from discord.ext import tasks
@@ -28,6 +26,8 @@ from tabulate import tabulate
 
 from bot.bot import bot
 
+from .constants import (all_parameters, all_servers, api_url, countries_per_id,
+                        countries_per_server, date_format, flags_codes)
 from .paginator import FieldPageSource, Pages
 
 
@@ -39,29 +39,37 @@ class CoolDownModified:
         self.per = per
 
     async def __call__(self, message) -> Optional[Cooldown]:
-        if is_premium_level_0(message):
+        if await is_premium_level_0(message):
             return None
         return Cooldown(self.rate, self.per)
 
 
 hidden_guild = int(bot.config_ids["commands_server"])
 font = path.join(path.dirname(__file__), "DejaVuSansMono.ttf")
-filterwarnings("ignore")
 
 
 def server_validation(server: str) -> str:
     """server validation"""
     server = server.lower().strip()
-    if server in bot.all_servers:
+    if server in all_servers:
         return server
-    raise CheckFailure(f"`{server} ` is not a valid server.\nValid servers: " + ", ".join(bot.all_servers))
+    raise CheckFailure(f"`{server} ` is not a valid server.\nValid servers: " + ", ".join(all_servers))
 
 
-def human_format(num: int, precision: int = 1) -> str:
+def human_format(num: float) -> str:
     """Number to human format"""
-    suffixes = ['', 'K', 'M', 'B', 'T']
-    m = sum(abs(num / 1000.0 ** x) >= 1 for x in range(1, len(suffixes)))
-    return f'{num / 1000.0 ** m:.{precision}f}{suffixes[m]}'
+    magnitude = 0
+    while abs(num) >= 1000:
+        magnitude += 1
+        num /= 1000
+
+    if num < 10:
+        precision = 2
+    elif num < 100:
+        precision = 1
+    else:
+        precision = 0
+    return f'{num:.{precision}f}' + ['', 'K', 'M', 'B', 'T', 'P'][magnitude]
 
 
 async def extract_url(string: str) -> list:
@@ -131,7 +139,7 @@ async def dmg_trend(hit_time: dict, server: str, battle_id: str) -> BytesIO:
     ax.set_xlabel('Time')
     ax.set_yticklabels([human_format(int(x)) for x in ax.get_yticks().tolist()])
     ax.grid()
-    return plt_to_bytes()
+    return plt_to_bytes(fig)
 
 
 async def get_auction(link: str) -> dict:
@@ -173,12 +181,10 @@ async def save_dmg_time(api_fights: str, attacker: str, defender: str) -> (dict,
     return my_dict, hit_time
 
 
-def plt_to_bytes() -> BytesIO:
-    """plt to bytes"""
+def plt_to_bytes(fig: plt.Figure) -> BytesIO:
     output_buffer = BytesIO()
-    plt.savefig(output_buffer)
+    fig.savefig(output_buffer)
     output_buffer.seek(0)
-    plt.close()
     return output_buffer
 
 
@@ -431,7 +437,7 @@ def camel_case_merge(identifier: str) -> str:
 async def get_content(link: str, return_type: str = "", method: str = "get", session=None, throw: bool = False):
     """get content"""
     if not return_type:
-        if "api" in link or link.startswith(bot.api):
+        if "api" in link or link.startswith(api_url):
             return_type = "json"
         else:
             return_type = "html"
@@ -596,7 +602,7 @@ async def send_error(interaction: Optional[Interaction], error: Exception, cmd: 
             f"**{x['name']}**: {x.get('value')}" for x in interaction.data.get('options', []))
     else:
         data = cmd
-    msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(bot.date_format)}] : {data}"
+    msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)}] : {data}"
     error_channel = bot.get_channel(int(bot.config_ids["error_channel"]))
     try:
         await error_channel.send(
@@ -606,8 +612,9 @@ async def send_error(interaction: Optional[Interaction], error: Exception, cmd: 
     if interaction is None:
         return
     custom_error = f"```{str(error).strip() or 'Timeout!'}\n```\n `The program {cmd if cmd else interaction.command.name} has halted.`"
-    await custom_followup(interaction, custom_error if not cmd else
-    custom_error + f"The following results do not include ID {cmd} onwards")
+    if cmd:
+        custom_error += f"The following results do not include ID {cmd} onwards"
+    await custom_followup(interaction, custom_error)
 
 
 class Confirm(ui.View):
@@ -807,187 +814,9 @@ async def last_page(link: str, func=get_content, **kwargs) -> int:
     return last + 1
 
 
-flags_codes = {
-    'defender': '\u2694', 'attacker': '\u2620', 'poland': '\U0001f1f5\U0001f1f1', 'russia': '\U0001f1f7\U0001f1fa',
-    'germany': '\U0001f1e9\U0001f1ea', 'france': '\U0001f1eb\U0001f1f7', 'spain': '\U0001f1ea\U0001f1f8',
-    'united kingdom': '\U0001f1ec\U0001f1e7', 'italy': '\U0001f1ee\U0001f1f9',
-    'hungary': '\U0001f1ed\U0001f1fa', 'romania': '\U0001f1f7\U0001f1f4', 'bulgaria': '\U0001f1e7\U0001f1ec',
-    'serbia': '\U0001f1f7\U0001f1f8', 'croatia': '\U0001f1ed\U0001f1f7',
-    'bosnia and herzegovina': '\U0001f1e7\U0001f1e6', 'greece': '\U0001f1ec\U0001f1f7',
-    'republic of macedonia': '\U0001f1f2\U0001f1f0', 'ukraine': '\U0001f1fa\U0001f1e6',
-    'sweden': '\U0001f1f8\U0001f1ea', 'portugal': '\U0001f1f5\U0001f1f9', 'lithuania': '\U0001f1f1\U0001f1f9',
-    'latvia': '\U0001f1f1\U0001f1fb', 'slovenia': '\U0001f1f8\U0001f1ee', 'turkey': '\U0001f1f9\U0001f1f7',
-    'brazil': '\U0001f1e7\U0001f1f7', 'argentina': '\U0001f1e6\U0001f1f7', 'mexico': '\U0001f1f2\U0001f1fd',
-    'usa': '\U0001f1fa\U0001f1f8', 'canada': '\U0001f1e8\U0001f1e6', 'china': '\U0001f1e8\U0001f1f3',
-    'indonesia': '\U0001f1ee\U0001f1e9', 'iran': '\U0001f1ee\U0001f1f7', 'south korea': '\U0001f1f0\U0001f1f7',
-    'taiwan': '\U0001f1f9\U0001f1fc', 'israel': '\U0001f1ee\U0001f1f1', 'india': '\U0001f1ee\U0001f1f3',
-    'australia': '\U0001f1e6\U0001f1fa', 'netherlands': '\U0001f1f3\U0001f1f1',
-    'finland': '\U0001f1eb\U0001f1ee', 'ireland': '\U0001f1ee\U0001f1ea',
-    'switzerland': '\U0001f1e8\U0001f1ed', 'belgium': '\U0001f1e7\U0001f1ea',
-    'pakistan': '\U0001f1f5\U0001f1f0', 'malaysia': '\U0001f1f2\U0001f1fe', 'norway': '\U0001f1f3\U0001f1f4',
-    'peru': '\U0001f1f5\U0001f1ea', 'chile': '\U0001f1e8\U0001f1f1', 'colombia': '\U0001f1e8\U0001f1f4',
-    'montenegro': '\U0001f1f2\U0001f1ea', 'austria': '\U0001f1e6\U0001f1f9',
-    'slovakia': '\U0001f1f8\U0001f1f0', 'denmark': '\U0001f1e9\U0001f1f0',
-    'czech republic': '\U0001f1e8\U0001f1ff', 'belarus': '\U0001f1e7\U0001f1fe',
-    'estonia': '\U0001f1ea\U0001f1ea', 'philippines': '\U0001f1f5\U0001f1ed',
-    'albania': '\U0001f1e6\U0001f1f1', 'venezuela': '\U0001f1fb\U0001f1ea', 'egypt': '\U0001f1ea\U0001f1ec',
-    'japan': '\U0001f1ef\U0001f1f5', 'bangladesh': '\U0001f1e7\U0001f1e9', 'vietnam': '\U0001f1fb\U0001f1f3',
-    'yemen': '\U0001f1fe\U0001f1ea', 'saudi arabia': '\U0001f1f8\U0001f1e6',
-    'thailand': '\U0001f1f9\U0001f1ed', 'algeria': '\U0001f1e9\U0001f1ff', 'angola': '\U0001f1e6\U0001f1f4',
-    'cameroon': '\U0001f1e8\U0001f1f2', 'ivory coast': '\U0001f1e8\U0001f1ee',
-    'ethiopia': '\U0001f1ea\U0001f1f9', 'ghana': '\U0001f1ec\U0001f1ed', 'kenya': '\U0001f1f0\U0001f1ea',
-    'libya': '\U0001f1f1\U0001f1fe', 'morocco': '\U0001f1f2\U0001f1e6', 'mozambique': '\U0001f1f2\U0001f1ff',
-    'nigeria': '\U0001f1f3\U0001f1ec', 'senegal': '\U0001f1f8\U0001f1f3',
-    'south africa': '\U0001f1ff\U0001f1e6', 'sudan': '\U0001f1f8\U0001f1e9',
-    'tanzania': '\U0001f1f9\U0001f1ff', 'togo': '\U0001f1f9\U0001f1ec', 'tunisia': '\U0001f1f9\U0001f1f3',
-    'uganda': '\U0001f1fa\U0001f1ec', 'zambia': '\U0001f1ff\U0001f1f2', 'zimbabwe': '\U0001f1ff\U0001f1fc',
-    'botswana': '\U0001f1e7\U0001f1fc', 'benin': '\U0001f1e7\U0001f1ef',
-    'burkina faso': '\U0001f1e7\U0001f1eb', 'congo': '\U0001f1e8\U0001f1ec',
-    'central african republic': '\U0001f1e8\U0001f1eb', 'dr of the congo': '\U0001f1e8\U0001f1e9',
-    'eritrea': '\U0001f1ea\U0001f1f7', 'gabon': '\U0001f1ec\U0001f1e6', 'chad': '\U0001f1f9\U0001f1e9',
-    'niger': '\U0001f1f3\U0001f1ea', 'mali': '\U0001f1f2\U0001f1f1', 'mauritania': '\U0001f1f2\U0001f1f7',
-    'guinea': '\U0001f1ec\U0001f1f3', 'guinea bissau': '\U0001f1ec\U0001f1fc',
-    'sierra leone': '\U0001f1f8\U0001f1f1', 'liberia': '\U0001f1f1\U0001f1f7',
-    'equatorial guinea': '\U0001f1ec\U0001f1f6', 'namibia': '\U0001f1f3\U0001f1e6',
-    'lesotho': '\U0001f1f1\U0001f1f8', 'swaziland': '\U0001f1f8\U0001f1ff',
-    'madagascar': '\U0001f1f2\U0001f1ec', 'malawi': '\U0001f1f2\U0001f1fc', 'somalia': '\U0001f1f8\U0001f1f4',
-    'djibouti': '\U0001f1e9\U0001f1ef', 'rwanda': '\U0001f1f7\U0001f1fc', 'burundi': '\U0001f1e7\U0001f1ee',
-    'united arab emirates': '\U0001f1e6\U0001f1ea', 'syria': '\U0001f1f8\U0001f1fe',
-    'iraq': '\U0001f1ee\U0001f1f6', 'oman': '\U0001f1f4\U0001f1f2', 'qatar': '\U0001f1f6\U0001f1e6',
-    'jordan': '\U0001f1ef\U0001f1f4', 'western sahara': '\U0001f1ea\U0001f1ed',
-    'the gambia': '\U0001f1ec\U0001f1f2', 'south sudan': '\U0001f1f8\U0001f1f8',
-    'cambodia': '\U0001f1f0\U0001f1ed', 'nepal': '\U0001f1f3\U0001f1f5', 'bolivia': '\U0001f1e7\U0001f1f4',
-    'ecuador': '\U0001f1ea\U0001f1e8', 'paraguay': '\U0001f1f5\U0001f1fe', 'uruguay': '\U0001f1fa\U0001f1fe',
-    'honduras': '\U0001f1ed\U0001f1f3', 'dominican republic': '\U0001f1e9\U0001f1f4',
-    'guatemala': '\U0001f1ec\U0001f1f9', 'kazakhstan': '\U0001f1f0\U0001f1ff',
-    'sri lanka': '\U0001f1f1\U0001f1f0', 'afghanistan': '\U0001f1e6\U0001f1eb',
-    'armenia': '\U0001f1e6\U0001f1f2', 'azerbaijan': '\U0001f1e6\U0001f1ff', 'georgia': '\U0001f1ec\U0001f1ea',
-    'kyrgyzstan': '\U0001f1f0\U0001f1ec', 'laos': '\U0001f1f1\U0001f1e6', 'tajikistan': '\U0001f1f9\U0001f1ef',
-    'turkmenistan': '\U0001f1f9\U0001f1f2', 'uzbekistan': '\U0001f1fa\U0001f1ff',
-    'new zealand': '\U0001f1f3\U0001f1ff', 'guyana': '\U0001f1ec\U0001f1fe',
-    'suriname': '\U0001f1f8\U0001f1f7', 'nicaragua': '\U0001f1f3\U0001f1ee', 'panama': '\U0001f1f5\U0001f1e6',
-    'costa rica': '\U0001f1e8\U0001f1f7', 'mongolia': '\U0001f1f2\U0001f1f3',
-    'papua new guinea': '\U0001f1f5\U0001f1ec', 'cuba': '\U0001f1e8\U0001f1fa',
-    'lebanon': '\U0001f1f1\U0001f1e7', 'puerto rico': '\U0001f1f5\U0001f1f7',
-    'moldova': '\U0001f1f2\U0001f1e9', 'jamaica': '\U0001f1ef\U0001f1f2',
-    'el salvador': '\U0001f1f8\U0001f1fb', 'haiti': '\U0001f1ed\U0001f1f9', 'bahrain': '\U0001f1e7\U0001f1ed',
-    'kuwait': '\U0001f1f0\U0001f1fc', 'cyprus': '\U0001f1e8\U0001f1fe', 'belize': '\U0001f1e7\U0001f1ff',
-    'kosovo': '\U0001f1fd\U0001f1f0', 'east timor': '\U0001f1f9\U0001f1f1', 'bahamas': '\U0001f1e7\U0001f1f8',
-    'solomon islands': '\U0001f1f8\U0001f1e7', 'myanmar': '\U0001f1f2\U0001f1f2',
-    'north korea': '\U0001f1f0\U0001f1f5', 'bhutan': '\U0001f1e7\U0001f1f9', 'iceland': '\U0001f1ee\U0001f1f8',
-    'vanuatu': '\U0001f1fb\U0001f1fa', 'san marino': '\U0001f1f8\U0001f1f2', 'palestine': '\U0001f1f5\U0001f1f8',
-    'republic of china': '\U0001f1e8\U0001f1f3', 'yugoslavia': '\U0001f1f8\U0001f1f0',
-    'czechoslovakia': '\U0001f1e8\U0001f1ff', 'persia': '\U0001f1ee\U0001f1f7',
-    'weimar republic': '\U0001f1e9\U0001f1ea', 'soviet union': '\U0001f1f7\U0001f1fa'}
-
-
 def codes(country: str) -> str:
     """flags codes"""
     return flags_codes.get(country.lower(), '\u2620')
-
-
-countries_per_id = {1: ('poland', 'pl', 'pln'), 2: ('russia', 'ru', 'rub'), 3: ('germany', 'ger', 'dem'),
-                    4: ('france', 'fr', 'frf'), 5: ('spain', 'es', 'esp'), 6: ('united kingdom', 'gb', 'gbp'),
-                    7: ('italy', 'it', 'itl'), 8: ('hungary', 'hu', 'huf'), 9: ('romania', 'ro', 'ron'),
-                    10: ('bulgaria', 'bg', 'bgn'), 11: ('serbia', 'rs', 'rsd'), 12: ('croatia', 'hr', 'hrk'),
-                    13: ('bosnia and herzegovina', 'ba', 'bam'), 14: ('greece', 'gr', 'grd'),
-                    15: ('republic of macedonia', 'mk', 'mkd'), 16: ('ukraine', 'ua', 'uah'),
-                    17: ('sweden', 'se', 'sek'), 18: ('portugal', 'pt', 'pte'), 19: ('lithuania', 'lt', 'ltl'),
-                    20: ('latvia', 'lv', 'lvl'), 21: ('slovenia', 'si', 'sit'), 22: ('turkey', 'tr', 'try'),
-                    23: ('brazil', 'br', 'brl'), 24: ('argentina', 'ar', 'ars'), 25: ('mexico', 'mx', 'mxn'),
-                    26: ('usa', 'us', 'usd'), 27: ('canada', 'ca', 'cad'), 28: ('china', 'cn', 'cny'),
-                    29: ('indonesia', 'id', 'idr'), 30: ('iran', 'ir', 'irr'), 31: ('south korea', 'kr', 'krw'),
-                    32: ('taiwan', 'tw', 'twd'), 33: ('israel', 'il', 'nis'), 34: ('india', 'in', 'inr'),
-                    35: ('australia', 'au', 'aud'), 36: ('netherlands', 'nl', 'nlg'), 37: ('finland', 'fi', 'fim'),
-                    38: ('ireland', 'i', 'iep'), 39: ('switzerland', 'ch', 'chf'), 40: ('belgium', 'be', 'bef'),
-                    41: ('pakistan', 'pk', 'pkr'), 42: ('malaysia', 'my', 'myr'), 43: ('norway', 'no', 'nok'),
-                    44: ('peru', 'pe', 'pen'), 45: ('chile', 'cl', 'clp'), 46: ('colombia', 'co', 'cop'),
-                    47: ('montenegro', 'me', 'mep'), 48: ('austria', 'a', 'ats'), 49: ('slovakia', 'sk', 'skk'),
-                    50: ('denmark', 'dk', 'dkk'), 51: ('czech republic', 'cz', 'czk', 'czech'),
-                    52: ('belarus', 'by', 'byr'), 53: ('estonia', 'ee', 'eek'), 54: ('philippines', 'ph', 'php'),
-                    55: ('albania', 'al', 'all'), 56: ('venezuela', 've', 'vef'), 57: ('egypt', 'eg', 'egp'),
-                    58: ('japan', 'jp', 'jpy'), 59: ('bangladesh', 'bd', 'bdt'), 60: ('vietnam', 'vn', 'vnd'),
-                    61: ('yemen', 'ye', 'yer'), 62: ('saudi arabia', 'sa', 'sar'), 63: ('thailand', 'th', 'thb'),
-                    64: ('algeria', 'dz', 'dzd'), 65: ('angola', 'ao', 'aoa'), 66: ('cameroon', 'cm', 'cm'),
-                    67: ('ivory coast', 'ci', 'ci'), 68: ('ethiopia', 'et', 'etb'), 69: ('ghana', 'gh', 'ghs'),
-                    70: ('kenya', 'ke', 'kes'), 71: ('libya', 'ly', 'lyd'), 72: ('morocco', 'ma', 'mad'),
-                    73: ('mozambique', 'mz', 'mzn'), 74: ('nigeria', 'ng', 'ngn'), 75: ('senegal', 'sn', 'sn'),
-                    76: ('south africa', 'za', 'zar'), 77: ('sudan', 'sd', 'sdg'), 78: ('tanzania', 'tz', 'tzs'),
-                    79: ('togo', 'tg', 'tg'), 80: ('tunisia', 'tn', 'tnd'), 81: ('uganda', 'ug', 'ugx'),
-                    82: ('zambia', 'zm', 'zmw'), 83: ('zimbabwe', 'zw', 'zwl'), 84: ('botswana', 'bw', 'bwp'),
-                    85: ('benin', 'bj', 'bj'), 86: ('burkina faso', 'bf', 'bf'), 87: ('congo', 'cg', 'cg'),
-                    88: ('central african republic', 'cf', 'cf'), 89: ('dr of the congo', 'cd', 'cdf'),
-                    90: ('eritrea', 'er', 'ern'), 91: ('gabon', 'ga', 'ga'), 92: ('chad', 'td', 'td'),
-                    93: ('niger', 'ne', 'ne'), 94: ('mali', 'ml', 'ml'), 95: ('mauritania', 'mr', 'mro'),
-                    96: ('guinea', 'gn', 'gnf'), 97: ('guinea bissau', 'gw', 'gw'), 98: ('sierra leone', 'sl', 'sll'),
-                    99: ('liberia', 'lr', 'lrd'), 100: ('equatorial guinea', 'gq', 'gq'), 101: ('namibia', 'na', 'nad'),
-                    102: ('lesotho', 'ls', 'lsl'), 103: ('swaziland', 'sz', 'szl'), 104: ('madagascar', 'mg', 'mga'),
-                    105: ('malawi', 'mw', 'mwk'), 106: ('somalia', 'so', 'sos'), 107: ('djibouti', 'dj', 'djf'),
-                    108: ('rwanda', 'rw', 'rwf'), 109: ('burundi', 'bi', 'bif'),
-                    110: ('united arab emirates', 'ae', 'aed'), 111: ('syria', 'sy', 'syp'), 112: ('iraq', 'iq', 'iqd'),
-                    113: ('oman', 'om', 'omr'), 114: ('qatar', 'qa', 'qar'), 115: ('jordan', 'jo', 'jod'),
-                    116: ('western sahara', 'eh', 'eh'), 117: ('the gambia', 'gm', 'gmd'),
-                    118: ('south sudan', 'ss', 'ssp'), 119: ('cambodia', 'kh', 'khr'), 120: ('nepal', 'np', 'npr'),
-                    121: ('bolivia', 'bo', 'bob'), 122: ('ecuador', 'ec', 'ecd'), 123: ('paraguay', 'py', 'pyg'),
-                    124: ('uruguay', 'uy', 'uyu'), 125: ('honduras', 'hn', 'hnl'),
-                    126: ('dominican republic', 'do', 'dop'), 127: ('guatemala', 'gt', 'gtq'),
-                    128: ('kazakhstan', 'kz', 'kzt'), 129: ('sri lanka', 'lk', 'lkr'),
-                    130: ('afghanistan', 'af', 'afn'), 131: ('armenia', 'am', 'amd'), 132: ('azerbaijan', 'az', 'azn'),
-                    133: ('georgia', 'ge', 'gel'), 134: ('kyrgyzstan', 'kg', 'kgs'), 135: ('laos', 'la', 'lak'),
-                    136: ('tajikistan', 'tj', 'tjs'), 137: ('turkmenistan', 'tm', 'tmt'),
-                    138: ('uzbekistan', 'uz', 'uzs'), 139: ('new zealand', 'nz', 'nzd'), 140: ('guyana', 'gy', 'gyt'),
-                    141: ('suriname', 'sr', 'srd'), 142: ('nicaragua', 'ni', 'nio'), 143: ('panama', 'pa', 'pab'),
-                    144: ('costa rica', 'cr', 'crc'), 145: ('mongolia', 'mn', 'mnt'),
-                    146: ('papua new guinea', 'pg', 'pgk'), 147: ('cuba', 'cu', 'cuc'), 148: ('lebanon', 'lb', 'lbp'),
-                    149: ('puerto rico', 'pr', 'prd'), 150: ('moldova', 'md', 'mdl'), 151: ('jamaica', 'jm', 'jmd'),
-                    152: ('el salvador', 'sv', 'svd'), 153: ('haiti', 'ht', 'htg'), 154: ('bahrain', 'bh', 'bhd'),
-                    155: ('kuwait', 'kw', 'kwd'), 156: ('cyprus', 'cy', 'cy'), 157: ('belize', 'bz', 'bzd'),
-                    158: ('kosovo', 'xk', 'xkd'), 159: ('east timor', 'tl', 'tld'), 160: ('bahamas', 'bs', 'bsd'),
-                    161: ('solomon islands', 'sb', 'sbd'), 162: ('myanmar', 'mm', 'mmk'),
-                    163: ('north korea', 'kp', 'kpw'), 164: ('bhutan', 'bt', 'btn'), 165: ('iceland', 'is', 'isk'),
-                    166: ('vanuatu', 'vu', 'vut'), 167: ('san marino', 'sm', 'rsm'), 168: ('palestine', 'ps', 'psd'),
-                    169: ('soviet union', 'su', 'sur'), 170: ('czechoslovakia', 'cshh', 'cs'),
-                    171: ('yugoslavia', 'yug', 'yug'), 172: ('weimar republic', 'wer', 'wer'),
-                    173: ('republic of china', 'cn', 'cn'), 174: ('persia', 'prs', 'prs')}
-
-countries_per_server = {
-    'luxia': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
-              30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55,
-              56, 57, 58, 59, 60, 61, 62, 63, 64, 68, 71, 72, 80, 104, 106, 110, 111, 112, 113, 114, 115, 119, 120, 121,
-              122, 123, 124, 125, 126, 127, 128, 130, 131, 132, 133, 134, 135, 136, 137, 138, 140, 141, 142, 143, 144,
-              145, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 158, 159, 162, 164, 165],
-    'alpha': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28,
-              29, 30, 31, 32, 33, 34, 36, 37, 39, 40, 41, 43, 44, 45, 46, 47, 48, 49, 50, 51, 53, 54, 55, 56, 57, 58,
-              60, 64, 71, 72, 80, 121, 131, 132, 133],
-    'primera': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27,
-                28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53,
-                54, 55, 56, 57, 58, 59, 60, 63, 119, 121, 122, 123, 124, 125, 126, 127, 139, 140, 141, 142, 143, 144,
-                147, 149, 150, 151, 152, 153, 156, 157, 158, 160, 165, 167, 168],
-    'secura': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28,
-               29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 54, 55, 56,
-               57, 58, 60, 63, 119, 120, 121, 122, 123, 124, 125, 126, 127, 130, 135, 140, 141, 142, 143, 144, 145, 146,
-               147, 149, 150, 151, 152, 153, 156, 157, 158, 159, 160, 161, 162, 163, 164, 166, 167, 168],
-    'suna': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28,
-             29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55,
-             56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82,
-             83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107,
-             108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128,
-             129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149,
-             150, 151, 152, 153, 154, 155, 167, 168],
-    'testura': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27,
-                28, 29, 30, 31, 32, 33, 34, 36, 37, 40, 41, 43, 44, 45, 46, 47, 48, 49, 50, 51, 53, 55, 56, 57, 58, 64,
-                71, 72, 80, 121, 131, 132, 133],
-    'nika': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
-             30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56,
-             57, 58, 59, 60, 62, 63, 64, 71, 72, 80, 110, 111, 112, 115, 119, 120, 121, 122, 123, 124, 125, 126, 127,
-             128, 130, 131, 132, 133, 134, 135, 136, 138, 142, 143, 144, 145, 147, 148, 149, 150, 152, 155, 156, 162,
-             165],
-    'vega': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
-             30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56,
-             57, 58, 59, 60, 62, 63, 64, 71, 72, 80, 110, 111, 112, 115, 119, 120, 121, 122, 123, 124, 125, 126, 127,
-             128, 130, 131, 132, 133, 134, 135, 136, 138, 142, 143, 144, 145, 147, 148, 149, 150, 152, 155, 156, 162,
-             165]
-}
 
 
 def get_countries(server: str, country: int = 0, index: int = -1) -> Union[dict, str]:
@@ -1044,7 +873,7 @@ def get_eqs(tree) -> iter:
         parameters = []
         values = []
         for parameter_string in tree.xpath('//p/text()'):
-            for x in bot.all_parameters:
+            for x in all_parameters:
                 if x in parameter_string.lower():
                     parameters.append(x)
                     try:
@@ -1149,206 +978,3 @@ async def replace_one(collection: str, _id: str, data: dict) -> None:
     filename = f"../db/{collection}_{_id}.json"
     with open(filename, "w", encoding='utf-8', errors='ignore') as file:
         json.dump(data, file)
-
-
-api_battles_columns = ('battle_id', 'currentRound', 'attackerScore', 'regionId', 'defenderScore',
-                       'frozen', 'type', 'defenderId', 'attackerId', 'totalSecondsRemaining')
-api_fights_columns = ('battle_id', 'round_id', 'damage', 'weapon', 'berserk', 'defenderSide', 'citizenship',
-                      'citizenId', 'time', 'militaryUnit')
-inserted_api_fights = {server: {} for server in bot.all_servers}
-
-
-async def cache_api_battles(interaction: Interaction, server: str, battle_ids: iter) -> None:
-    """Verify all battles are in db, if not, insert them"""
-    start_id, end_id = min(battle_ids), max(battle_ids)
-    excluded_ids = ",".join(str(i) for i in range(start_id, end_id + 1) if i not in battle_ids)
-    query = f"SELECT battle_id FROM {server}.apiBattles " \
-            f"WHERE (battle_id BETWEEN {start_id} AND {end_id}) " + \
-            (f"AND battle_id NOT IN ({excluded_ids})" if excluded_ids else "") + \
-            " AND (defenderScore = 8 OR attackerScore = 8)"
-
-    async with bot.conn.cursor() as cursor:
-        await cursor.execute(query)
-        existing_battles = [x[0] for x in await cursor.fetchall()]  # x[0] = battle_id
-    for battle_id in battle_ids:
-        if battle_id not in existing_battles:
-            await insert_into_api_battles(server, battle_id)
-            await custom_delay(interaction)
-
-
-async def insert_into_api_battles(server: str, battle_id: int) -> dict:
-    """insert_into_api_battles"""
-    api_battles = await get_content(f'https://{server}.e-sim.org/apiBattles.html?battleId={battle_id}')
-    api_battles['totalSecondsRemaining'] = (api_battles["hoursRemaining"] * 3600 +
-                                            api_battles["minutesRemaining"] * 60 + api_battles["secondsRemaining"])
-    api_battles['battle_id'] = battle_id
-    filtered_api_battles = {k: api_battles[k] for k in api_battles_columns}
-    async with bot.conn.cursor() as cursor:
-        placeholders = ', '.join(['%s'] * len(filtered_api_battles))
-        await cursor.execute(f"REPLACE INTO {server}.apiBattles VALUES ({placeholders})",
-                             tuple(filtered_api_battles.values()))
-        await bot.conn.commit()
-    return filtered_api_battles
-
-
-async def find_many_api_battles(server: str, battle_ids: iter, columns: tuple = None,
-                                custom_condition: str = None) -> pd.DataFrame:
-    """find_many_api_battles"""
-    columns = columns or api_battles_columns
-    start_id, end_id = min(battle_ids), max(battle_ids)
-    excluded_ids = ",".join(str(i) for i in range(start_id, end_id + 1) if i not in battle_ids)
-    query = f"SELECT {', '.join(columns)} FROM {server}.apiBattles " \
-            f"WHERE (battle_id BETWEEN {start_id} AND {end_id}) " + \
-            (f"AND battle_id NOT IN ({excluded_ids}) " if excluded_ids else "") + \
-            ("" if not custom_condition else f"AND {custom_condition}")
-
-    async with bot.conn.cursor() as cursor:
-        await cursor.execute(query)
-        api_battles = await cursor.fetchall()
-    return pd.DataFrame(api_battles, columns=list(columns), index=[x[0] for x in api_battles])
-
-
-async def find_one_api_battles(server: str, battle_id: int, columns: tuple = None) -> dict:
-    """find_one_api_battles"""
-    columns = columns or api_battles_columns
-    # TODO: ensure columns contains defenderScore and attackerScore or add them
-    async with bot.conn.cursor() as cursor:
-        query = f"SELECT {', '.join(columns)} FROM {server}.apiBattles WHERE battle_id = {battle_id} LIMIT 1"
-
-        await cursor.execute(query)
-        r = await cursor.fetchone()
-    r = dict(zip(columns, r)) if r else {}
-
-    if not r or 8 not in (r['defenderScore'], r['attackerScore']):
-        r = await insert_into_api_battles(server, battle_id)
-    return r
-
-
-async def insert_into_api_fights(server: str, battle_id: int, round_id: int) -> None:
-    """insert_into_api_fights"""
-    api_fights = await get_content(f'https://{server}.e-sim.org/apiFights.html?battleId={battle_id}&roundId={round_id}')
-    if not api_fights:
-        # insert dummy hit to avoid rechecking this round
-        api_fights = [{'damage': 0, 'weapon': 0, 'berserk': False, 'defenderSide': False, 'citizenship': None,
-                       'citizenId': 0, 'time': datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[
-                                               :-3]}]  # TODO: Will those values cause problems?
-    # time can be %d-%m-%Y %H:%M:%S:%f or %Y-%m-%d %H:%M:%S:%f or %Y-%m-%d %H:%M:%S.%f or %Y-%m-%d %H:%M:%S
-    # so we should replace last : with . if the count of : is 3
-    api_fights = [(battle_id, round_id, hit['damage'], hit['weapon'], hit['berserk'], hit['defenderSide'],
-                   hit['citizenship'], hit['citizenId'],
-                   ".".join(hit["time"].strip().rsplit(":", 1)) if hit["time"].count(":") == 3 else hit["time"].strip(),
-                   hit.get('militaryUnit')) for hit in reversed(api_fights)]
-
-    async with bot.conn.cursor() as cursor:
-        placeholders = ', '.join(['%s'] * len(api_fights[0]))
-        query = f"INSERT IGNORE INTO {server}.apiFights VALUES ({placeholders})"
-
-        await cursor.executemany(query, api_fights)
-        await bot.conn.commit()
-
-
-async def cache_api_fights(interaction: Interaction, server: str, api_battles_df: pd.DataFrame) -> None:
-    """Verify all fights are in db, if not, insert them"""
-    # get last inserted round per battle:
-    start_id, end_id = min(api_battles_df["battle_id"].values), max(api_battles_df["battle_id"].values)
-    excluded_ids = ",".join(str(i) for i in range(start_id, end_id + 1) if i not in api_battles_df["battle_id"].values)
-
-    async with bot.conn.cursor() as cursor:
-        query = f"SELECT battle_id, MAX(round_id) FROM {server}.apiFights " + \
-                f"WHERE (battle_id BETWEEN {start_id} AND {end_id}) " + \
-                (f"AND battle_id NOT IN ({excluded_ids}) " if excluded_ids else "") + \
-                f"GROUP BY battle_id"
-        print(query)
-        await cursor.execute(query)
-        last_round_per_battle = {x[0]: x[1] for x in await cursor.fetchall()}
-
-    for i, api in api_battles_df.iterrows():
-        current_round = api["currentRound"]
-        if 8 in (api['defenderScore'], api['attackerScore']):
-            last_round = current_round
-        else:
-            last_round = current_round + 1
-        for round_id in range(last_round_per_battle.get(api["battle_id"], 0) + 1, last_round):
-            await insert_into_api_fights(server, int(api["battle_id"]), round_id)
-            await custom_delay(interaction)
-
-
-async def find_many_api_fights(server: str, battle_ids: iter, columns: tuple = None,
-                               custom_condition: str = None) -> pd.DataFrame:
-    """find_many_api_fights"""
-    columns = columns or api_fights_columns
-    start_id, end_id = min(battle_ids), max(battle_ids)
-    excluded_ids = ",".join(str(i) for i in range(start_id, end_id + 1) if i not in battle_ids)
-
-    query = f"SELECT {', '.join(columns)} FROM {server}.apiFights " \
-            f"WHERE (battle_id BETWEEN {start_id} AND {end_id}) " + \
-            (f"AND battle_id NOT IN ({excluded_ids}) " if excluded_ids else "") + \
-            ("" if not custom_condition else f"AND {custom_condition}")
-
-    async with bot.conn.cursor() as cursor:
-        await cursor.execute(query)
-        api_fights = await cursor.fetchall()
-    return pd.DataFrame(api_fights, columns=list(columns))
-
-
-async def get_api_fights_sum(server: str, battle_ids: iter) -> pd.DataFrame:
-    start_id, end_id = min(battle_ids), max(battle_ids)
-    excluded_ids = ",".join(str(i) for i in range(start_id, end_id + 1) if i not in battle_ids)
-    query = ("SELECT citizenId, SUM(damage) AS damage, "
-             f"SUM(IF(weapon = 0, IF(berserk, 5, 1), 0)) AS Q0, "
-             f"SUM(IF(weapon = 1, IF(berserk, 5, 1), 0)) AS Q1, "
-             f"SUM(IF(weapon = 2, IF(berserk, 5, 1), 0)) AS Q2, "
-             f"SUM(IF(weapon = 3, IF(berserk, 5, 1), 0)) AS Q3, "
-             f"SUM(IF(weapon = 4, IF(berserk, 5, 1), 0)) AS Q4, "
-             f"SUM(IF(weapon = 5, IF(berserk, 5, 1), 0)) AS Q5, "
-             "SUM(IF(berserk, 5, 1)) AS hits "
-             f"FROM {server}.apiFights WHERE (battle_id BETWEEN {start_id} AND {end_id}) " +
-             (f"AND battle_id NOT IN ({excluded_ids}) " if excluded_ids else "") +
-             "GROUP BY citizenId "
-             "ORDER BY damage DESC "  # TODO: parameter
-             )
-
-    async with bot.conn.cursor() as cursor:
-        await cursor.execute(query)
-        api_fights = await cursor.fetchall()
-    columns = ["citizenId", "damage", "Q0", "Q1", "Q2", "Q3", "Q4", "Q5", "hits"]
-    return pd.DataFrame(api_fights, columns=columns, index=[x[0] for x in api_fights])
-
-
-async def find_one_api_fights(server: str, api: dict, round_id: int = 0) -> pd.DataFrame:
-    # TODO: rewrite
-    columns = ['battle_id', 'round_id', 'damage', 'weapon', 'berserk', 'defenderSide', 'citizenship',
-               'citizenId', 'time', 'militaryUnit']
-    battle_id = api["battle_id"]
-    async with bot.conn.cursor() as cursor:
-        cursor.execute(f"SELECT * FROM {server}.apiFights WHERE battle_id = {battle_id}" +
-                       (f" AND round_id = {round_id}" if round_id else ""))
-        values = await cursor.fetchall()
-    dfs = []
-    if values:
-        dfs.append(pd.DataFrame(values, columns=["index"] + columns))
-
-    current_round, first_round = api["currentRound"], api["last_round_in_db"] + 1
-    if 8 in (api['defenderScore'], api['attackerScore']):
-        last_round = current_round
-    else:
-        last_round = current_round + 1
-    for round_id in range(first_round, last_round):
-        r = await get_content(f'https://{server}.e-sim.org/apiFights.html?battleId={battle_id}&roundId={round_id}')
-        if not r:
-            continue
-        r = [
-            (battle_id, round_id, hit['damage'], hit['weapon'], hit['berserk'], hit['defenderSide'], hit['citizenship'],
-             hit['citizenId'], hit['time'], hit.get('militaryUnit', 0)) for hit in reversed(r)]
-        if battle_id not in inserted_api_fights[server]:
-            inserted_api_fights[server][battle_id] = []
-        if round_id != current_round and round_id not in inserted_api_fights[server][battle_id]:
-            async with bot.conn.cursor() as cursor:
-                placeholders = ', '.join(['%s'] * len(r[0]))
-                query = f"INSERT IGNORE INTO {server}.apiFights {tuple(columns)} VALUES ({placeholders})"
-
-                await cursor.executemany(query, r)
-                await bot.conn.commit()
-            inserted_api_fights[server][battle_id].append(round_id)
-        dfs.append(pd.DataFrame(r, columns=columns))
-    return pd.concat(dfs, ignore_index=True, copy=False) if dfs else None

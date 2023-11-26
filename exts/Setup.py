@@ -4,6 +4,7 @@ from discord.app_commands import Range, Transform, checks, command, describe
 from discord.ext.commands import Cog
 
 from Help import utils
+from Help.constants import all_servers
 from Help.transformers import Server
 
 
@@ -43,7 +44,7 @@ class Setup(Cog):
             d[user_id] = {server: nick}
             await utils.custom_followup(interaction, f"`{nick}` is now your default nick at `{server}`", ephemeral=True)
         else:
-            for server in self.bot.all_servers:
+            for server in all_servers:
                 if user_id not in d:
                     d[user_id] = {}
                 d[user_id][server] = nick
