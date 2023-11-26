@@ -452,8 +452,9 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                         except Exception:
                             pass
                         price = round(float(mm_ratio) * float(raw_price), 4)
-                        final[country_id] = {"price": price, "stock": stock,
-                                             "country": all_countries[country_id]}
+                        if price:
+                            final[country_id] = {"price": price, "stock": stock,
+                                                 "country": all_countries[country_id]}
                 if len(raw_prices) < 20:  # last page
                     break
                 await utils.custom_delay(interaction)
