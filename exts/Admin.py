@@ -32,7 +32,7 @@ class Admin(Cog):
                                       defenderScore TINYINT,
                                       frozen BOOLEAN,
                                       type VARCHAR(32),
-                                      defenderId TINYINT UNSIGNED,
+                                      defenderId SMALLINT UNSIGNED,
                                       attackerId SMALLINT UNSIGNED,
                                       totalSecondsRemaining SMALLINT UNSIGNED
                                       )''')
