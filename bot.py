@@ -61,7 +61,7 @@ async def update_buffs(server: str) -> None:
                 player_details = utils.extract_player_details(tree)
 
                 # Update the player data if they are buffed
-                if player_details["buffed"]:
+                if player_details.get("buffed"):
                     if nick not in buffs_data:
                         buffs_data[nick] = [player_profile_link, player_details['citizenship'],
                                             player_details['damage'],
@@ -78,7 +78,7 @@ async def update_buffs(server: str) -> None:
                             elixir_bonus += val
 
                 # Update the times of the elixir buff
-                for buff in player_details["buffs"]:
+                for buff in player_details.get("buffs", []):
                     if "elixir" in buff:
                         size = buff.split("elixir")[1].split("_")[0]
                         elixir = buff.split("elixir")[0]
