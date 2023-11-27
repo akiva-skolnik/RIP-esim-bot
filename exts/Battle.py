@@ -24,7 +24,7 @@ from pytz import timezone
 
 from Help import db_utils, utils
 from Help.constants import (all_countries, all_countries_by_name, all_servers,
-                            date_format)
+                            date_format, gids)
 from Help.transformers import (AuctionLink, BattleLink, Country, Server,
                                TournamentLink)
 from Help.utils import (CoolDownModified, bar, camel_case_merge,
@@ -43,7 +43,7 @@ class Battle(Cog):
         """Displays links of the buff and time trackers"""
         embed = Embed(colour=0x3D85C6)
         description = "**Buff and time trackers:**\n"
-        for server, data in self.bot.gids.items():
+        for server, data in gids.items():
             description += f"[**{server}**](https://docs.google.com/spreadsheets/d/{data[0]}/edit#gid={data[2]})\n"
         embed.description = description
         return await interaction.response.send_message("You can also use `/buff <server> <country or MU id>`",
@@ -55,7 +55,7 @@ class Battle(Cog):
                     country: Transform[str, Country] = "", military_unit_id: int = 0) -> None:
         """Displays buffed players per server and country or military unit."""
 
-        if server not in self.bot.gids:
+        if server not in gids:
             return await interaction.response.send_message("You can not use this server in this command",
                                                            ephemeral=True)
 
@@ -98,8 +98,8 @@ class Battle(Cog):
         if not result:
             await utils.custom_followup(
                 interaction, f"No one is buffed/debuffed at {country or mu_name}, {server} (as far as I can tell)\n"
-                             f"See https://docs.google.com/spreadsheets/d/{self.bot.gids[server][0]}/edit#gid="
-                             f"{self.bot.gids[server][2]}\n")
+                             f"See https://docs.google.com/spreadsheets/d/{gids[server][0]}/edit#gid="
+                             f"{gids[server][2]}\n")
             return
         dmg = [int(x[-1].replace(",", "")) for x in result]
         median = statistics.median(dmg)
@@ -109,7 +109,7 @@ class Battle(Cog):
         embed = Embed(colour=0x3D85C6,
                       description=f"**Buffed players {country or mu_name}, {server}**\n"
                                   f"{total_buff} :green_circle:, {total_debuff} :red_circle:",
-                      url=f"https://docs.google.com/spreadsheets/d/{self.bot.gids[server][0]}/edit#gid={self.bot.gids[server][2]}")
+                      url=f"https://docs.google.com/spreadsheets/d/{gids[server][0]}/edit#gid={gids[server][2]}")
         embed.set_footer(text="\U00002b50 / \U0001f512 = Premium / Non Premium\n"
                               "\U0001f7e2 / \U0001f534 = Buff / Debuff\n"
                               f"\U0001f505 / \U0001f506 = Below / Above median total dmg ({round(median):,})\n"
@@ -1016,7 +1016,7 @@ class Battle(Cog):
 
         else:
             new_lines = 0
-            if server in self.bot.gids:
+            if server in gids:
                 find_buffs = await utils.find_one("buffs", server)
                 for row in table1:
                     if row[0] not in find_buffs or not find_buffs[row[0]][5]:

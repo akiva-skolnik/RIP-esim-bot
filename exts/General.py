@@ -14,7 +14,7 @@ from wolframalpha import Client
 
 from Help import utils
 from Help.constants import (all_countries, all_products, all_servers, api_url,
-                            config_ids, date_format)
+                            config_ids, date_format, gids)
 from Help.transformers import Country, Server
 from Help.utils import CoolDownModified, camel_case_merge
 
@@ -183,11 +183,11 @@ class General(Cog):
             "Resistance", "Sewer") for x in buffs_debuffs if "Negative" in x.split("_")[1:]]).title()
         avg_per_day = 0
 
-        if server in self.bot.gids:
+        if server in gids:
             find_buffs = await utils.find_one("buffs", server)
             if api["login"] in find_buffs and find_buffs[api["login"]][5]:
                 db_row = find_buffs[api["login"]]
-                buffs_link = f"https://docs.google.com/spreadsheets/d/{self.bot.gids[server][0]}/edit#gid={self.bot.gids[server][2]}"
+                buffs_link = f"https://docs.google.com/spreadsheets/d/{gids[server][0]}/edit#gid={gids[server][2]}"
                 now = datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)
                 if (datetime.strptime(now, date_format) - datetime.strptime(db_row[5],
                                                                                      date_format)).total_seconds() < 86400:
@@ -197,7 +197,7 @@ class General(Cog):
 
             find_time = await utils.find_one("time_online", server)
             if api["id"] in find_time:
-                online_link = f"https://docs.google.com/spreadsheets/d/{self.bot.gids[server][0]}/edit#gid={self.bot.gids[server][1]}"
+                online_link = f"https://docs.google.com/spreadsheets/d/{gids[server][0]}/edit#gid={gids[server][1]}"
                 db_row = find_time[api["id"]]
                 avg_per_day = f"[{db_row[-1]} Hours]({online_link})"
 
@@ -253,7 +253,7 @@ class General(Cog):
             members = []
 
         embed = Embed(colour=0x3D85C6, title="Time Online",
-                      url=f"https://docs.google.com/spreadsheets/d/{self.bot.gids[server][0]}/edit#gid={self.bot.gids[server][1]}")
+                      url=f"https://docs.google.com/spreadsheets/d/{gids[server][0]}/edit#gid={gids[server][1]}")
 
         result = []
         find_time = await utils.find_one("time_online", server)
@@ -278,7 +278,7 @@ class General(Cog):
         if not result:
             await utils.custom_followup(
                 interaction, f"No results were found\n"
-                             f"See https://docs.google.com/spreadsheets/d/{self.bot.gids[server][0]}/edit#gid={self.bot.gids[server][1]}\n")
+                             f"See https://docs.google.com/spreadsheets/d/{gids[server][0]}/edit#gid={gids[server][1]}\n")
             return
         headers = ["Global Rank, Nick", "Minutes " + find_time["_headers"][2].split("(")[1].split(")")[0].title(),
                    "Minutes " + find_time["_headers"][4].split("(")[1].split(")")[0].title()]
