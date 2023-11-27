@@ -943,6 +943,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             return await func("There is nothing to upgrade")
 
         ax.xaxis.set_major_locator(MultipleLocator(1))
+        ax.yaxis.set_ticks(ax.get_yticks()[1 if ax.get_yticks()[0] < 0 else 0:])
         ax.set_yticklabels([f'{x * 100:.0f}%' for x in ax.get_yticks()])
         ax.legend()
         ax.set_xlabel('Upgrades Count')

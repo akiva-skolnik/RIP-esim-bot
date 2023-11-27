@@ -138,7 +138,8 @@ async def dmg_trend(hit_time: dict, server: str, battle_id: str) -> BytesIO:
     ax.set_title(f"Dmg Trend ({server}, {battle_id})")
     ax.set_ylabel('DMG')
     ax.set_xlabel('Time')
-    ax.set_yticklabels([human_format(int(x)) for x in ax.get_yticks().tolist()])
+    ax.yaxis.set_ticks(ax.get_yticks()[1 if ax.get_yticks()[0] < 0 else 0:])
+    ax.set_yticklabels([human_format(x) for x in ax.get_yticks().tolist()])
     ax.grid()
     return plt_to_bytes(fig)
 
