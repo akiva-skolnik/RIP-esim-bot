@@ -62,8 +62,8 @@ class Admin(Cog):
     @guilds(utils.hidden_guild)
     async def logout(self, interaction: Interaction) -> None:
         await self.bot.session.close()
-        await self.bot.locked_session.close()
-        await self.bot.org_session.close()
+        for server, session in self.bot.locked_sessions.items():
+            await session.close()
         await interaction.response.send_message("done")
         await self.bot.close()
 

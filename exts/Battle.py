@@ -585,8 +585,7 @@ class Battle(Cog):
         embed.add_field(name="**Hits For Next**", value="\n".join([f"{int(v[1]):,}" for v in drops_per_q.values()]))
         if nick:
             try:
-                given_user_id = \
-                (await utils.get_content(f"https://{server}.e-sim.org/apiCitizenByName.html?name={nick.lower()}"))['id']
+                given_user_id = (await utils.get_content(f"https://{server}.e-sim.org/apiCitizenByName.html?name={nick.lower()}"))['id']
                 if given_user_id not in hits_per_player:
                     nick = ""
             except Exception:
@@ -598,7 +597,8 @@ class Battle(Cog):
         fig, ax = plt.subplots()
 
         indexes = {"Q3": top10, "Q4": top3, "Q5": top1, "Q6": top1}
-
+        mean_values = []
+        max_k = 0
         for user_id, value in tops_per_player.items():
             player = given_user_id if nick else user_id
             if player == user_id:
@@ -618,6 +618,7 @@ class Battle(Cog):
                     n = total_drops
                     p = (my_tops / total_tops) if total_tops else 0
                     mean = n * p  # mu
+                    mean_values.append(mean)
                     std = math.sqrt(mean * (1 - p))  # sigma
                     for k in range(n + 1):
                         if n * p >= 5 and n * (1 - p) >= 5:  # or: n*p*(1-p) > 10
@@ -626,6 +627,7 @@ class Battle(Cog):
                             prob = math.comb(n, k) * math.pow(p, k) * math.pow(1 - p, n - k)
                         x.append(prob * 100)
                         y.append(k)
+                        max_k = max(max_k, k)
                         total_chances += prob
                         if total_chances > 0.99:
                             break
@@ -652,7 +654,6 @@ class Battle(Cog):
             output = StringIO()
             csv_writer = writer(output)
             csv_writer.writerow(["Citizen Id", "Hits", "Top 1", "Top 3", "Top 10"] + [a for a in header for a in a])
-
         for player, chances in final.items():
             if not nick:
                 row = [player, tops_per_player[player]["hits"]] + tops_per_player[player]["tops"]
@@ -665,8 +666,17 @@ class Battle(Cog):
                     ax.legend()
                     ax.set_title(f"Drop chances for {nick} ({server}, {battle_id})")
                     ax.set_ylabel('%')
-                    ax.set_xlabel('Drops Amount')
+                    ax.set_xlabel('Drops Amount (log scale)')
                     ax.xaxis.get_major_locator().set_params(integer=True)
+
+                    # convert the x to log scale
+                    ax.set_xscale('log')
+                    means = [round(x) for x in mean_values if x > 20]
+                    ticks = sorted(set(list(range(1, min(10, max_k+1))) + means))
+
+                    ax.set_xticks(ticks)
+                    tick_labels = [str(tick) for tick in ticks]
+                    ax.set_xticklabels(tick_labels)
                     return utils.plt_to_bytes(fig)
 
                 output_buffer = await self.bot.loop.run_in_executor(None, plot_drops)

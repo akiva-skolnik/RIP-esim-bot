@@ -229,8 +229,9 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                                            File(fp=BytesIO(output.getvalue().encode()),
                                                 filename=f"NPC_estimate_time_{server}.csv")])
 
-    @check(utils.is_premium_level_1)
-    @command(name="npc-stats")
+    # This command is unavailable at the moment (no e-sim premium access)
+    # @check(utils.is_premium_level_1)
+    # @command(name="npc-stats")
     async def npc_stats(self, interaction: Interaction, server: Transform[str, Server]) -> None:
         """Displays npc stats."""
 
@@ -269,7 +270,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             if await self.bot.should_cancel(interaction, msg):
                 break
             msg = await utils.update_percent(index + length // 7, length, msg)
-            tree = await utils.get_locked_content(f"{base_url}npcStatistics.html?regionId={row['id']}", org=True)
+            tree = await utils.get_locked_content(f"{base_url}npcStatistics.html?regionId={row['id']}")
             for tr in range(2, len(tree.xpath('//table[@class="myTable"][1]//tr/td[1]/a/text()')) + 2):
                 name = tree.xpath(f'//table[@class="myTable"][1]//tr[{tr}]/td[1]/a/text()')[0]
                 skill = tree.xpath(f'//table[@class="myTable"][1]//tr[{tr}]/td[2]/text()')[0]

@@ -79,8 +79,7 @@ class MyClient(Bot):
         self.delay = {}
 
         self.session = None
-        self.locked_session = None
-        self.org_session = None
+        self.locked_sessions = {}
         self.phone_users = (find_one("collection", "phone") or {"users": []})["users"]
         self.default_nick_dict = find_one("collection", "default")
         self.premium_users = find_one("collection", "donors")
@@ -92,8 +91,6 @@ class MyClient(Bot):
     async def setup_hook(self) -> None:
         headers = {"User-Agent": 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0'}
         self.session = ClientSession(timeout=ClientTimeout(total=100), headers=headers)
-        self.locked_session = ClientSession(timeout=ClientTimeout(total=150), headers=headers)
-        self.org_session = ClientSession(timeout=ClientTimeout(total=150), headers=headers)
         self.pool = await asyncmy.create_pool(host="localhost", user="root", password="root", autocommit=True)
 
         await load_extensions()

@@ -7,11 +7,12 @@ from copy import deepcopy
 from csv import reader
 from datetime import date, datetime, timedelta
 from io import BytesIO, StringIO
-from os import path
+from os import environ, path
 from re import findall, finditer
 from traceback import format_exception
 from typing import List, Optional, Union
 
+from aiohttp import ClientSession, ClientTimeout
 from discord import ButtonStyle, Embed, File, Interaction, Message, ui
 from discord.app_commands import CheckFailure
 from discord.ext import tasks
@@ -492,18 +493,29 @@ async def get_content(link: str, return_type: str = "", method: str = "get", ses
     raise OSError(link)
 
 
-async def get_locked_content(link: str, test_login: bool = False, method: str = "get", org: bool = False):
+async def create_session(server: str = None) -> ClientSession:
+    """create session"""
+    headers = {"User-Agent": environ["headers"]}
+    if server:
+        headers["Host"] = server + ".e-sim.org"
+    return ClientSession(timeout=ClientTimeout(total=150), headers=headers)
+
+
+async def get_session(server: str) -> ClientSession:
+    """get session"""
+    if server not in bot.locked_sessions:
+        bot.locked_sessions[server] = await create_session(server)
+    return bot.locked_sessions[server]
+
+
+async def get_locked_content(link: str, test_login: bool = False, method: str = "get"):
     """get locked content"""
     link = link.split("#")[0].replace("http://", "https://")
     server = link.split("https://", 1)[1].split(".e-sim.org", 1)[0]
-    if not org:
-        nick, password = bot.config.get(server, bot.config['nick']), bot.config.get(server + "_password",
-                                                                                    bot.config['password'])
-        session = bot.locked_session
-    else:
-        nick = bot.orgs[server][0]
-        password = bot.orgs[server][1]
-        session = bot.org_session
+    nick = bot.config.get(server, bot.config['nick'])
+    password = bot.config.get(server + "_password", bot.config['password'])
+    session = await get_session(server)
+
     base_url = f"https://{server}.e-sim.org/"
     not_logged_in = False
     tree = None
@@ -522,8 +534,12 @@ async def get_locked_content(link: str, test_login: bool = False, method: str = 
     if not_logged_in:
         payload = {'login': nick, 'password': password, "submit": "Login"}
         async with session.get(base_url, ssl=False) as _:
-            async with session.post(base_url + "login.html", data=payload, ssl=False) as r:
-                if "index.html?act=login" not in str(r.url):
+            async with session.post(base_url + "login.html", data=payload, ssl=False) as respond:
+                respond_text = await respond.text(encoding='utf-8')
+                tree = fromstring(respond_text)
+                logged = tree.xpath('//*[@id="command"]')
+                print(respond.url, [x.action for x in logged])
+                if any("login.html" in x.action for x in logged):
                     raise BadArgument("This command is currently unavailable")
         tree = await get_content(link, method=method, session=session)
     if test_login and not not_logged_in:
