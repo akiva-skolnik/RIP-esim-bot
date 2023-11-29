@@ -7,7 +7,7 @@ from copy import deepcopy
 from csv import reader
 from datetime import date, datetime, timedelta
 from io import BytesIO, StringIO
-from os import environ, path
+from os import path
 from re import findall, finditer
 from traceback import format_exception
 from typing import List, Optional, Union
@@ -496,7 +496,7 @@ async def get_content(link: str, return_type: str = "", method: str = "get", ses
 
 async def create_session(server: str = None) -> ClientSession:
     """create session"""
-    headers = {"User-Agent": environ["headers"]}
+    headers = {"User-Agent": bot.config["headers"]}
     if server:
         headers["Host"] = server + ".e-sim.org"
     return ClientSession(timeout=ClientTimeout(total=150), headers=headers)

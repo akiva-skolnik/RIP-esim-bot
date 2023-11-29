@@ -89,7 +89,7 @@ class MyClient(Bot):
         self.db_lock = asyncio.Lock()
 
     async def setup_hook(self) -> None:
-        headers = {"User-Agent": 'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:84.0) Gecko/20100101 Firefox/84.0'}
+        headers = {"User-Agent": self.config["headers"]}
         self.session = ClientSession(timeout=ClientTimeout(total=100), headers=headers)
         self.pool = await asyncmy.create_pool(host="localhost", user="root", password="root", autocommit=True)
 

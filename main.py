@@ -122,7 +122,7 @@ async def start() -> None:
 @guilds(utils.hidden_guild)
 async def update_from_source(interaction: Interaction) -> None:
     """Updates the code from the source."""
-    if not os.environ.get("test_mode"):
+    if not bot.config.get("test_mode"):
         process = subprocess.Popen(["git", "pull"], stdout=subprocess.PIPE)
         output = process.communicate()[0]
         await interaction.response.send_message(output.decode("utf-8"))
