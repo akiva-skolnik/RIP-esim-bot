@@ -187,6 +187,7 @@ async def save_dmg_time(api_fights: str, attacker: str, defender: str) -> (dict,
 def plt_to_bytes(fig: plt.Figure) -> BytesIO:
     output_buffer = BytesIO()
     fig.savefig(output_buffer)
+    plt.close(fig)
     output_buffer.seek(0)
     return output_buffer
 
