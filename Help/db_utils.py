@@ -115,12 +115,8 @@ async def cache_api_fights(interaction: Interaction, server: str, api_battles_df
     last_round_per_battle = {x[0]: x[1] for x in await execute_query(bot.pool, query, fetch=True)}
 
     for i, api in api_battles_df.iterrows():
-        current_round = api["currentRound"]
-        if 8 in (api['defenderScore'], api['attackerScore']):
-            last_round = current_round
-        else:
-            last_round = current_round + 1
-        for round_id in range(last_round_per_battle.get(api["battle_id"], 0) + 1, last_round):
+        current_round = api["currentRound"]  # ignore the ongoing round
+        for round_id in range(last_round_per_battle.get(api["battle_id"], 0) + 1, current_round):
             await insert_into_api_fights(server, int(api["battle_id"]), round_id)
             await custom_delay(interaction)
 
