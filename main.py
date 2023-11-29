@@ -60,7 +60,7 @@ async def activate_watch_and_ping() -> None:
         channel = bot.get_channel(int(inner_dict["channel"]))
         if channel:
             bot.loop.create_task(
-                watch_auction_func(bot, channel, inner_dict['link'], inner_dict['t'],
+                watch_auction_func(channel, inner_dict['link'], inner_dict['t'],
                                    inner_dict['custom'], inner_dict["author_id"]))
         else:
             db_dict["auctions"].remove(inner_dict)

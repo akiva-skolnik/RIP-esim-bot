@@ -13,7 +13,7 @@ from discord.app_commands import (Range, Transform, check, checks, command,
 from discord.ext.commands import BadArgument, Cog
 from lxml import html
 from matplotlib import pyplot as plt
-from matplotlib.ticker import MultipleLocator
+from matplotlib.ticker import FixedLocator
 from pytz import timezone
 
 from Help import utils
@@ -943,8 +943,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         if not total:
             return await func("There is nothing to upgrade")
 
-        ax.xaxis.set_major_locator(MultipleLocator(1))
-        ax.yaxis.set_ticks(ax.get_yticks()[1 if ax.get_yticks()[0] < 0 else 0:])
+        ax.yaxis.set_major_locator(FixedLocator(ax.get_yticks()))
         ax.set_yticklabels([f'{x * 100:.0f}%' for x in ax.get_yticks()])
         ax.legend()
         ax.set_xlabel('Upgrades Count')

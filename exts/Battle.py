@@ -20,6 +20,7 @@ from discord.ext.commands import Cog, Context, hybrid_command
 from discord.utils import MISSING
 from matplotlib import pyplot as plt
 from matplotlib.dates import DateFormatter
+from matplotlib.ticker import FixedLocator
 from pytz import timezone
 
 from Help import db_utils, utils
@@ -1183,7 +1184,7 @@ class Battle(Cog):
                 {"channel": str(interaction.channel.id), "link": link, "t": t, "custom": custom_msg,
                  "author_id": str(interaction.user.id)})
             await utils.replace_one("collection", "auctions", find_auctions)
-            await watch_auction_func(self.bot, interaction.channel, link, t, custom_msg)
+            await watch_auction_func(interaction.channel, link, t, custom_msg)
 
         except Exception:
             link = await BattleLink().transform(interaction, link)
@@ -1470,7 +1471,7 @@ def generate_cup_plot(df: pd.DataFrame, names: dict) -> Optional[BytesIO]:
     df['total_damage'] = df.groupby('citizenId')['damage'].cumsum()
 
     # Identify the day changes (more than 12h) and plot them directly
-    fig, axs = plt.subplots(1, 2, sharey='all', tight_layout=True)
+    fig, (ax0, ax1) = plt.subplots(1, 2, sharey='all', tight_layout=True)
 
     has_second_day = False
 
@@ -1484,41 +1485,41 @@ def generate_cup_plot(df: pd.DataFrame, names: dict) -> Optional[BytesIO]:
 
         # Plot the first subplot (before the day change)
         if not second_day_points.empty:
-            axs[0].plot(group['time'][group['time'] < second_day_points.iloc[0]['time']],
-                        group['total_damage'][group['time'] < second_day_points.iloc[0]['time']],
-                        label=names[citizen_id], color=color)
+            ax0.plot(group['time'][group['time'] < second_day_points.iloc[0]['time']],
+                     group['total_damage'][group['time'] < second_day_points.iloc[0]['time']],
+                     label=names[citizen_id], color=color)
         else:
-            axs[0].plot(group['time'], group['total_damage'], label=names[citizen_id], color=color)
+            ax0.plot(group['time'], group['total_damage'], label=names[citizen_id], color=color)
 
         # Plot the second subplot (after the day change)
         if not second_day_points.empty:
             has_second_day = True
-            axs[1].plot(group['time'][group['time'] >= second_day_points.iloc[0]['time']],
-                        group['total_damage'][group['time'] >= second_day_points.iloc[0]['time']],
-                        label=names[citizen_id], color=color)
+            ax1.plot(group['time'][group['time'] >= second_day_points.iloc[0]['time']],
+                     group['total_damage'][group['time'] >= second_day_points.iloc[0]['time']],
+                     label=names[citizen_id], color=color)
 
-    axs[0].yaxis.set_ticks(axs[0].get_yticks()[1 if axs[0].get_yticks()[0] < 0 else 0:])
-    axs[0].set_yticklabels([human_format(x) for x in axs[0].get_yticks().tolist()])
+    # Use FixedFormatter with existing tick positions
+    ax0.yaxis.set_major_locator(FixedLocator(ax0.get_yticks()))
+    ax0.set_yticklabels([human_format(x) for x in ax0.get_yticks().tolist()])
 
-    axs[0].xaxis.set_major_formatter(DateFormatter("%d-%m %H:%M"))
-    axs[1].xaxis.set_major_formatter(DateFormatter("%d-%m %H:%M"))
+    ax0.xaxis.set_major_formatter(DateFormatter("%d-%m %H:%M"))
+    ax1.xaxis.set_major_formatter(DateFormatter("%d-%m %H:%M"))
 
     if has_second_day:
-        axs[0].spines['right'].set_visible(False)
-        axs[1].spines['left'].set_visible(False)
-        axs[1].yaxis.tick_right()
+        ax0.spines['right'].set_visible(False)
+        ax1.spines['left'].set_visible(False)
+        ax1.yaxis.tick_right()
     else:
-        # remove axs[1] and expand axs[0]
-        fig.delaxes(axs[1])
-        axs[0].change_geometry(1, 1, 1)
+        # remove ax1 and expand ax0
+        fig.delaxes(ax1)
+        ax0.change_geometry(1, 1, 1)
 
     fig.suptitle('Total Damage vs Time')
+    ax0.set_ylabel('Total Damage')
+    ax0.set_xlabel('Time')
 
-    # set_xlabel
-    axs[0].set_ylabel('Total Damage')
-    axs[0].set_xlabel('Time')
+    ax0.legend(names.values())
 
-    axs[0].legend()
     fig.autofmt_xdate()
 
     return utils.plt_to_bytes(fig)
@@ -1684,13 +1685,13 @@ async def watch_func(bot, channel: TextChannel, link: str, t: float, role: str, 
         await sleep(t * 60 + 150)
 
 
-async def watch_auction_func(bot, channel: TextChannel, link: str, t: float, custom_msg: str,
+async def watch_auction_func(channel: TextChannel, link: str, t: float, custom_msg: str,
                              author_id: int = 0) -> None:
     """Activate watch/auction function"""
     row = await utils.get_auction(link)
 
     if row["remaining_seconds"] < 0:
-        return await remove_auction(bot, link, channel.id)
+        return await remove_auction(link, channel.id)
 
     await sleep(row["remaining_seconds"] - t * 60)
     row = await utils.get_auction(link)
@@ -1703,10 +1704,10 @@ async def watch_auction_func(bot, channel: TextChannel, link: str, t: float, cus
     embed = Embed(colour=0x3D85C6, title=link)
     embed.add_field(name="Info", value="\n".join([f"**{k.title()}:** {v}" for k, v in row.items()]))
     await channel.send(custom_msg, embed=await utils.convert_embed(author_id, embed))
-    return await remove_auction(bot, link, channel.id)
+    return await remove_auction(link, channel.id)
 
 
-async def remove_auction(bot, link: str, channel_id: int) -> None:
+async def remove_auction(link: str, channel_id: int) -> None:
     """Removes auction"""
     find_auctions = await utils.find_one("collection", "auctions") or {"auctions": []}
     for auction_dict in list(find_auctions["auctions"]):
