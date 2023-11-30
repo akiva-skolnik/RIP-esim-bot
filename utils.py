@@ -61,7 +61,7 @@ async def spreadsheets(spreadsheet_id: str, tab: str, columns: str = "A:Z",
     if delete:
         await worksheet.clear()
         await asyncio.sleep(0.5)
-    await worksheet.update(range_name=columns, values=values)
+    await worksheet.update(range_name=columns, values=values, raw=False)
 
 
 def get_countries(server: str, country: int = 0, index: int = -1) -> Union[str, dict]:
