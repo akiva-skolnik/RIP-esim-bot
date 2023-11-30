@@ -79,20 +79,20 @@ async def update_buffs(server: str) -> None:
 
                 # Update the times of the elixir buff
                 for buff in player_details.get("buffs", []):
-                    if "elixir" in buff:
-                        size = buff.split("elixir")[1].split("_")[0]
-                        elixir = buff.split("elixir")[0]
-                        index = ELIXIRS.index(elixir)
-                        if nick not in buffs_data:
-                            buffs_data[nick] = [player_profile_link, player_details['citizenship'],
-                                                player_details['damage'],
-                                                now_s, player_details['premium']] + \
-                                               [""] * (3 + len(ELIXIRS) * 2)  # 3 = buffed at, debuff ends, till change
-                        if not buffs_data[nick][base_columns + index]:
-                            buffs_data[nick][base_columns + index] = str(
-                                timedelta(minutes=(1 + elixir_bonus / 100) * BUFF_SIZES[size]))
-                        if not buffs_data[nick][base_columns + index + len(ELIXIRS)]:
-                            buffs_data[nick][base_columns + index + len(ELIXIRS)] = now_s
+                    if "elixir" not in buff:
+                        continue
+                    size = buff.split("elixir")[1].split("_")[0]
+                    elixir = buff.split("elixir")[0]
+                    index = ELIXIRS.index(elixir)
+                    if nick not in buffs_data:
+                        buffs_data[nick] = [player_profile_link, player_details['citizenship'],
+                                            player_details['damage'],
+                                            now_s, player_details['premium']] + \
+                                           [""] * (3 + len(ELIXIRS) * 2)  # 3 = buffed at, debuff ends, till change
+                    if not buffs_data[nick][base_columns + index]:
+                        buffs_data[nick][base_columns + index] = str(
+                            timedelta(minutes=(1 + elixir_bonus / 100) * BUFF_SIZES[size]))
+                        buffs_data[nick][base_columns + index + len(ELIXIRS)] = now_s
 
                 if player["login"] in buffs_data:  # update last seen
                     buffs_data[player["login"]][LAST_SEEN] = now_s
@@ -159,14 +159,16 @@ async def update_buffs(server: str) -> None:
             # Sort the data for presentation in the spreadsheet, and update the database
             sorted_data = {"Last update:": [now_s, "(game time)."] + [""] * (base_columns - 2 + len(ELIXIRS)),
                            "Nick": ["Link", "Citizenship", "Total Dmg", "Last Seen", "Premium", "Buffed At",
-                                    "Debuff Ends", "Till Status Change"] + [x.title() for x in ELIXIRS]}
+                                    "Debuff Ends", "Till Status Change"] +
+                                   [x.title() for x in ELIXIRS] + [f"{x.title()} Buffed At" for x in ELIXIRS]
+                           }
             # sort by citizenship then nick
             sorted_data.update(dict(sorted(buffs_data.items(), key=lambda x: (x[1][CITIZENSHIP], nick))))
             buffs_data.clear()  # Clear the data to free up memory
             if is_first_update or randint(1, 10) == 1:
                 await utils.spreadsheets(
                     servers[server], "buffs", "!A1:M200",
-                    [([v[0], k] + v[1:base_columns + len(ELIXIRS)]) if k != "Last update:" else [k] + v
+                    [([v[0], k] + v[1:]) if k != "Last update:" else [k] + v
                      for k, v in sorted_data.items()], delete=True)
                 is_first_update = False
             await utils.replace_one("buffs", server, sorted_data)
