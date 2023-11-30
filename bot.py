@@ -137,6 +137,7 @@ async def update_buffs(server: str) -> None:
                         elixir_time = datetime.strptime(player[elixir], "%H:%M:%S")
                     except ValueError:
                         player[elixir] = ""
+                        player[elixir + len(ELIXIRS)] = ""
                         continue
 
                     elixir_duration = timedelta(hours=elixir_time.hour, minutes=elixir_time.minute,
@@ -205,10 +206,7 @@ async def update_time(server: str) -> None:
             player_data = await utils.find_one("time_online", server)  # Retrieve current player time online data
             player_data.pop("_headers", None)  # Remove headers if they are in the data already
 
-            # Reset monthly minutes at the start of each month
-            if now.strftime("%d %H:%M") in ("01 00:00", "01 00:01"):
-                for player_stats in player_data.values():
-                    player_stats[MONTH_MINUTES] = 0
+            max_month_minutes = next(iter(player_data.values()))[MONTH_MINUTES]
 
             # Update player data from the API content
             for player_info in await utils.get_content(f"{base_url}apiOnlinePlayers.html"):
@@ -229,9 +227,13 @@ async def update_time(server: str) -> None:
             elapsed_since_start = (today_date - start_date).total_seconds() / 60
             elapsed_since_month_start = (today_date - start_of_month + timedelta(days=1)).total_seconds() / 60
 
+            new_month = max_month_minutes > elapsed_since_month_start
+
             # Update averages for each player
             for player_stats in player_data.values():
                 # [:-3] to remove the seconds from the string
+                if new_month:
+                    player_stats[MONTH_MINUTES] = 1
                 player_stats[TOTAL_AVG] = str(timedelta(
                     minutes=int((player_stats[TOTAL_MINUTES] / elapsed_since_start) * 24 * 60)))[:-3]
                 player_stats[MONTH_AVG] = str(timedelta(
