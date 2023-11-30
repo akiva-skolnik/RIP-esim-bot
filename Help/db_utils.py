@@ -52,7 +52,8 @@ async def insert_into_api_battles(server: str, battle_id: int) -> dict:
 
     placeholders = ', '.join(['%s'] * len(filtered_api_battles))
     query = f"INSERT INTO {server}.apiBattles VALUES ({placeholders}) " \
-            f"ON DUPLICATE KEY UPDATE {', '.join([f'{k} = VALUES({k})' for k in filtered_api_battles if k != 'battle_id'])}"
+            f"ON DUPLICATE KEY UPDATE " + \
+            ", ".join([f"{k} = {v}" for k, v in filtered_api_battles.items() if k != "battle_id"])
     await execute_query(bot.pool, query, tuple(filtered_api_battles.values()))
 
     return filtered_api_battles
