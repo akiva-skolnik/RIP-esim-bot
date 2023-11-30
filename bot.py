@@ -58,7 +58,7 @@ async def update_buffs(server: str) -> None:
                 # Pause to comply with server request limits
                 await asyncio.sleep(0.37)
                 tree = await utils.get_content(player_profile_link)
-                player_details = utils.extract_player_details(tree)
+                player_details = utils.extract_player_details(player_profile_link, tree)
 
                 # Update the player data if they are buffed
                 if player_details.get("buffed"):
@@ -167,7 +167,7 @@ async def update_buffs(server: str) -> None:
             buffs_data.clear()  # Clear the data to free up memory
             if is_first_update or randint(1, 10) == 1:
                 await utils.spreadsheets(
-                    servers[server], "buffs", "!A1:M200",
+                    servers[server], "buffs", f"A1:Q{len(sorted_data) + 1}",
                     [([v[0], k] + v[1:]) if k != "Last update:" else [k] + v
                      for k, v in sorted_data.items()], delete=True)
                 is_first_update = False
@@ -224,11 +224,10 @@ async def update_time(server: str) -> None:
             # Calculate averages and update data
             date_format = "%d/%m/%Y"
             start_date = datetime.strptime(initial_date_info.get(server, ["", "18/05/2020"])[1], date_format)
-            start_of_month = datetime.strptime(f"01/{now.strftime('%m')}/{now.strftime('%Y')}", date_format)
+            start_of_month = max(start_date, datetime.strptime(f"01/{now.strftime('%m')}/{now.strftime('%Y')}", date_format))
             today_date = datetime.strptime(now.strftime(date_format), date_format)
             elapsed_since_start = (today_date - start_date).total_seconds() / 60
             elapsed_since_month_start = (today_date - start_of_month + timedelta(days=1)).total_seconds() / 60
-            days_since_month_start = (today_date - start_of_month).days + 1  # Including today
 
             # Update averages for each player
             for player_stats in player_data.values():
@@ -237,11 +236,6 @@ async def update_time(server: str) -> None:
                     minutes=int((player_stats[TOTAL_MINUTES] / elapsed_since_start) * 24 * 60)))[:-3]
                 player_stats[MONTH_AVG] = str(timedelta(
                     minutes=int((player_stats[MONTH_MINUTES] / elapsed_since_month_start) * 24 * 60)))[:-3]
-                # Check if it's the first month to adjust the average calculation
-                if days_since_month_start > 0:
-                    player_stats[MONTH_AVG] = str(timedelta(minutes=int((player_stats[MONTH_MINUTES] / (
-                        elapsed_since_month_start if now.strftime("%m") != start_date.strftime(
-                            "%m") else days_since_month_start)) * 24 * 60)))[:-3]
 
             # Sort and limit the data
             player_data = dict(sorted(player_data.items(),
@@ -258,7 +252,7 @@ async def update_time(server: str) -> None:
             # Update the spreadsheet
             if is_first_update or randint(1, 30) == 1:
                 del player_data["_headers"]
-                await utils.spreadsheets(servers[server], "Time online", "!A1:G1000",
+                await utils.spreadsheets(servers[server], "Time online", f"A1:G{len(player_data) + 1}",
                                          [headers] + [[f"{base_url}profile.html?id={player_id}"] + stats for
                                                       player_id, stats in player_data.items()][:999])
                 is_first_update = False
@@ -334,7 +328,7 @@ async def update_monetary_market():
         values[1:] = sorted(values[1:])
         if len(values) > 1:
             try:
-                await utils.spreadsheets(PRODUCT_SHEET, "Monetary Market", "!A1:K200", values, True)
+                await utils.spreadsheets(PRODUCT_SHEET, "Monetary Market", f"A1:K{len(values) + 1}", values, True)
             except Exception:
                 error_traceback = traceback.format_exc()
                 print(error_traceback if len(error_traceback) < 1000 else "monetary_market long error")
@@ -442,7 +436,7 @@ async def update_prices(server: str) -> None:
                         new_values.append(["", "-", "-", "-"])
 
                 if is_first_update or randint(1, 3) == 1:
-                    await utils.spreadsheets(PRODUCT_SHEET, server, "!A1:G300", new_values, True)
+                    await utils.spreadsheets(PRODUCT_SHEET, server, f"A1:G{len(new_values) + 1}", new_values, True)
                     is_first_update = False
             results.clear()
             new_values.clear()

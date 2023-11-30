@@ -52,15 +52,16 @@ def get_creds():
 agcm = gspread_asyncio.AsyncioGspreadClientManager(get_creds)
 
 
-async def spreadsheets(SPREADSHEET_ID: str, RANGE_NAME: str, columns: str = "!A:Z",
+async def spreadsheets(spreadsheet_id: str, tab: str, columns: str = "A:Z",
                        values: list = None, delete: bool = False) -> None:
     """Update spreadsheets"""
     agc = await agcm.authorize()
-    ss = await agc.open_by_key(SPREADSHEET_ID)
+    spreadsheet = await agc.open_by_key(key=spreadsheet_id)
+    worksheet = await spreadsheet.worksheet(title=tab)
     if delete:
-        await ss.values_clear(RANGE_NAME + '!A:Z')
+        await worksheet.clear()
         await asyncio.sleep(0.5)
-    await ss.values_update(RANGE_NAME + columns, params={'valueInputOption': 'USER_ENTERED'}, body={'values': values})
+    await worksheet.update(range_name=columns, values=values)
 
 
 def get_countries(server: str, country: int = 0, index: int = -1) -> Union[str, dict]:
@@ -202,7 +203,7 @@ def format_seconds(seconds):
     return f'{int(h):02d}:{int(m):02d}:{int(s):02d}'
 
 
-def extract_player_details(tree):
+def extract_player_details(player_profile_link: str, tree: fromstring) -> dict:
     """Extract player details such as whether they are premium and their buffs."""
     try:
         premium = len(tree.xpath('//*[@class="premium-account"]')) == 1
@@ -215,7 +216,7 @@ def extract_player_details(tree):
         buffs = [x.split("_")[0].lower() for x in buffs_debuffs if "positive" in x.split("_")[1:]]
         buffed = any(a in buffs for a in ('steroids', 'tank', 'bunker', 'sewer'))
     except Exception as e:
-        print(f"Error extracting player details: {e}")
+        print(f"Error extracting player details for {player_profile_link}: {e}")
         return {}
 
     return {
