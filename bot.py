@@ -12,7 +12,7 @@ from random import randint
 import pytz
 
 import utils
-from big_dicts import countries_per_id, countries_per_server
+from constants import countries_per_id, countries_per_server
 
 warnings.filterwarnings("ignore")
 
