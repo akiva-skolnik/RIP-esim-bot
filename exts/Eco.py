@@ -421,8 +421,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 seconds_from_update = (datetime.strptime(now, date_format) -
                                        datetime.strptime(last, date_format)).total_seconds()
                 if seconds_from_update > 3600:
-                    channel = self.bot.get_channel(config_ids["warnings_channel"])
-                    await channel.send(f'Prices for {server} updated {seconds_from_update} seconds ago.')
+                    warnings_channel = self.bot.get_channel(config_ids["warnings_channel_id"])
+                    await warnings_channel.send(f'Prices for {server} updated {seconds_from_update} seconds ago.')
                     if await utils.is_premium_level_1(interaction, False):
                         real_time = True
 

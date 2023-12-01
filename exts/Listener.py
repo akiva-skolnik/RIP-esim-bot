@@ -5,8 +5,8 @@ from traceback import format_exception
 
 from aiohttp import ClientError, client_exceptions
 from discord import Embed, Interaction, errors
-from discord.app_commands import AppCommandError, CheckFailure, Command
-from discord.ext.commands import Cog, CommandOnCooldown
+from discord.app_commands import AppCommandError, CheckFailure, Command, CommandOnCooldown
+from discord.ext.commands import Cog
 from pytz import timezone
 
 from Help import utils
@@ -32,7 +32,7 @@ class Listener(Cog):
 
         my_cogs = sorted([cog for cog in self.bot.cogs if cog != "Listener"] + ["BlackMarket"])
         channel_name = f"{str(command.name).lower().split()[-1].replace('+', '-plus')}"
-        guild = self.bot.get_guild(config_ids["commands_server"])
+        guild = self.bot.get_guild(config_ids["commands_server_id"])
         cog_name = command.module.split(".")[-1]
         if cog_name == "__main__":
             return
@@ -60,7 +60,7 @@ class Listener(Cog):
             f"**{x['name']}**: {x.get('value')}" for x in interaction.data.get('options', []))
         msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)}] : {data}"
         if not isinstance(error, CheckFailure):
-            error_channel = self.bot.get_channel(config_ids["error_channel"])
+            error_channel = self.bot.get_channel(config_ids["error_channel_id"])
             try:
                 await error_channel.send(
                     f"{msg}\n```{''.join(format_exception(type(error), error, error.__traceback__))}```")
@@ -85,7 +85,7 @@ class Listener(Cog):
 
         elif isinstance(error, (TypeError, KeyError, IndexError, AttributeError, UnboundLocalError)):
             user_error = f"Possibly my fault. Please contact <@{config_ids['OWNER_ID']}>" \
-                         f" or report it in the [Support Server]({config_ids['support_invite']})"
+                         f" or report it in the support server: {config_ids['support_invite']}"
 
         embed = Embed(colour=0xFF0000, title="There was an error.", timestamp=interaction.created_at,
                       description=f"- [Support Server]({config_ids['support_invite']})\n\n" +

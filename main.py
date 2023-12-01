@@ -33,7 +33,7 @@ async def on_error(*args, **kwargs) -> None:
     else:
         msg = " "
     msg += kwargs.get('msg', '')
-    error_channel = bot.get_channel(config_ids["error_channel"])
+    error_channel = bot.get_channel(config_ids["error_channel_id"])
     await error_channel.send(f"{msg}\n```{format_exc()}"[:1900] + "```")
 
 
