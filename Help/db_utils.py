@@ -29,10 +29,12 @@ async def cache_api_battles(interaction: Interaction, server: str, battle_ids: i
     """Verify all battles are in db, if not, insert them"""
     start_id, end_id = min(battle_ids), max(battle_ids)
     excluded_ids = ",".join(str(i) for i in range(start_id, end_id + 1) if i not in battle_ids)
+
+    # Select battles that are in the db and have finished, to be excluded from reinserting
     query = f"SELECT battle_id FROM {server}.apiBattles " \
             f"WHERE (battle_id BETWEEN {start_id} AND {end_id}) " + \
             (f"AND battle_id NOT IN ({excluded_ids})" if excluded_ids else "") + \
-            " AND (defenderScore = 8 OR attackerScore = 8)"
+            " AND (defenderScore = 8 OR attackerScore = 8 OR totalSecondsRemaining = 0)"
 
     existing_battles = [x[0] for x in await execute_query(bot.pool, query, fetch=True)]  # x[0] = battle_id
 

@@ -91,7 +91,8 @@ class MyClient(Bot):
     async def setup_hook(self) -> None:
         headers = {"User-Agent": self.config["headers"]}
         self.session = ClientSession(timeout=ClientTimeout(total=100), headers=headers)
-        self.pool = await asyncmy.create_pool(host="localhost", user="root", password="root", autocommit=True)
+        self.pool = await asyncmy.create_pool(host="localhost", user="root",
+                                              password=self.config["db_password"], autocommit=True)
 
         await load_extensions()
 

@@ -185,13 +185,13 @@ config_ids = {
 }
 
 gids = {
-    "primera": ["1laY2aYa5_TcaDPCZ4FrFjZnbvVkxRIrGdm7ZRaO41nY", 0, 1364472548],
-    "luxia": ["1mx_JkHVnTVikNdTSxhvfFh4Pzuepp9ZGakCAtxnGxyY", 1876322398, 1265748453],
-    "secura": ["10en9SJVsIQz7uGhbXwb9GInnOdcDuE4p7L93un0q6xw", 1876322398, 1265748453],
-    "suna": ["1imlsoLdaEb45NnJGmo5T7mQxsjzzTGbrkvqfcR8pMlE", 2061648609, 0],
-    "alpha": ["1KqxbZ9LqS191wRf1VGLNl-aw6UId9kmUE0k7NfKQdI4", 1445005647, 0],
-    "nika": ["141302UWgwAMoNO55NfWzeQkvCtq7IY_MAYSGnqfTy2I", 1876322398, 1265748453],
-    "vega": ["19fmlmxwWrzA2PgvzKvB-tNhiSUDTfVBtooLIOnc38vI", 1876322398, 1265748453]
+    "primera": ["1laY2aYa5_TcaDPCZ4FrFjZnbvVkxRIrGdm7ZRaO41nY", 0, 1136091975],
+    "luxia": ["1mx_JkHVnTVikNdTSxhvfFh4Pzuepp9ZGakCAtxnGxyY", 1876322398, 2043546982],
+    "secura": ["10en9SJVsIQz7uGhbXwb9GInnOdcDuE4p7L93un0q6xw", 1876322398, 1820848479],
+    "suna": ["1imlsoLdaEb45NnJGmo5T7mQxsjzzTGbrkvqfcR8pMlE", 2061648609, 563437000],
+    "alpha": ["1KqxbZ9LqS191wRf1VGLNl-aw6UId9kmUE0k7NfKQdI4", 1445005647, 1812695346],
+    "nika": ["141302UWgwAMoNO55NfWzeQkvCtq7IY_MAYSGnqfTy2I", 1876322398, 1719163363],
+    "vega": ["19fmlmxwWrzA2PgvzKvB-tNhiSUDTfVBtooLIOnc38vI", 1876322398, 845606470]
 }
 
 api_url = "http://23.95.130.52:5000/"
