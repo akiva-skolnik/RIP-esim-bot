@@ -175,12 +175,13 @@ countries_per_server = {
 }
 
 config_ids = {
-    "commands_server": "1032367697503199357",
-    "support_server": "584948608097452032",
-    "error_channel": "1032367698258169879",
-    "warnings_channel": "1032367971970072619",
-    "bugs_channel": "694436164979130420",
-    "feedback_channel": "584950255238512660",
+    "commands_server": 1032367697503199357,
+    "support_server": 584948608097452032,
+    "error_channel": 1032367698258169879,
+    "warnings_channel": 1032367971970072619,
+    "bugs_channel": 694436164979130420,
+    "feedback_channel": 584950255238512660,
+    "OWNER_ID": 309449683426607104,
     "support_invite": "https://discord.com/invite/q96wSd6"
 }
 

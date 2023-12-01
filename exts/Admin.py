@@ -1,5 +1,4 @@
 """Admin.py"""
-import os
 import textwrap
 import traceback
 from contextlib import redirect_stdout
@@ -11,7 +10,7 @@ from discord.app_commands import command, guilds
 from discord.ext.commands import Cog
 
 from Help import utils
-from Help.constants import all_servers
+from Help.constants import all_servers, config_ids
 
 
 class Admin(Cog):
@@ -73,9 +72,10 @@ class Admin(Cog):
     async def execute(self, interaction: Interaction, code: str) -> None:
         # https://github.com/Rapptz/RoboDanny/blob/rewrite/cogs/admin.py#L215
         """Executes a given code"""
-        if interaction.user.id != self.bot.config.get("OWNER_ID"):
+        if interaction.user.id != config_ids.get("OWNER_ID"):
             return
         await interaction.response.defer()
+
         env = {
             'bot': self.bot,
             'interaction': interaction,
@@ -85,6 +85,8 @@ class Admin(Cog):
         }
 
         env.update(globals())
+
+        code = code.replace(";", "\n")
 
         # remove ```py\n```
         if code.startswith('```') and code.endswith('```'):

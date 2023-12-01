@@ -34,7 +34,7 @@ class General(Cog):
 
         msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)}] " \
               f"**{interaction.user.name}** has sent the following bug report: \n{your_bug_report}"
-        channel = self.bot.get_channel(int(config_ids["bugs_channel"]))
+        channel = self.bot.get_channel(config_ids["bugs_channel"])
         await channel.send(msg)
         await utils.custom_followup(
             interaction, f"Your bug report has been sent, and it will be visible to everyone at our support server "
@@ -372,7 +372,7 @@ class General(Cog):
         """Send a feedback about the bot."""
 
         msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)}] **{interaction.user.name}** has sent the following feedback: \n{your_feedback}"
-        channel = self.bot.get_channel(int(config_ids["feedback_channel"]))
+        channel = self.bot.get_channel(config_ids["feedback_channel"])
         await channel.send(msg)
         await utils.custom_followup(
             interaction, f"Your feedback has been sent, and it will be visible to everyone at our support server"

@@ -33,8 +33,8 @@ async def on_error(*args, **kwargs) -> None:
     else:
         msg = " "
     msg += kwargs.get('msg', '')
-    channel = bot.get_channel(int(config_ids["error_channel"]))
-    await channel.send(f"{msg}\n```{format_exc()}"[:1900] + "```")
+    error_channel = bot.get_channel(config_ids["error_channel"])
+    await error_channel.send(f"{msg}\n```{format_exc()}"[:1900] + "```")
 
 
 async def activate_reminder() -> None:

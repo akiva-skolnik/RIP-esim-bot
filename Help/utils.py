@@ -47,7 +47,7 @@ class CoolDownModified:
         return Cooldown(self.rate, self.per)
 
 
-hidden_guild = int(config_ids["commands_server"])
+hidden_guild = config_ids["commands_server"]
 font = path.join(path.dirname(__file__), "DejaVuSansMono.ttf")
 
 
@@ -209,7 +209,7 @@ async def _stop_alert(channel_id: str) -> None:
 @tasks.loop(seconds=900)
 async def update_donors():
     now = datetime.utcnow()
-    guild = bot.get_guild(int(config_ids["support_server"]))
+    guild = bot.get_guild(config_ids["support_server"])
     patreon = bot.get_user(216303189073461248)
     async for entry in guild.audit_logs(user=patreon):
         if entry.user.name == 'Patreon' and (now-entry.created_at).total_seconds() < 5*24*3600:  # 5 days
@@ -248,7 +248,7 @@ async def alert() -> None:
 
 async def not_support(interaction: Interaction) -> bool:
     """not support channel"""
-    if interaction.guild and str(interaction.guild.id) == config_ids["support_server"]:
+    if interaction.guild and interaction.guild.id == config_ids["support_server"]:
         await custom_followup(interaction, "You can't use this command on support channel. Go spam somewhere else!")
         return False
     return True
@@ -623,7 +623,7 @@ async def send_error(interaction: Optional[Interaction], error: Exception, cmd: 
     else:
         data = cmd
     msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)}] : {data}"
-    error_channel = bot.get_channel(int(config_ids["error_channel"]))
+    error_channel = bot.get_channel(config_ids["error_channel"])
     try:
         await error_channel.send(
             f"{msg}\n```{''.join(format_exception(type(error), error, error.__traceback__))}```")
@@ -631,10 +631,11 @@ async def send_error(interaction: Optional[Interaction], error: Exception, cmd: 
         await error_channel.send(f"{msg}\n{error}"[:1900])
     if interaction is None:
         return
-    custom_error = f"```{str(error).strip() or 'Timeout!'}\n```\n `The program {cmd if cmd else interaction.command.name} has halted.`"
+    user_error = f"An error occurred. Please report this at the support server: {config_ids['support_server']}" \
+                 f"\n `The program {cmd if cmd else interaction.command.name} has halted.`"
     if cmd:
-        custom_error += f"The following results do not include ID {cmd} onwards"
-    await custom_followup(interaction, custom_error)
+        user_error += f"The following results do not include ID {cmd} onwards"
+    await custom_followup(interaction, user_error)
 
 
 class Confirm(ui.View):
