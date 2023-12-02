@@ -129,7 +129,10 @@ async def update_buffs(server: str) -> None:
                 # Update elixir buff timers
                 for elixir in range(base_columns, base_columns + len(ELIXIRS)):
                     if not player[elixir]:
-                        player[elixir + len(ELIXIRS)] = ""
+                        try:
+                            player[elixir + len(ELIXIRS)] = ""
+                        except IndexError:
+                            print(f"index error for {nick} at {server}")
                         continue
                     elapsed_since_update = now - datetime.strptime(last_update, DATETIME_FORMAT)
                     is_negative = "-" in player[elixir]
