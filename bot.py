@@ -140,8 +140,7 @@ async def update_buffs(server: str) -> None:
                     try:
                         elixir_time = datetime.strptime(player[elixir], "%H:%M:%S")
                     except ValueError:
-                        player[elixir] = ""
-                        player[elixir + len(ELIXIRS)] = ""
+                        player[elixir] = player[elixir + len(ELIXIRS)] = ""
                         continue
 
                     elixir_duration = timedelta(hours=elixir_time.hour, minutes=elixir_time.minute,
@@ -154,8 +153,10 @@ async def update_buffs(server: str) -> None:
                             remaining_seconds += day_seconds - (now - elixir_start).total_seconds()
                             is_negative = True
 
-                    player[elixir] = (("-" if is_negative else "") + utils.format_seconds(
-                        remaining_seconds)) if remaining_seconds > 0 else ""
+                    if remaining_seconds > 0:
+                        player[elixir] = (("-" if is_negative else "") + utils.format_seconds(remaining_seconds))
+                    else:
+                        player[elixir] = player[elixir + len(ELIXIRS)] = ""
 
                 # Remove the player if there are no active buffs or elixirs
                 if not any(player[i] for i in range(7, 12)):
