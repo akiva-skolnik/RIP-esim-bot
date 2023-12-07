@@ -1467,6 +1467,7 @@ class Battle(Cog):
 
 
 def generate_cup_plot(df: pd.DataFrame, names: dict) -> Optional[BytesIO]:
+    names = {k: v.replace("_", "") for k, v in names.items()}  # matplotlib ignores names that starts with _
     # Calculate total_damage for each row
     df['total_damage'] = df.groupby('citizenId')['damage'].cumsum()
 
