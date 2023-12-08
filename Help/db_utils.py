@@ -53,7 +53,7 @@ async def insert_into_api_battles(server: str, battle_id: int) -> dict:
     api_battles['totalSecondsRemaining'] = (api_battles["hoursRemaining"] * 3600 +
                                             api_battles["minutesRemaining"] * 60 + api_battles["secondsRemaining"])
     api_battles['battle_id'] = battle_id
-    api_battles['lastVerifiedRound'] = None
+    api_battles['lastVerifiedRound'] = -1
     filtered_api_battles = {k: api_battles[k] for k in api_battles_columns}
 
     placeholders = ', '.join(['%s'] * len(filtered_api_battles))
@@ -115,7 +115,7 @@ async def cache_api_fights(interaction: Interaction, server: str, api_battles_df
             current_round = api_battles["currentRound"]  # this can be 9...16 included
         else:
             current_round = api_battles["currentRound"] + 1  # insert the ongoing round too
-        last_verified_round = int(api_battles["lastVerifiedRound"] or 0)  # TODO: find why it is float
+        last_verified_round = max(api_battles["lastVerifiedRound"], 0)
         for round_id in range(last_verified_round + 1, current_round):
             # Using int because battle_id is np.int64
             await insert_into_api_fights(server, int(api_battles["battle_id"]), round_id)
@@ -138,15 +138,15 @@ async def update_last_verified_round(server: str, api_battles: pd.Series) -> Non
     current_round = api_battles["currentRound"]
     previous_round = current_round - 1
     if current_round == 1:  # first round
-        last_verified_round = None  # no previous round to verify
-    elif api_battles["lastVerifiedRound"] is None:  # first time (new battle)
+        last_verified_round = -1  # no previous round to verify
+    elif api_battles["lastVerifiedRound"] < 0:  # first time (new battle)
         last_verified_round = current_round - 2
     elif api_battles["lastVerifiedRound"] != previous_round:
         last_verified_round = previous_round
     else:  # lastVerifiedRound is present and equal to previous_round
-        last_verified_round = None
+        last_verified_round = -1
 
-    if last_verified_round is not None:
+    if last_verified_round >= 0:
         query = f"UPDATE {server}.apiBattles SET lastVerifiedRound = {last_verified_round} " \
                 f"WHERE battle_id = {api_battles['battle_id']}"
         await execute_query(bot.pool, query)
