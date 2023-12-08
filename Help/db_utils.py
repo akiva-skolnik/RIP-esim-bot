@@ -115,7 +115,7 @@ async def cache_api_fights(interaction: Interaction, server: str, api_battles_df
             current_round = api_battles["currentRound"]  # this can be 9...16 included
         else:
             current_round = api_battles["currentRound"] + 1  # insert the ongoing round too
-        last_verified_round = api_battles["lastVerifiedRound"] or 0
+        last_verified_round = int(api_battles["lastVerifiedRound"] or 0)  # TODO: find why it is float
         for round_id in range(last_verified_round + 1, current_round):
             # Using int because battle_id is np.int64
             await insert_into_api_fights(server, int(api_battles["battle_id"]), round_id)
