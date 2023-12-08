@@ -116,7 +116,8 @@ async def cache_api_fights(interaction: Interaction, server: str, api_battles_df
         else:
             current_round = api_battles["currentRound"] + 1  # insert the ongoing round too
         last_verified_round = api_battles["lastVerifiedRound"] or 0
-        for round_id in range(last_verified_round + 1, current_round):
+        # TODO: remove ints (TypeError: 'float' object cannot be interpreted as an integer)
+        for round_id in range(int(last_verified_round + 1), int(current_round)):
             # Using int because battle_id is np.int64
             await insert_into_api_fights(server, int(api_battles["battle_id"]), round_id)
             await custom_delay(interaction)
