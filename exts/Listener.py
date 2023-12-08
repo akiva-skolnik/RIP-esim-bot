@@ -5,7 +5,8 @@ from traceback import format_exception
 
 from aiohttp import ClientError, client_exceptions
 from discord import Embed, Interaction, errors
-from discord.app_commands import AppCommandError, CheckFailure, Command, CommandOnCooldown
+from discord.app_commands import (AppCommandError, CheckFailure, Command,
+                                  CommandOnCooldown)
 from discord.ext.commands import Cog
 from pytz import timezone
 

@@ -1389,9 +1389,8 @@ class Battle(Cog):
                 del db_dict[db_key]
                 return await utils.replace_one("collection", interaction.command.name, db_dict)
             await db_utils.cache_api_battles(interaction, server, battle_ids)
-            api_battles_df = await db_utils.select_many_api_battles(
-                server, battle_ids, columns=("battle_id", "currentRound", "defenderScore", "attackerScore"),
-                custom_condition=f"type = '{battle_type}'")
+            api_battles_df = await db_utils.select_many_api_battles(server, battle_ids,
+                                                                    custom_condition=f"type = '{battle_type}'")
             await db_utils.cache_api_fights(interaction, server, api_battles_df)
 
             api_fights_df = await db_utils.get_api_fights_sum(server, battle_ids)

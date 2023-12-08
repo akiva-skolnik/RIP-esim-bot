@@ -8,8 +8,8 @@ from bot.bot import bot
 
 from .utils import custom_delay, get_content
 
-api_battles_columns = ('battle_id', 'currentRound', 'attackerScore', 'regionId', 'defenderScore',
-                       'frozen', 'type', 'defenderId', 'attackerId', 'totalSecondsRemaining')
+api_battles_columns = ('battle_id', 'currentRound', 'lastVerifiedRound', 'attackerScore', 'regionId',
+                       'defenderScore',  'frozen', 'type', 'defenderId', 'attackerId', 'totalSecondsRemaining')
 api_fights_columns = ('battle_id', 'round_id', 'damage', 'weapon', 'berserk', 'defenderSide', 'citizenship',
                       'citizenId', 'time', 'militaryUnit')
 
@@ -34,7 +34,7 @@ async def cache_api_battles(interaction: Interaction, server: str, battle_ids: i
     query = f"SELECT battle_id FROM {server}.apiBattles " \
             f"WHERE (battle_id BETWEEN {start_id} AND {end_id}) " + \
             (f"AND battle_id NOT IN ({excluded_ids})" if excluded_ids else "") + \
-            " AND (defenderScore = 8 OR attackerScore = 8 OR totalSecondsRemaining = 0)"
+            " AND (defenderScore = 8 OR attackerScore = 8)"
 
     existing_battles = [x[0] for x in await execute_query(bot.pool, query, fetch=True)]  # x[0] = battle_id
 
@@ -50,6 +50,7 @@ async def insert_into_api_battles(server: str, battle_id: int) -> dict:
     api_battles['totalSecondsRemaining'] = (api_battles["hoursRemaining"] * 3600 +
                                             api_battles["minutesRemaining"] * 60 + api_battles["secondsRemaining"])
     api_battles['battle_id'] = battle_id
+    api_battles['lastVerifiedRound'] = None
     filtered_api_battles = {k: api_battles[k] for k in api_battles_columns}
 
     placeholders = ', '.join(['%s'] * len(filtered_api_battles))
@@ -90,9 +91,8 @@ async def insert_into_api_fights(server: str, battle_id: int, round_id: int) -> 
     if not api_fights:
         # insert dummy hit to avoid rechecking this round
         api_fights = [{'damage': 0, 'weapon': 0, 'berserk': False, 'defenderSide': False, 'citizenship': None,
-                       'citizenId': 0, 'time': datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[
-                                               :-3]}]  # TODO: Will those values cause problems?
-    # time can be %d-%m-%Y %H:%M:%S:%f or %Y-%m-%d %H:%M:%S:%f or %Y-%m-%d %H:%M:%S.%f or %Y-%m-%d %H:%M:%S
+                       'citizenId': 0, 'time': datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]}]
+    # time can be one of: (%d-%m-%Y %H:%M:%S:%f, %Y-%m-%d %H:%M:%S:%f, %Y-%m-%d %H:%M:%S.%f, %Y-%m-%d %H:%M:%S)
     # so we should replace last : with . if the count of : is 3
     api_fights = [(battle_id, round_id, hit['damage'], hit['weapon'], hit['berserk'], hit['defenderSide'],
                    hit['citizenship'], hit['citizenId'],
@@ -106,21 +106,46 @@ async def insert_into_api_fights(server: str, battle_id: int, round_id: int) -> 
 
 async def cache_api_fights(interaction: Interaction, server: str, api_battles_df: pd.DataFrame) -> None:
     """Verify all fights are in db, if not, insert them"""
-    # get last inserted round per battle:
-    start_id, end_id = min(api_battles_df["battle_id"].values), max(api_battles_df["battle_id"].values)
-    excluded_ids = ",".join(str(i) for i in range(start_id, end_id + 1) if i not in api_battles_df["battle_id"].values)
-
-    query = f"SELECT battle_id, MAX(round_id) FROM {server}.apiFights " + \
-            f"WHERE (battle_id BETWEEN {start_id} AND {end_id}) " + \
-            (f"AND battle_id NOT IN ({excluded_ids}) " if excluded_ids else "") + \
-            f"GROUP BY battle_id"
-    last_round_per_battle = {x[0]: x[1] for x in await execute_query(bot.pool, query, fetch=True)}
-
-    for i, api in api_battles_df.iterrows():
-        current_round = api["currentRound"]  # ignore the ongoing round
-        for round_id in range(last_round_per_battle.get(api["battle_id"], 0) + 1, current_round):
-            await insert_into_api_fights(server, int(api["battle_id"]), round_id)
+    for i, api_battles in api_battles_df.iterrows():
+        battle_is_over = 8 in (api_battles['defenderScore'], api_battles['attackerScore'])
+        if battle_is_over:
+            current_round = api_battles["currentRound"]  # this can be 9...16 included
+        else:
+            current_round = api_battles["currentRound"] + 1  # insert the ongoing round too
+        last_verified_round = api_battles["lastVerifiedRound"] or 0
+        for round_id in range(last_verified_round + 1, current_round):
+            await insert_into_api_fights(server, int(api_battles["battle_id"]), round_id)
             await custom_delay(interaction)
+
+        await update_last_verified_round(server, api_battles)
+
+
+async def update_last_verified_round(server: str, api_battles: pd.Series) -> None:
+    """Update lastVerifiedRound in apiBattles
+    We attempt to insert every closed last round twice, because sometimes the api takes a while to update.
+    For example, when the current round is 15, there's no point in inserting rounds 1-13 twice, because they surely updated.
+    But round 14 might not have updated yet, so we insert it twice: once with lastVerifiedRound = 13, and once with 14.
+    Same with finished battles: if the battle is finished, we insert the last round twice:
+        once with lastVerifiedRound = current-2, and once with lastVerifiedRound = last_round (current-1)
+
+    Edge cases: in the first round, we don't change lastVerifiedRound, because there's no previous round to verify.
+    The second round, we insert lastVerifiedRound=0, because the first round is not verified yet but next time it will be.
+    """
+    current_round = api_battles["currentRound"]
+    previous_round = current_round - 1
+    if current_round == 1:  # first round
+        last_verified_round = None  # no previous round to verify
+    elif api_battles["lastVerifiedRound"] is None:  # first time (new battle)
+        last_verified_round = current_round - 2
+    elif api_battles["lastVerifiedRound"] != previous_round:
+        last_verified_round = previous_round
+    else:  # lastVerifiedRound is present and equal to previous_round
+        last_verified_round = None
+
+    if last_verified_round is not None:
+        query = f"UPDATE {server}.apiBattles SET lastVerifiedRound = {last_verified_round} " \
+                f"WHERE battle_id = {api_battles['battle_id']}"
+        await execute_query(bot.pool, query)
 
 
 async def select_many_api_fights(server: str, battle_ids: iter, columns: tuple = None,
@@ -172,7 +197,7 @@ async def select_one_api_fights(server: str, api: dict, round_id: int = 0) -> pd
     if values:
         dfs.append(pd.DataFrame(values, columns=["index"] + columns))
 
-    current_round, first_round = api["currentRound"], api["last_round_in_db"] + 1
+    current_round, first_round = api["currentRound"], api["lastVerifiedRound"] + 1
     if 8 in (api['defenderScore'], api['attackerScore']):
         last_round = current_round
     else:

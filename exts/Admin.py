@@ -29,6 +29,7 @@ class Admin(Cog):
                     await cursor.execute(f'''CREATE TABLE {server}.apiBattles
                                           (battle_id INT UNSIGNED PRIMARY KEY,
                                           currentRound TINYINT,
+                                          lastVerifiedRound TINYINT,
                                           attackerScore TINYINT,
                                           regionId SMALLINT UNSIGNED,
                                           defenderScore TINYINT,
@@ -50,7 +51,7 @@ class Admin(Cog):
                                           citizenId INT,
                                           time DATETIME(3),  -- 3 for milliseconds
                                           militaryUnit SMALLINT UNSIGNED,
-                                          PRIMARY KEY (citizenId, time),
+                                          PRIMARY KEY (citizenId, time)
                                           -- FOREIGN KEY (battle_id) REFERENCES apiBattles(battle_id)
                                           -- this does not allow me to update apiBattles because of foreign key constraint
                                           )''')
