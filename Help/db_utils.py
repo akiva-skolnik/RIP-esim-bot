@@ -2,11 +2,14 @@ from datetime import datetime
 
 import asyncmy
 import pandas as pd
+from asyncmy.cursors import logger as asyncmy_logger
 from discord import Interaction
 
 from bot.bot import bot
 
 from .utils import custom_delay, get_content
+
+asyncmy_logger.setLevel("ERROR")  # I INSERT IGNORE, so I don't care about duplicate key warnings
 
 api_battles_columns = ('battle_id', 'currentRound', 'lastVerifiedRound', 'attackerScore', 'regionId',
                        'defenderScore',  'frozen', 'type', 'defenderId', 'attackerId', 'totalSecondsRemaining')
@@ -114,6 +117,7 @@ async def cache_api_fights(interaction: Interaction, server: str, api_battles_df
             current_round = api_battles["currentRound"] + 1  # insert the ongoing round too
         last_verified_round = api_battles["lastVerifiedRound"] or 0
         for round_id in range(last_verified_round + 1, current_round):
+            # Using int because battle_id is np.int64
             await insert_into_api_fights(server, int(api_battles["battle_id"]), round_id)
             await custom_delay(interaction)
 
@@ -155,7 +159,7 @@ async def select_many_api_fights(server: str, battle_ids: iter, columns: tuple =
     excluded_ids = ",".join(str(i) for i in range(start_id, end_id + 1) if i not in battle_ids)
 
     query = f"SELECT {', '.join(columns)} FROM {server}.apiFights " \
-            f"WHERE (battle_id BETWEEN {start_id} AND {end_id}) " + \
+            f"WHERE (battle_id BETWEEN {start_id} AND {end_id}) AND citizenId <> 0 " + \
             (f"AND battle_id NOT IN ({excluded_ids}) " if excluded_ids else "") + \
             ("" if not custom_condition else f"AND {custom_condition}")
 
