@@ -182,7 +182,8 @@ config_ids = {
     "bugs_channel_id": 694436164979130420,
     "feedback_channel_id": 584950255238512660,
     "OWNER_ID": 309449683426607104,
-    "support_invite": "https://discord.com/invite/q96wSd6"
+    "support_invite": "https://discord.com/invite/q96wSd6",
+    "product_sheet_id": "17y8qEU4aHQRTXKdnlM278z3SDzY16bmxMwrZ0RKWcEI"
 }
 
 gids = {

@@ -153,7 +153,8 @@ class Pages(discord.ui.View):
             kwargs.setdefault('content', content)
 
         self._update_labels(0)
-        func = self.interaction.followup.send if self.interaction.response.is_done() else self.interaction.response.send_message
+        func = self.interaction.followup.send if self.interaction.response.is_done() \
+            else self.interaction.response.send_message
         self.message = await func(**kwargs, view=self, files=files, ephemeral=ephemeral)
         return self.message
 

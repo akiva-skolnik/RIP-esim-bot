@@ -171,14 +171,15 @@ async def get_api_fights_sum(server: str, battle_ids: iter) -> pd.DataFrame:
     start_id, end_id = min(battle_ids), max(battle_ids)
     excluded_ids = ",".join(str(i) for i in range(start_id, end_id + 1) if i not in battle_ids)
     query = ("SELECT citizenId, SUM(damage) AS damage, "
-             f"SUM(IF(weapon = 0, IF(berserk, 5, 1), 0)) AS Q0, "
-             f"SUM(IF(weapon = 1, IF(berserk, 5, 1), 0)) AS Q1, "
-             f"SUM(IF(weapon = 2, IF(berserk, 5, 1), 0)) AS Q2, "
-             f"SUM(IF(weapon = 3, IF(berserk, 5, 1), 0)) AS Q3, "
-             f"SUM(IF(weapon = 4, IF(berserk, 5, 1), 0)) AS Q4, "
-             f"SUM(IF(weapon = 5, IF(berserk, 5, 1), 0)) AS Q5, "
+             "SUM(IF(weapon = 0, IF(berserk, 5, 1), 0)) AS Q0, "
+             "SUM(IF(weapon = 1, IF(berserk, 5, 1), 0)) AS Q1, "
+             "SUM(IF(weapon = 2, IF(berserk, 5, 1), 0)) AS Q2, "
+             "SUM(IF(weapon = 3, IF(berserk, 5, 1), 0)) AS Q3, "
+             "SUM(IF(weapon = 4, IF(berserk, 5, 1), 0)) AS Q4, "
+             "SUM(IF(weapon = 5, IF(berserk, 5, 1), 0)) AS Q5, "
              "SUM(IF(berserk, 5, 1)) AS hits "
-             f"FROM {server}.apiFights WHERE (battle_id BETWEEN {start_id} AND {end_id}) " +
+             f"FROM {server}.apiFights "
+             f"WHERE (battle_id BETWEEN {start_id} AND {end_id}) AND citizenId <> 0 " +
              (f"AND battle_id NOT IN ({excluded_ids}) " if excluded_ids else "") +
              "GROUP BY citizenId "
              "ORDER BY damage DESC "  # TODO: parameter

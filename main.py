@@ -1,7 +1,6 @@
 """Main Module"""
 import asyncio
 import importlib
-import os
 import subprocess
 from datetime import datetime
 from os import walk

@@ -100,7 +100,8 @@ class General(Cog):
             now = datetime.now().astimezone(timezone('Europe/Berlin')).replace(tzinfo=None)
             try:
                 tree = await utils.get_locked_content(f'{base_url}tournamentEvents.html')
-            except:
+            except Exception as e:
+                print("EVENTS ERROR:", server, e)
                 embed.add_field(name=server, value="Error", inline=False)
                 continue
             events = []
@@ -139,7 +140,8 @@ class General(Cog):
             if indexes:
                 indexes.sort(reverse=True)
                 embed.add_field(name=server, value="\n".join(f"[{events[i]}]({base_url}{links[i]})" for i in indexes))
-                embed.add_field(name="Start Time", value="\n".join(str(start_time[i]).split('.', maxsplit=1)[0] for i in indexes))
+                embed.add_field(name="Start Time", value="\n".join(str(start_time[i]).split('.', maxsplit=1)[0]
+                                                                   for i in indexes))
                 embed.add_field(name="\u200B", value="\u200B")
             else:
                 embed.add_field(name=server, value="Nothing found", inline=False)
@@ -190,7 +192,7 @@ class General(Cog):
                 buffs_link = f"https://docs.google.com/spreadsheets/d/{gids[server][0]}/edit#gid={gids[server][2]}"
                 now = datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)
                 if (datetime.strptime(now, date_format) - datetime.strptime(db_row[5],
-                                                                                     date_format)).total_seconds() < 86400:
+                                                                            date_format)).total_seconds() < 86400:
                     buffs += f" [(*Time left:* {db_row[7].strip()})]({buffs_link})"
                 else:
                     debuffs += f" [(*Time left:* {db_row[7].strip()})]({buffs_link})"
@@ -324,7 +326,8 @@ class General(Cog):
 
     @checks.dynamic_cooldown(utils.CoolDownModified(5))
     @command()
-    @describe(reminder_id="leave empty if you want to remove all the reminders in this channel. 0 will show you the list of your ids.")
+    @describe(reminder_id="leave empty if you want to remove all the reminders in this channel. "
+                          "0 will show you the list of your ids.")
     async def remove(self, interaction: Interaction, reminder_id: int = -1) -> None:
         """Removing a given id from the reminder list"""
         find_remind = await utils.find_one("collection", "remind")
@@ -363,7 +366,8 @@ class General(Cog):
                 await utils.custom_followup(interaction, f"{reminder_id} removed", ephemeral=True)
 
         else:
-            await utils.custom_followup(interaction, f"`{reminder_id}` is not an active reminder in this channel", ephemeral=True)
+            await utils.custom_followup(interaction, f"`{reminder_id}` is not an active reminder in this channel",
+                                        ephemeral=True)
 
     @checks.dynamic_cooldown(CoolDownModified(30))
     @command()
@@ -371,7 +375,8 @@ class General(Cog):
     async def feedback(self, interaction: Interaction, your_feedback: str) -> None:
         """Send a feedback about the bot."""
 
-        msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)}] **{interaction.user.name}** has sent the following feedback: \n{your_feedback}"
+        msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)}] " \
+              f"**{interaction.user.name}** has sent the following feedback: \n{your_feedback}"
         channel = self.bot.get_channel(config_ids["feedback_channel_id"])
         await channel.send(msg)
         await utils.custom_followup(
@@ -410,7 +415,8 @@ class General(Cog):
             row = await utils.get_content(get_url)
             wanted_keys = ["description", "achieved_by", "category"]
             embed.add_field(name="Info",
-                            value="\n".join([f"**{k.replace('_', ' ').title()}:** {v}" for k, v in row.items() if k in wanted_keys]))
+                            value="\n".join([f"**{k.replace('_', ' ').title()}:** {v}"
+                                             for k, v in row.items() if k in wanted_keys]))
 
         # auction, article and law are the most common, therefore I prefer to skip the api.
         elif "/auction.html" in link:
@@ -447,14 +453,16 @@ class General(Cog):
             row = {"law_proposal": proposal, "proposed_by": by.strip(), "proposed": time2,
                    "remaining_time" if "Voting finished" not in time1 else "status": time1,
                    "result": f'{yes} Yes, {no} No'}
-            embed.add_field(name="Info", value="\n".join([f"**{k.replace('_', ' ').title()}:** {v}" for k, v in sorted(row.items())]))
+            embed.add_field(name="Info", value="\n".join([f"**{k.replace('_', ' ').title()}:** {v}"
+                                                          for k, v in sorted(row.items())]))
 
         elif "/party.html" in link or "/showShout.html" in link:
             row = await utils.get_content(get_url)
             if "party" in link:
                 del row["members_list"]
                 row["country"] = f"{utils.codes(row['country'])} " + row["country"]
-            embed.add_field(name="Info", value="\n".join([f"**{k.replace('_', ' ').title()}:** {v}" for k, v in sorted(row.items())]))
+            embed.add_field(name="Info", value="\n".join([f"**{k.replace('_', ' ').title()}:** {v}"
+                                                          for k, v in sorted(row.items())]))
 
         elif "/citizenStatistics.html" in link:
             row = await utils.get_content(get_url)
@@ -512,7 +520,8 @@ class General(Cog):
                  f"({base_url}battle.html?id={v['battle_id']})"
                  f" ({v['defender']['score']}:{v['attacker']['score']})" for v in row['battles']][:5]))
             embed.add_field(name="Bar", value="\n".join(
-                [(await utils.bar(v['defender']['bar'], v['attacker']['bar'], size=6)).splitlines()[0] for v in row['battles']][:5]))
+                [(await utils.bar(v['defender']['bar'], v['attacker']['bar'], size=6)).splitlines()[0]
+                 for v in row['battles']][:5]))
             embed.set_footer(text="Battles: " + ", ".join([str(x['battle_id']) for x in row['battles']]))
 
         elif "/battlesByWar.html" in link:
@@ -560,8 +569,9 @@ class General(Cog):
             row["buildings"] = len(row["buildings"])
             for key in ("current_owner", "rightful_owner"):
                 row[key] = f"{utils.codes(row[key])} " + row[key]
-            embed.add_field(name="Info", value="\n".join([f"**{k.replace('_', ' ').title()}:** {v}" for k, v in row.items() if (
-                    not isinstance(v, (dict, list)) and v != "No resources")]))
+            embed.add_field(name="Info", value="\n".join([
+                f"**{k.replace('_', ' ').title()}:** {v}" for k, v in row.items() if (
+                        not isinstance(v, (dict, list)) and v != "No resources")]))
 
         elif "/stockCompanyStatistics.html" in link:
             row = await utils.get_content(get_url)
@@ -590,7 +600,8 @@ class General(Cog):
             row["total_coins_in_treasury"] = round(sum(row["treasury"][0].values()))
             row['country'] = f"{utils.codes(row['country'])} " + row['country']
             embed.add_field(name="Info",
-                            value="\n".join([f"**{k.replace('_', ' ').title()}:** {v}" for k, v in row.items() if k in wanted_keys]))
+                            value="\n".join([f"**{k.replace('_', ' ').title()}:** {v}" for k, v in row.items()
+                                             if k in wanted_keys]))
 
         elif "/countryPoliticalStatistics.html" in link:
             row = await utils.get_content(get_url)
@@ -610,7 +621,8 @@ class General(Cog):
                 row[event] = len(row[event])
                 wanted_keys.append(event)
             embed.add_field(name="Info",
-                            value="\n".join([f"**{k.replace('_', ' ').title()}:** {v}" for k, v in row.items() if k in wanted_keys]))
+                            value="\n".join([f"**{k.replace('_', ' ').title()}:** {v}" for k, v in row.items()
+                                             if k in wanted_keys]))
 
         elif "/events.html" in link:
             row = await utils.get_content(get_url)
@@ -641,12 +653,14 @@ class General(Cog):
             embed.description = None
             api1 = await utils.get_content(link.replace("militaryUnit", "apiMilitaryUnitById"))
             api2 = await utils.get_content(link.replace("militaryUnit", "apiMilitaryUnit"))
-            row = {"Name": api1['name'], "Total Damage": f"{api1['totalDamage']:,}", "Today Damage": f"{api2['todayDamage']:,}",
-                   "Max Members": api1['maxMembers'], "Citizenship": all_countries[api1['countryId']],
-                   "Type": api1['militaryUnitType'], "Value": api2['value']}
+            row = {"Name": api1['name'], "Total Damage": f"{api1['totalDamage']:,}",
+                   "Today Damage": f"{api2['todayDamage']:,}", "Max Members": api1['maxMembers'],
+                   "Citizenship": all_countries[api1['countryId']], "Type": api1['militaryUnitType'],
+                   "Value": api2['value']}
             row['Citizenship'] = f"{utils.codes(row['Citizenship'])}" + row['Citizenship']
             embed.add_field(name="Info", value="\n".join([f"**{k}:** {v}" for k, v in row.items()]))
-            row = {f"Battle Order: {all_countries[api2['todayBattleAttacker']]} VS {all_countries[api2['todayBattleDefender']]}": f"{base_url}battle.html?id={api2['todayBattleId']}",
+            row = {f"Battle Order: {all_countries[api2['todayBattleAttacker']]} VS "
+                   f"{all_countries[api2['todayBattleDefender']]}": f"{base_url}battle.html?id={api2['todayBattleId']}",
                    "Recruitment": link.replace("militaryUnit", "militaryUnitRecrutation"),
                    "Donate products": link.replace("militaryUnit", "donateProductsToMilitaryUnit"),
                    "Donate money": link.replace("militaryUnit", "donateMoneyToMilitaryUnit"),
@@ -705,7 +719,8 @@ class General(Cog):
         elif "/battle.html" in link:
             embed.description = None
             api_battle = await utils.get_content(link.replace("battle", "apiBattles").replace("id", "battleId"))
-            t = f"{(api_battle['minutesRemaining'] + api_battle['hoursRemaining'] * 60):02d}:{api_battle['secondsRemaining']:02d}"
+            minutes = api_battle['minutesRemaining'] + api_battle['hoursRemaining'] * 60
+            t = f"{minutes:02d}:{api_battle['secondsRemaining']:02d}"
             attacker, defender = api_battle["attackerId"], api_battle["defenderId"]
             if attacker != defender and api_battle["type"] != "MILITARY_UNIT_CUP_EVENT_BATTLE":
                 attacker = all_countries.get(attacker, "Attacker")

@@ -95,13 +95,15 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
         """Convert ids to names and vice versa"""
         if extra_premium_info and not await utils.is_premium_level_1(interaction, False):
             await utils.custom_followup(
-                interaction, "`extra_premium_info` is a premium parameter! If you wish to use it, along with many other premium commands, please visit https://www.buymeacoffee.com/RipEsim"
+                interaction, "`extra_premium_info` is a premium parameter! If you wish to use it, "
+                             "along with many other premium commands, please visit https://www.buymeacoffee.com/RipEsim"
                              "\n\nOtherwise, try again, but this time with `extra_premium_info=False`")
             return
 
         if not ids and not ids_in_file:
             await utils.custom_followup(
-                interaction, "You must provide list/range of ids or attach a file containing the list of ids (if there are too many)",
+                interaction, "You must provide list/range of ids or attach a file containing the list of ids "
+                             "(if there are too many)",
                 ephemeral=True)
             return
         if ids is None:
@@ -334,7 +336,8 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                         if day not in user['restores']:
                             user['restores'][day] = 0
                         user['restores'][day] += 1
-                        if fast_server or (fast_server is None and server not in ("primera", "secura", "suna")):  # fast server has limits restore
+                        # fast server has limits restore
+                        if fast_server or (fast_server is None and server not in ("primera", "secura", "suna")):
                             user['limits'] = min(user['limits'] + int(seconds_from_last // 600) * 2 + 2, full_limits)
                     if battle_restore and user.get("has_restore"):
                         user['limits'] = 10 + 10 + 2
@@ -554,7 +557,8 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
 
         if scan_more_players and not await utils.is_premium_level_1(interaction, False):
             await utils.custom_followup(
-                interaction, "`scan_more_players` is a premium parameter! If you wish to use it, along with many other premium commands, please visit https://www.buymeacoffee.com/RipEsim"
+                interaction, "`scan_more_players` is a premium parameter! If you wish to use it, "
+                             "along with many other premium commands, please visit https://www.buymeacoffee.com/RipEsim"
                              "\n\nOtherwise, try again, but this time with `scan_more_players=False`", ephemeral=True)
             return
 
@@ -562,7 +566,8 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
         base_url = f'https://{server}.e-sim.org/'
         output = StringIO()
         csv_writer = writer(output)
-        link = f'{base_url}achievement.html?type=EQUIPPED_V' if scan_more_players else f'{base_url}achievement.html?type=LEGENDARY_EQUIPMENT'
+        link = f'{base_url}achievement.html?type=EQUIPPED_V' if scan_more_players \
+            else f'{base_url}achievement.html?type=LEGENDARY_EQUIPMENT'
         last_page = await utils.last_page(link)
         if last_page == 1:
             link = f'{base_url}achievement.html?type=EQUIPPED_V'

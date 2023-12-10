@@ -93,7 +93,8 @@ class BlackMarket(GroupCog, name="black-market"):
     @command()
     @describe(product="you should provide product or eq link (but not both). Ignore both if you wish to see all offers",
               equipment="you should provide product or eq link (but not both). Ignore both if you wish to see all offers",
-              stock_or_eq_link="if you provided a product, you must provide the stock, and if an eq, you must provide its link.")
+              stock_or_eq_link="if you provided a product, you must provide the stock, "
+                               "and if an eq, you must provide its link.")
     async def add(self, interaction: Interaction, action: Literal["buy", "sell"],
                   your_profile_link: Transform[dict, ProfileLink], item_quality: Optional[Range[int, 0, 7]],
                   product: Optional[Transform[str, Product]], equipment: Optional[Transform[str, Slots]],
@@ -128,8 +129,8 @@ class BlackMarket(GroupCog, name="black-market"):
         while offer_id in data:
             offer_id = str(randint(10000, 99999))
         data[offer_id] = {"server": server, "price": round(price, 4), "buy": action == "buy",
-                          "item": (f"Q{item_quality or 5} {item}" if item.lower() not in
-                                                                     all_products[:6] else item).lower(),
+                          "item": (f"Q{item_quality or 5} {item}" if item.lower() not in all_products[:6]
+                                   else item).lower(),
                           "stock_or_eq_link": stock_or_eq_link, "discord": str(interaction.user),
                           "discord_id": str(interaction.user.id), "nick": nick, "link": link,
                           "created_at": str(date.today())}

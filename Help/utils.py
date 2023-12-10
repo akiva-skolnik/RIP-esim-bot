@@ -77,7 +77,9 @@ def human_format(num: float) -> str:
 
 async def extract_url(string: str) -> list:
     """extract url"""
-    regex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
+    # TODO: simplify this regex
+    regex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|" \
+            r"(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
     return [x[0] for x in findall(regex, string.replace("*", ""))]
 
 
@@ -285,8 +287,10 @@ async def dmg_calculator(api: dict, bonuses: str = "new") -> dict:
         DS = Defense System quality (1.0 if no DS, 1.05~1.25 if there is Q1~Q5 DS). [Q0/5 in this function]
         L = Location bonus (1.2 if you're located in the battlefield as a defender or in resistance wars,
             or next to the battlefield as an attacker, 1.0 if not, 0.8 if no route to core regions)
-        MU = Military unit order bonus (1.0 if no order, 1.05-1.20 if fight in order depending on MU type) [no MU / elite MU in this function]
-        Buff = special item bonus (1.2 if tank is on * 1.2 if steroid is on * 1.25 if bunker or sewer guide is on, 0.8 if debuffed)
+        MU = Military unit order bonus (1.0 if no order, 1.05-1.20 if fight in order depending on MU type)
+            [no MU / elite MU in this function]
+        Buff = special item bonus (1.2 if tank is on * 1.2 if steroid is on * 1.25 if bunker or sewer guide is on,
+            or 0.8 if debuffed)
         C = Critical chance (0.125-0.4)
         M = Miss chance (0-0.125)
 
@@ -459,9 +463,11 @@ async def get_content(link: str, return_type: str = "", method: str = "get", ses
                 if "NO_PRIVILEGES" in str(respond.url):
                     raise IOError("NO_PRIVILEGES")
                 if any(t in str(respond.url) for t in ("notLoggedIn", "error")):
-                    raise BadArgument(f"This page is locked for bots.\n"
-                                      f"(Try open this page after logging out or in a private tab {link.replace(' ', '+')} )\n\n"
-                                      f"If you want this command to work again, you should ask `Liberty Games Interactive#3073` to reopen this page.")
+                    raise BadArgument(
+                        f"This page is locked for bots.\n"
+                        f"(Try open this page after logging out or in a private tab {link.replace(' ', '+')} )\n\n"
+                        f"If you want this command to work again, "
+                        f"you should ask `Liberty Games Interactive#3073` to reopen this page.")
                 if respond.status == 500:
                     raise OSError(500)
                 if respond.status == 200:

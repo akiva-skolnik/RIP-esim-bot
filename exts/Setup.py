@@ -20,7 +20,8 @@ class Setup(Cog):
         """Cancels a given (long) command."""
         self.bot.cancel_command[interaction.user.id] = command_name
         await utils.custom_followup(
-            interaction, "If you are running that command now, i will try to cancel it. You have my word! (it might take some time tho)",
+            interaction, "If you are running that command now, i will try to cancel it. "
+                         "You have my word! (it might take some time tho)",
             ephemeral=True)
 
     @command()
@@ -65,7 +66,8 @@ class Setup(Cog):
         else:
             self.bot.custom_delay_dict[str(interaction.user.id)] = seconds
             await utils.custom_followup(
-                interaction, f"I will now wait `{seconds}` seconds between each request! Let's hope e-sim won't block this too.",
+                interaction, f"I will now wait `{seconds}` seconds between each request! "
+                             f"Let's hope e-sim won't block this too.",
                 ephemeral=True)
         await utils.replace_one("collection", interaction.command.name, self.bot.custom_delay_dict)
 

@@ -43,7 +43,8 @@ class Premium(Cog):
         deleted = 0
         await interaction.response.defer()
         msg = await utils.custom_followup(interaction,
-                                          "I'm on it, Sir. Be patient. (I have no idea how long it will take, but i will update this msg every 50 articles)",
+                                          "I'm on it, Sir. Be patient. (I have no idea how long it will take, "
+                                          "but i will update this msg every 50 articles)",
                                           file=File("files/typing.gif"))
         base_url = f"https://{server}.e-sim.org/"
         tree = await utils.get_content(f"{base_url}news.html?newsType=LATEST_ARTICLES")
@@ -181,7 +182,8 @@ class Premium(Cog):
             File(fp=BytesIO(output.getvalue().encode()), filename=f"articles_per_month_and_country_{server}.csv"))
 
         await utils.custom_followup(interaction,
-                                    f"{deleted} articles doesn't exist (probably deleted).\n{preview_articles} articles in preview mode.\n"
+                                    f"{deleted} articles doesn't exist (probably deleted).\n"
+                                    f"{preview_articles} articles in preview mode.\n"
                                     f"You can add more stats, such as avg votes per article etc.", files=files,
                                     mention_author=first - article_id > 100)
 
@@ -580,7 +582,8 @@ class Premium(Cog):
         link = f"{base_url}orgTransactions.html?citizenName={org}&dayFrom={first_day}&dayTo={last_day}"
         last_page = await utils.last_page(link, utils.get_locked_content)
         msg = await utils.custom_followup(interaction,
-                                          "Progress status: 1%.\n(I will update you after every 10%)" if last_page > 10 else "I'm on it, Sir. Be patient.",
+                                          "Progress status: 1%.\n(I will update you after every 10%)" if last_page > 10
+                                          else "I'm on it, Sir. Be patient.",
                                           file=File("files/typing.gif"))
         for page in range(1, last_page):
             if await self.bot.should_cancel(interaction, msg):
@@ -869,7 +872,8 @@ class Premium(Cog):
         period = period.replace("s", "")  # remove trailing s
         await interaction.response.defer()
         msg = await utils.custom_followup(interaction,
-                                          "I'm on it, Sir. Be patient. (I have no idea how long it will take, but i will update this msg every 10 shouts pages)",
+                                          "I'm on it, Sir. Be patient. (I have no idea how long it will take, "
+                                          "but i will update this msg every 10 shouts pages)",
                                           file=File("files/typing.gif"))
         base_url = f"https://{server}.e-sim.org/"
         my_dict = {"shouts": 0, "replies (by author)": 0, "votes (to author shouts)": 0, "replies (to author)": 0}

@@ -102,7 +102,8 @@ class Ids(Transformer):  # noqa
                 ids = [int(x.strip()) for x in ids_list]
 
             if len(ids) > 500 and not await utils.is_premium_level_1(interaction, False, False):
-                raise CheckFailure("It's too much... sorry. You can buy premium at https://www.buymeacoffee.com/RipEsim to remove this limit.")
+                raise CheckFailure("It's too much... sorry. "
+                                   "You can buy premium at https://www.buymeacoffee.com/RipEsim to remove this limit.")
             return ids
         except (ValueError, IndexError) as exc:
             raise TransformerError(ids, self.type, self) from exc

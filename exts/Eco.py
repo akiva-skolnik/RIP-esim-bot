@@ -139,23 +139,25 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
     async def npc_help(self, interaction: Interaction):
         hint = """**General info about NPC:**
 (might be outdated)
-            
+
 - NPC is an automated worker who takes the highest-paying job available.
     > If you have premium, you can see their stats at https://<server>.e-sim.org/npcStatistics.html
 
 - To hire an unemployed NPC, offer a salary equal to 2x + 0.01 (where x is their skill level).
 
 - To hire an employed NPC, offer a salary equal to their current salary / 0.9 + 0.01.
-    > Hence, to keep your employed NPC - make sure the offer in the market, minus 10% (`X*0.9`), is lower or equal to the current salary.
+    > Hence, to keep your employed NPC - make sure the offer in the market, minus 10% (`X*0.9`),
+        is lower or equal to the current salary.
 
 - You cannot hire NPC through organizations or military units, but:
 - Governments can profit a lot from NPC through currency printing, taxes, and NPC donations to their treasury.
 
-- The best way to hurt your enemy is to find out what is the maximum salary they are willing to pay for an NPC, and force them to pay it every single day.
+- The best way to hurt your enemy is to find out what is the maximum salary they are willing to pay for an NPC,
+    and force them to pay it every single day.
     This means you may have to sacrifice some gold for a few days, but it will show your opponent that you are serious.
 
 
-- Another method is to place high salary offers, This will force your enemy to raise the salaries or risk losing the NPC.
+- Another method is to place high salary offers, This will force your enemy to raise the salaries or risk losing the NPC
     The NPC may leave its job and try to apply again later, which is when you can create a small offer to employ it.
     It's best to create multiple offers, one for each NPC, to force each of them to leave.
 
@@ -237,7 +239,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
 
         if server not in self.bot.orgs:
             await utils.custom_followup(
-                interaction, f"This command is unavailable at the moment.\n"
+                interaction, "This command is unavailable at the moment.\n"
                              "If you want it to work, DM the author (@34444#8649) with org password (for premium)",
                 ephemeral=True)
             return
@@ -355,13 +357,18 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             embed.set_footer(text="30 out of " + str(len(data)))
         await utils.custom_followup(interaction, embed=await utils.custom_author(embed))
 
+    @staticmethod
+    def _get_product_sheet_link(server: str) -> str:
+        gid = product_gids.get(server, '')
+        return f"https://docs.google.com/spreadsheets/d/{config_ids['product_sheet_id']}/edit#gid={gid}"
+
     @command()
     async def price_list(self, interaction: Interaction, server: Transform[str, Server]) -> None:
         """Displays a list of the cheapest prices in the given server"""
         await interaction.response.defer()
         db_dict = await utils.find_one("price", server)
         embed = Embed(colour=0x3D85C6, title=server,
-                      description=f"[All products](https://docs.google.com/spreadsheets/d/17y8qEU4aHQRTXKdnlM278z3SDzY16bmxMwrZ0RKWcEI/edit#gid={product_gids.get(server, '')}),"
+                      description=f"[All products]({self._get_product_sheet_link(server)}),"
                                   f" [API For developers]({api_url}/https:/{server}.e-sim.org/prices.html)")
         headers = ["Cheapest Item", "Price", "Stock"]
         results = []
@@ -381,7 +388,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         """Displays the cheapest prices in the market for a given product / for all products"""
         if real_time and not await utils.is_premium_level_1(interaction, False):
             await utils.custom_followup(
-                interaction, "`real_time` is a premium parameter! If you wish to use it, along with many other premium commands, please visit https://www.buymeacoffee.com/RipEsim"
+                interaction, "`real_time` is a premium parameter! If you wish to use it, "
+                             "along with many other premium commands, please visit https://www.buymeacoffee.com/RipEsim"
                              "\n\nOtherwise, try again, but this time with `real_time=False`")
             return
         await interaction.response.defer()
@@ -405,7 +413,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
 
             if not real_time:
                 embed = Embed(colour=0x3D85C6, title=f"{product_name}, {server}",
-                              description=f"[All products](https://docs.google.com/spreadsheets/d/17y8qEU4aHQRTXKdnlM278z3SDzY16bmxMwrZ0RKWcEI/edit#gid={product_gids.get(server, '')}),"
+                              description=f"[All products]({self._get_product_sheet_link(server)}),"
                                           f" [API For developers]({api_url}/https:/{server}.e-sim.org/prices.html)")
                 embed.set_footer(text=db_dict["Product"][0][-1])
                 if results:
@@ -441,7 +449,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                         mm_ratio = 0
                         try:
                             func = utils.get_locked_content if server == "primera" else utils.get_content
-                            tree = await func(f"{base_url}monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1")
+                            tree = await func(f"{base_url}monetaryMarketOffers"
+                                              f"?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1")
                             ratios = tree.xpath("//*[@class='ratio']//b/text()")
                             amounts = tree.xpath("//*[@class='amount']//b/text()")
                             for ratio, amount in zip(ratios, amounts):
@@ -497,7 +506,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             await utils.replace_one("collection", "alert", db_dict)
             message = f"I will let you know once there is an offer below that price ({optimal_price})"
         elif optimal_price < 0:
-            message = "This embed has been sent because you wrote a specific price at the message I replied, and the price now is lower than that.\n"
+            message = "This embed has been sent because you wrote a specific price at the message I replied, " \
+                      "and the price now is lower than that.\n"
             message += "I deleted your request to avoid spam, but feel free to make a new one."
         else:
             message = "You can add optimal price and i will let you know once the price in market is below that price\n"
@@ -699,7 +709,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         await interaction.response.defer()
         balance = defaultdict(
             lambda: {"profit": 0, "dividends": 0, "shares sold": 0, "shares purchased": 0, "owned shares": 0})
-        link = f'{base_url}stockCompanyLogs.html?stockCompanyId={stock_company_id}&type=DIVIDEND_TRANSACTION&importance=TRIVIAL&initiatorId=0'
+        link = f'{base_url}stockCompanyLogs.html' \
+               f'?stockCompanyId={stock_company_id}&type=DIVIDEND_TRANSACTION&importance=TRIVIAL&initiatorId=0'
         try:
             last_page = await utils.last_page(link)
         except Exception:
@@ -710,7 +721,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         last_page2 = await utils.last_page(link2)
 
         msg = await utils.custom_followup(interaction,
-                                          "Progress status: 1%.\n(I will update you after every 10%)" if last_page + last_page2 > 10 else "I'm on it, Sir. Be patient.",
+                                          "Progress status: 1%.\n(I will update you after every 10%)"
+                                          if last_page + last_page2 > 10 else "I'm on it, Sir. Be patient.",
                                           file=File("files/typing.gif"))
         for page in range(1, last_page):
             if await self.bot.should_cancel(interaction, msg):
@@ -763,7 +775,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
 
     @checks.dynamic_cooldown(CoolDownModified(5))
     @command()
-    async def mm(self, interaction: Interaction, server: Transform[str, Server], country: Transform[str, Country] = "") -> None:
+    async def mm(self, interaction: Interaction,
+                 server: Transform[str, Server], country: Transform[str, Country] = "") -> None:
         """Shows monetary market stats per server/country."""
         await interaction.response.defer()
         country_id = all_countries_by_name.get(country.lower(), 0)
@@ -803,7 +816,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         embed.set_thumbnail(url=f"attachment://{interaction.id}.png")
         try:
             func = utils.get_locked_content if server == "primera" else utils.get_content
-            tree = await func(f"https://{server}.e-sim.org/monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1")
+            tree = await func(f"https://{server}.e-sim.org/monetaryMarketOffers"
+                              f"?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1")
             sellers = tree.xpath("//*[@class='seller']/a/text()")
             buy = tree.xpath("//*[@class='buy']/button")[0].attrib['data-buy-currency-name']
             seller_ids = [int(x.split("?id=")[1]) for x in tree.xpath("//*[@class='seller']/a/@href")]
@@ -825,7 +839,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
     @command()
     @describe(value="The eq parameter value (in case you didn't provide a link)",
               parameter="profile link / eq link / eq parameter (Avoid, Max, Crit, Damage, Miss, Flight, Eco, "
-                        "Str, Hit, Less, Find, Split, Production, Consume, Merging, Restore, Increase, Evening/Noon...)")
+                        "Str, Hit, Less, Find, Split, Production, Consume, Merging, Restore, Increase, Evening/Noon..)")
     @rename(parameter="link_or_parameter")
     async def upgrade(self, interaction: Interaction, parameter: str, value: float = -1.0) -> None:
         """Displays estimated parameter value after upgrade, and how many needed until the maximum (90%)"""
@@ -860,8 +874,9 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                     for p in item["parameters"]:
                         api_values.append(p["value"])
 
-            profile_items = {eq_type.split()[1]: {"type": eq_type, "parameters": [list(x) for x in zip(parameters, values)]} for
-                             eq_type, parameters, values, eq_link in utils.get_eqs(tree)}
+            profile_items = {eq_type.split()[1]: {"type": eq_type,
+                                                  "parameters": [list(x) for x in zip(parameters, values)]}
+                             for eq_type, parameters, values, eq_link in utils.get_eqs(tree)}
             api_count = 0
             for item in api_items:
                 for profile_count in range(len(profile_items[item]["parameters"])):

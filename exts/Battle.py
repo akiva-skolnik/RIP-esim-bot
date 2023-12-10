@@ -84,7 +84,8 @@ class Battle(Cog):
                      nick.lower() == current_nick.lower()))):
                 continue
 
-            hyperlink = (":star:" if premium else ":lock:") + f" {utils.codes(citizenship) if not country else ''} [{current_nick[:12]}]({link})"
+            country_nick = f" {utils.codes(citizenship) if not country else ''} [{current_nick[:12]}]({link})"
+            hyperlink = (":star:" if premium else ":lock:") + country_nick
             if (datetime.strptime(now, date_format) - datetime.strptime(
                     buffed, date_format)).total_seconds() < 24 * 60 * 60:
                 buff = ":green_circle: "
@@ -120,7 +121,8 @@ class Battle(Cog):
 
     @checks.dynamic_cooldown(CoolDownModified(5))
     @describe(bonuses='options: PD, sewer or bunker, steroids, -tank (debuff), MU, location, DS\n'
-                      'Q<wep quality> (default: Q5), X<limits> (default: X1), <bonus dmg>% (default: 0%), new (ignore set and rank)')
+                      'Q<wep quality> (default: Q5), X<limits> (default: X1), <bonus dmg>% (default: 0%), '
+                      'new (ignore set and rank)')
     @command()
     async def calc(self, interaction: Interaction, server: Transform[str, Server], nick: str, bonuses: str = "") -> None:
         """DMG calculator"""
@@ -166,7 +168,8 @@ class Battle(Cog):
                 await self.cup_func(interaction, link, server, ids)
             else:
                 await interaction.edit_original_response(
-                    content="No IDs found. Consider using the `cup` command instead. Example: `/cup server: alpha first_battle_id: 40730 last_battle_id: 40751`")
+                    content="No IDs found. Consider using the `cup` command instead. "
+                            "Example: `/cup server: alpha first_battle_id: 40730 last_battle_id: 40751`")
                 return
         else:
             find_cup[link].append({str(interaction.channel.id): {"nick": nick, "author_id": str(interaction.user.id)}})
@@ -467,7 +470,8 @@ class Battle(Cog):
             await utils.custom_followup(
                 interaction,
                 f"I did not find {key.replace('Id', '')} `{nick}` at <{base_url}battle.html?id={battle_id}>\n"
-                "**Remember:** for __nick__ use `-nick`, for __MU__ use the MU id, and for __country__ - write the country name.")
+                "**Remember:** for __nick__ use `-nick`, for __MU__ use the MU id, "
+                "and for __country__ - write the country name.")
             return
         embed = Embed(colour=0x3D85C6)
         embed.set_thumbnail(url=f"attachment://{interaction.id}.png")
@@ -517,8 +521,8 @@ class Battle(Cog):
                     value = value.split("[")[1].split("]")[0]
                     api = await utils.get_content(f'{base_url}{keys[embed_name]["api_url"]}.html?id={value}')
                     flag = utils.codes(all_countries[api[keys[embed_name]['cs_key']]])
-                    values[
-                        num] = f"{flag} [{api[keys[embed_name]['api_key'][:20]]}]({base_url}{keys[embed_name]['final_link']}.html?id={value})"
+                    values[num] = f"{flag} [{api[keys[embed_name]['api_key'][:20]]}]" \
+                                  f"({base_url}{keys[embed_name]['final_link']}.html?id={value})"
                     await utils.custom_delay(interaction)
                 embed.set_field_at(index, name=field.name[:-5] + "**", value="\n".join(values))
         await msg.edit(embed=await utils.convert_embed(interaction, embed), view=view)
@@ -586,7 +590,8 @@ class Battle(Cog):
         embed.add_field(name="**Hits For Next**", value="\n".join([f"{int(v[1]):,}" for v in drops_per_q.values()]))
         if nick:
             try:
-                given_user_id = (await utils.get_content(f"https://{server}.e-sim.org/apiCitizenByName.html?name={nick.lower()}"))['id']
+                api_citizen = f"https://{server}.e-sim.org/apiCitizenByName.html?name={nick.lower()}"
+                given_user_id = (await utils.get_content(api_citizen))['id']
                 if given_user_id not in hits_per_player:
                     nick = ""
             except Exception:
@@ -914,7 +919,8 @@ class Battle(Cog):
         if extra_premium_info and not await utils.is_premium_level_1(interaction, False):
             await utils.custom_followup(
                 interaction,
-                "`extra_premium_info` is a premium parameter! If you wish to use it, along with many other premium commands, please visit https://www.buymeacoffee.com/RipEsim"
+                "`extra_premium_info` is a premium parameter! If you wish to use it, "
+                "along with many other premium commands, please visit https://www.buymeacoffee.com/RipEsim"
                 "\n\nOtherwise, try again, but this time with `extra_premium_info=False`", ephemeral=True)
             return
 
@@ -983,7 +989,7 @@ class Battle(Cog):
                                  "img/specialItems/" in x]
                 buffs = ', '.join([x.split("_")[0].replace("Vacations", "Vac").replace("Resistance", "Sewer").replace(
                     "Pain Dealer", "PD ").replace("Bonus Damage", "") + ("% Bonus" if "Bonus Damage" in x.split(
-                    "_")[0] else "") for x in buffs_debuffs if "Positive" in x.split("_")[1:]]).title()
+                        "_")[0] else "") for x in buffs_debuffs if "Positive" in x.split("_")[1:]]).title()
                 debuffs = ', '.join([x.split("_")[0].lower().replace("Vacation", "Vac").replace(
                     "Resistance", "Sewer") for x in buffs_debuffs if "Negative" in x.split("_")[1:]]).title()
                 if check_battle and api_battles['type'] != "ATTACK":
@@ -1017,7 +1023,8 @@ class Battle(Cog):
                 interaction, "I'm sorry, but I could not find anyone online " +
                              (f"at the bonus locations of <{link}>" if check_battle else "") +
                              "\nPerhaps you should read the help command again.\n"
-                             f"If you do not believe me, you may see for yourself here: <{base_url}citizensOnline.html?countryId={country}>")
+                             f"If you do not believe me, you may see for yourself here: "
+                             f"<{base_url}citizensOnline.html?countryId={country}>")
             return
         if len(header) == 3:
             embed = Embed(colour=0x3D85C6, title="More Info",
@@ -1035,8 +1042,8 @@ class Battle(Cog):
 
                     db_row = find_buffs[row[0]]
                     index = None
-                    if (datetime.strptime(now, date_format) - datetime.strptime(db_row[5],
-                                                                                         date_format)).total_seconds() < 86400:
+                    if (datetime.strptime(now, date_format) -
+                            datetime.strptime(db_row[5], date_format)).total_seconds() < 86400:
                         index = -2
                     if not db_row[5]:
                         index = -1
@@ -1156,7 +1163,8 @@ class Battle(Cog):
         await interaction.response.send_message('\n'.join(["**Watch List:**"] + data + [
             "\nIf you want to remove any, write `/unwatch link: <link>`",
             f"Example: `/unwatch link: {data[0].split()[0]}`"]) if data else
-                                                "Currently, I'm not watching any battle. Type `/watch` if you want to watch one.")
+                                                "Currently, I'm not watching any battle. "
+                                                "Type `/watch` if you want to watch one.")
 
     @checks.dynamic_cooldown(CoolDownModified(10))
     @command()
@@ -1197,8 +1205,8 @@ class Battle(Cog):
             embed = Embed(colour=0x3D85C6, title=link,
                           description=f"**__Parameters__:**\n**T**: {t}\n**Role**: {role}\n**Custom msg**: " + (
                               f"{custom_msg}" if custom_msg else "None"))
-            embed.add_field(name="Time Remaining",
-                            value=f'{api_battles["hoursRemaining"]:02d}:{api_battles["minutesRemaining"]:02d}:{api_battles["secondsRemaining"]:02d}')
+            h, m, s = api_battles["hoursRemaining"], api_battles["minutesRemaining"], api_battles["secondsRemaining"]
+            embed.add_field(name="Time Remaining", value=f'{h:02d}:{m:02d}:{s:02d}')
             defender, attacker = all_countries.get(api_battles["defenderId"], "defender"), all_countries.get(
                 api_battles["attackerId"], "attacker")
             embed.add_field(name="Sides", value=f"{utils.codes(defender)} {defender} vs "
@@ -1600,7 +1608,8 @@ async def ping_func(channel: TextChannel, t: float, server: str, ping_id: str, c
                 attacker_dmg = my_dict[a_name]
                 defender_dmg = my_dict[d_name]
                 embed = Embed(colour=0x3D85C6, title=f"{base_url}battle.html?id={battle_dict['battle_id']}",
-                              description=f"**T{t}, Score:** {battle_dict['defender']['score']}:{battle_dict['attacker']['score']}\n"
+                              description=f"**T{t}, Score:** "
+                                          f"{battle_dict['defender']['score']}:{battle_dict['attacker']['score']}\n"
                                           + (f"**Total Dmg:** {battle_dict['dmg']}" if 'dmg' in battle_dict else ''))
                 embed.add_field(name=f"{utils.codes(d_name)} " + utils.shorten_country(d_name),
                                 value=f"{defender_dmg:,}")
