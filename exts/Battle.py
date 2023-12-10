@@ -1526,7 +1526,11 @@ def generate_cup_plot(df: pd.DataFrame, names: dict) -> Optional[BytesIO]:
     ax0.set_ylabel('Total Damage')
     ax0.set_xlabel('Time')
 
-    ax0.legend(names.values())
+    # sort legends based on tops
+    lines, labels = ax0.get_legend_handles_labels()
+    lines = [lines[labels.index(label)] for label in names.values()]
+    labels = [labels[labels.index(label)] for label in names.values()]
+    ax0.legend(lines, labels)
 
     fig.autofmt_xdate()
 
