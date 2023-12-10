@@ -632,7 +632,7 @@ class Battle(Cog):
                         else:
                             prob = math.comb(n, k) * math.pow(p, k) * math.pow(1 - p, n - k)
                         x.append(prob * 100)
-                        y.append(k)
+                        y.append(k+1)  # Shift the data to avoid log(0)
                         max_k = max(max_k, k)
                         total_chances += prob
                         if total_chances > 0.99:
@@ -677,11 +677,13 @@ class Battle(Cog):
 
                     # convert the x to log scale
                     ax.set_xscale('log')
+
                     means = [round(x) for x in mean_values if x > 20]
                     ticks = sorted(set(list(range(1, min(10, max_k+1))) + means))
 
                     ax.set_xticks(ticks)
-                    tick_labels = [str(tick) for tick in ticks]
+                    # Shift back the data to the original
+                    tick_labels = [str(tick-1) for tick in ticks]
                     ax.set_xticklabels(tick_labels)
                     return utils.plt_to_bytes(fig)
 
