@@ -1192,9 +1192,9 @@ class Battle(Cog):
             link = await BattleLink().transform(interaction, link)
             is_auction = False
 
-        server, auction_id = link["server"], link["id"]
+        server, link_id = link["server"], link["id"]
         if is_auction:
-            link = f'https://{server}.e-sim.org/auction.html?id={auction_id}'
+            link = f'https://{server}.e-sim.org/auction.html?id={link_id}'
             find_auctions = await utils.find_one("collection", "auctions") or {"auctions": []}
             find_auctions["auctions"].append(
                 {"channel_id": interaction.channel.id, "message_id": interaction.message.id,
@@ -1203,7 +1203,7 @@ class Battle(Cog):
             await watch_auction_func(interaction.channel, link, t, custom_msg)
 
         else:
-            link = f"https://{server}.e-sim.org/battle.html?id={battle_id}"
+            link = f"https://{server}.e-sim.org/battle.html?id={link_id}"
             api_battles = await utils.get_content(link.replace("battle", "apiBattles").replace("id", "battleId"))
             if 8 in (api_battles['defenderScore'], api_battles['attackerScore']):
                 await utils.custom_followup(interaction, "This battle is over!", ephemeral=True)
