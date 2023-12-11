@@ -1187,18 +1187,22 @@ class Battle(Cog):
 
         try:
             link = await AuctionLink().transform(interaction, link)
-            server, auction_id = link["server"], link["id"]
+            is_auction = True
+        except Exception:
+            link = await BattleLink().transform(interaction, link)
+            is_auction = False
+
+        server, auction_id = link["server"], link["id"]
+        if is_auction:
             link = f'https://{server}.e-sim.org/auction.html?id={auction_id}'
             find_auctions = await utils.find_one("collection", "auctions") or {"auctions": []}
             find_auctions["auctions"].append(
-                {"channel": str(interaction.channel.id), "link": link, "t": t, "custom": custom_msg,
-                 "author_id": str(interaction.user.id)})
+                {"channel_id": interaction.channel.id, "message_id": interaction.message.id,
+                 "author_id": interaction.user.id, "link": link, "t": t, "role": role, "custom": custom_msg})
             await utils.replace_one("collection", "auctions", find_auctions)
             await watch_auction_func(interaction.channel, link, t, custom_msg)
 
-        except Exception:
-            link = await BattleLink().transform(interaction, link)
-            server, battle_id = link["server"], link["id"]
+        else:
             link = f"https://{server}.e-sim.org/battle.html?id={battle_id}"
             api_battles = await utils.get_content(link.replace("battle", "apiBattles").replace("id", "battleId"))
             if 8 in (api_battles['defenderScore'], api_battles['attackerScore']):
@@ -1209,16 +1213,16 @@ class Battle(Cog):
                               f"{custom_msg}" if custom_msg else "None"))
             h, m, s = api_battles["hoursRemaining"], api_battles["minutesRemaining"], api_battles["secondsRemaining"]
             embed.add_field(name="Time Remaining", value=f'{h:02d}:{m:02d}:{s:02d}')
-            defender, attacker = all_countries.get(api_battles["defenderId"], "defender"), all_countries.get(
-                api_battles["attackerId"], "attacker")
+            defender = all_countries.get(api_battles["defenderId"], "defender")
+            attacker = all_countries.get(api_battles["attackerId"], "attacker")
             embed.add_field(name="Sides", value=f"{utils.codes(defender)} {defender} vs "
                                                 f"{utils.codes(attacker)} {attacker}")
             embed.add_field(name="Score", value=f'{api_battles["defenderScore"]}:{api_battles["attackerScore"]}')
             embed.set_footer(text="If you want me to stop watching this battle, use /unwatch")
             find_watch = await utils.find_one("collection", "watch") or {"watch": []}
             find_watch["watch"].append(
-                {"channel": str(interaction.channel.id), "link": link, "t": t, "role": role, "custom": custom_msg,
-                 "author_id": str(interaction.user.id)})
+                {"channel_id": interaction.channel.id, "message_id": interaction.message.id,
+                 "author_id": interaction.user.id, "link": link, "t": t, "role": role, "custom": custom_msg})
             await utils.replace_one("collection", "watch", find_watch)
             await utils.custom_followup(interaction, embed=await utils.convert_embed(interaction, embed))
             await watch_func(self.bot, interaction.channel, link, t, role, custom_msg)
@@ -1233,18 +1237,18 @@ class Battle(Cog):
         channel_id = ctx.channel.id if isinstance(ctx, Context) else ctx.id
 
         removed = []
-        for auction_dict in list(find_watch["watch"]):
-            if auction_dict["channel"] == str(channel_id) and auction_dict["link"] == link:
-                find_watch["watch"].remove(auction_dict)
+        for watch_dict in find_watch["watch"]:
+            if watch_dict["channel_id"] == channel_id and watch_dict["link"] == link:
+                watch_dict["removed"] = True
                 removed.append(f"<{link}>")
-        for auction_dict in list(find_auctions["auctions"]):
-            if auction_dict["channel"] == str(channel_id) and auction_dict["link"] == link:
-                find_auctions["auctions"].remove(auction_dict)
+        for auction_dict in find_auctions["auctions"]:
+            if auction_dict["channel_id"] == channel_id and auction_dict["link"] == link:
+                auction_dict["removed"] = True
                 removed.append(f"<{link}>")
         if not removed:
             await ctx.send(f"I'm not watching {link} in this server")
         else:
-            await ctx.send("Removed " + ", ".join(removed))
+            await ctx.send("Removed the following links " + "\n".join(removed))
             await utils.replace_one("collection", "watch", find_watch)
             await utils.replace_one("collection", "auctions", find_auctions)
 
@@ -1643,8 +1647,7 @@ async def ping_func(channel: TextChannel, t: float, server: str, ping_id: str, c
 async def watch_func(bot, channel: TextChannel, link: str, t: float, role: str, custom: str,
                      author_id: int = 0) -> None:
     """watch func"""
-    while any(DICT["channel"] == str(channel.id) and DICT["link"] == link for DICT in
-              (await utils.find_one("collection", "watch"))["watch"]):
+    for _ in range(20):
         api_battles = await utils.get_content(link.replace("battle", "apiBattles").replace("id", "battleId"))
         if 8 in (api_battles['defenderScore'], api_battles['attackerScore']):
             find_watch = await utils.find_one("collection", "watch") or {"watch": []}
@@ -1652,17 +1655,27 @@ async def watch_func(bot, channel: TextChannel, link: str, t: float, role: str, 
                 if watch_dict["link"] == link:
                     find_watch["watch"].remove(watch_dict)
             return await utils.replace_one("collection", "watch", find_watch)
-        sleep_time = api_battles["hoursRemaining"] * 3600 + api_battles["minutesRemaining"] * 60 + api_battles[
-            "secondsRemaining"] - t * 60
-        await sleep(sleep_time if sleep_time > 0 else 0)
+        h, m, s = api_battles["hoursRemaining"], api_battles["minutesRemaining"], api_battles["secondsRemaining"]
+        sleep_time = h * 3600 + m * 60 + s - t * 60
+        await sleep(max(0, sleep_time))
         find_watch = await utils.find_one("collection", "watch") or {"watch": []}
-        if not any(DICT["channel"] == str(channel.id) and DICT["link"] == link for DICT in find_watch["watch"]):
+        # if the battle is not in the watch list, or it has been marked as removed - stop watching it
+        for watch_dict in list(find_watch["watch"]):
+            if watch_dict["channel_id"] == channel.id and watch_dict["link"] == link and watch_dict.get("removed"):
+                find_watch["watch"].remove(watch_dict)
+                return await utils.replace_one("collection", "watch", find_watch)
+
+        if not any(watch_dict["channel_id"] == channel.id and watch_dict["link"] == link
+                   for watch_dict in find_watch["watch"]):
             break
+
+        # check again, in case e-sim froze the battle
         api_battles = await utils.get_content(link.replace("battle", "apiBattles").replace("id", "battleId"))
-        sleep_time = api_battles["hoursRemaining"] * 3600 + api_battles["minutesRemaining"] * 60 + api_battles[
-            "secondsRemaining"] - t * 60
-        await sleep(sleep_time if sleep_time > 0 else 0)
+        h, m, s = api_battles["hoursRemaining"], api_battles["minutesRemaining"], api_battles["secondsRemaining"]
+        sleep_time = h * 3600 + m * 60 + s - t * 60
+        await sleep(max(0, sleep_time))
         if api_battles['frozen']:
+            await sleep(300)
             continue
         attacker = api_battles["attackerId"]
         defender = api_battles["defenderId"]
@@ -1672,8 +1685,8 @@ async def watch_func(bot, channel: TextChannel, link: str, t: float, role: str, 
             defender = all_countries[defender]
         else:
             attacker, defender = "Attacker", "Defender"
-        api_fights = link.replace("battle", "apiFights").replace("id",
-                                                                 "battleId") + f"&roundId={api_battles['currentRound']}"
+        api_fights = link.replace("battle", "apiFights").replace(
+            "id", "battleId") + f"&roundId={api_battles['currentRound']}"
         my_dict, hit_time = await utils.save_dmg_time(api_fights, attacker, defender)
         output_buffer = await dmg_trend(hit_time, link.split("//")[1].split(".e-sim.org")[0],
                                         f'{link.split("=")[1].split("&")[0]}-{api_battles["currentRound"]}')
@@ -1693,7 +1706,7 @@ async def watch_func(bot, channel: TextChannel, link: str, t: float, role: str, 
             "secondsRemaining"]
 
         try:
-            await channel.send(msg, embed=await utils.convert_embed(int(author_id), embed),
+            await channel.send(msg, embed=await utils.convert_embed(author_id, embed),
                                file=File(fp=output_buffer, filename=f"{channel.id}.png"), delete_after=delete_after)
         except Exception:
             return await bot.get_command("unwatch").__call__(channel, link)
@@ -1709,16 +1722,17 @@ async def watch_auction_func(channel: TextChannel, link: str, t: float, custom_m
         return await remove_auction(link, channel.id)
 
     await sleep(row["remaining_seconds"] - t * 60)
-    row = await utils.get_auction(link)
+    if not row.get("removed"):
+        row = await utils.get_auction(link)
 
-    embed = Embed(colour=0x3D85C6, title=link,
-                  description=f"**__Parameters__:**\n**T**: {t}\n\n**Custom msg**: " + (
-                      f"{custom_msg}" if custom_msg else "None"))
-    embed.add_field(name="Info", value="\n".join([f"**{k.title()}:** {v}" for k, v in row.items()]))
+        embed = Embed(colour=0x3D85C6, title=link,
+                      description=f"**__Parameters__:**\n**T**: {t}\n\n**Custom msg**: " + (
+                          f"{custom_msg}" if custom_msg else "None"))
+        embed.add_field(name="Info", value="\n".join([f"**{k.title()}:** {v}" for k, v in row.items()]))
 
-    embed = Embed(colour=0x3D85C6, title=link)
-    embed.add_field(name="Info", value="\n".join([f"**{k.title()}:** {v}" for k, v in row.items()]))
-    await channel.send(custom_msg, embed=await utils.convert_embed(author_id, embed))
+        embed = Embed(colour=0x3D85C6, title=link)
+        embed.add_field(name="Info", value="\n".join([f"**{k.title()}:** {v}" for k, v in row.items()]))
+        await channel.send(custom_msg, embed=await utils.convert_embed(author_id, embed))
     return await remove_auction(link, channel.id)
 
 
@@ -1726,7 +1740,7 @@ async def remove_auction(link: str, channel_id: int) -> None:
     """Removes auction"""
     find_auctions = await utils.find_one("collection", "auctions") or {"auctions": []}
     for auction_dict in list(find_auctions["auctions"]):
-        if auction_dict["link"] == link and auction_dict["channel"] == channel_id:
+        if auction_dict["link"] == link and auction_dict["channel_id"] == channel_id:
             find_auctions["auctions"].remove(auction_dict)
     await utils.replace_one("collection", "auctions", find_auctions)
 

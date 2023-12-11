@@ -56,8 +56,8 @@ async def activate_watch_and_ping() -> None:
     """Activating Watch, Auction and Ping Function at Restart"""
     db_dict = await utils.find_one("collection", "auctions") or {"auctions": []}
     for inner_dict in list(db_dict["auctions"]):
-        channel = bot.get_channel(int(inner_dict["channel"]))
-        if channel:
+        channel = bot.get_channel(inner_dict["channel_id"])
+        if channel and not inner_dict.get("removed"):
             bot.loop.create_task(
                 watch_auction_func(channel, inner_dict['link'], inner_dict['t'],
                                    inner_dict['custom'], inner_dict["author_id"]))
@@ -68,8 +68,8 @@ async def activate_watch_and_ping() -> None:
 
     db_dict = await utils.find_one("collection", "watch") or {"watch": []}
     for inner_dict in list(db_dict["watch"]):
-        channel = bot.get_channel(int(inner_dict["channel"]))
-        if channel:
+        channel = bot.get_channel(inner_dict["channel_id"])
+        if channel and not inner_dict.get("removed"):
             bot.loop.create_task(
                 watch_func(bot, channel, inner_dict['link'], inner_dict['t'],
                            inner_dict['role'], inner_dict['custom'], inner_dict["author_id"]))
