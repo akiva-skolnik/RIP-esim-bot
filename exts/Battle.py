@@ -1197,7 +1197,7 @@ class Battle(Cog):
             link = f'https://{server}.e-sim.org/auction.html?id={link_id}'
             find_auctions = await utils.find_one("collection", "auctions") or {"auctions": []}
             find_auctions["auctions"].append(
-                {"channel_id": interaction.channel.id, "message_id": interaction.message.id,
+                {"channel_id": interaction.channel.id,
                  "author_id": interaction.user.id, "link": link, "t": t, "role": role, "custom": custom_msg})
             await utils.replace_one("collection", "auctions", find_auctions)
             await watch_auction_func(interaction.channel, link, t, custom_msg)
@@ -1221,7 +1221,7 @@ class Battle(Cog):
             embed.set_footer(text="If you want me to stop watching this battle, use /unwatch")
             find_watch = await utils.find_one("collection", "watch") or {"watch": []}
             find_watch["watch"].append(
-                {"channel_id": interaction.channel.id, "message_id": interaction.message.id,
+                {"channel_id": interaction.channel.id,
                  "author_id": interaction.user.id, "link": link, "t": t, "role": role, "custom": custom_msg})
             await utils.replace_one("collection", "watch", find_watch)
             await utils.custom_followup(interaction, embed=await utils.convert_embed(interaction, embed))
