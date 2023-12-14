@@ -28,7 +28,8 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
     @checks.dynamic_cooldown(CoolDownModified(60))
     @command()
     @describe(at_least_10_medals="Scan all active players with at least 10 medals, instead of 100 (premium)")
-    async def bhs(self, interaction: Interaction, server: Transform[str, Server], at_least_10_medals: bool = False) -> None:
+    async def bhs(self, interaction: Interaction, server: Transform[str, Server],
+                  at_least_10_medals: bool = False) -> None:
         """Displays top bh medals per player in a given server."""
 
         if at_least_10_medals and not await utils.is_premium_level_1(interaction, False):
@@ -90,7 +91,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
     async def convert(self, interaction: Interaction, server: Transform[str, Server], ids_in_file: Optional[Attachment],
                       ids: Optional[str],
                       your_input_is: Literal["citizen ids", "citizen names", "military unit ids", "citizenship ids",
-                                             "single MU id (get info about all MU members)"],
+                      "single MU id (get info about all MU members)"],
                       extra_premium_info: bool = False) -> None:
         """Convert ids to names and vice versa"""
         if extra_premium_info and not await utils.is_premium_level_1(interaction, False):
@@ -261,7 +262,13 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
             included_countries = [country.split(",") for country in included_countries.lower().split("vs")]
         if included_countries and included_countries[0][0]:
             for country in included_countries:
-                side_count.append([all_countries_by_name[x.strip().lower()] for x in country if x.strip()])
+                try:
+                    side_count.append([all_countries_by_name[x.strip().lower()] for x in country if x.strip()])
+                except KeyError:
+                    await utils.custom_followup(
+                        interaction,
+                        "Couldn't find country, make sure your countries are separated by a comma (,)",  ephemeral=True)
+                    return
 
         await interaction.response.defer()
         msg = await utils.custom_followup(interaction,
@@ -287,7 +294,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
             defender, attacker = api_battles['defenderId'], api_battles['attackerId']
             if len(side_count) > 1:
                 condition = (any(side == defender for side in side_count[0]) and any(
-                                side == attacker for side in side_count[1])) or \
+                    side == attacker for side in side_count[1])) or \
                             (any(side == defender for side in side_count[1]) and any(
                                 side == attacker for side in side_count[0]))
             elif len(side_count) == 1:
@@ -528,11 +535,11 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
             for row in reader(csvfile):
                 nick = (row[0], row[1])
                 if nick not in my_dict:
-                    my_dict[nick] = [0]*(len(headers)-2)
-                for i in range(len(headers)-2):
+                    my_dict[nick] = [0] * (len(headers) - 2)
+                for i in range(len(headers) - 2):
                     try:
                         if row[i + 2]:
-                            my_dict[nick][i] += int(row[i+2])
+                            my_dict[nick][i] += int(row[i + 2])
                     except IndexError:
                         pass
 
@@ -552,7 +559,8 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
     @command()
     @describe(server="You can see you score using /calc with bonuses=as new player",
               scan_more_players="True (premium) - all players with EQUIPPED_V achievement, otherwise - LEGENDARY_EQUIPMENT")
-    async def sets(self, interaction: Interaction, server: Transform[str, Server], scan_more_players: bool = False) -> None:
+    async def sets(self, interaction: Interaction, server: Transform[str, Server],
+                   scan_more_players: bool = False) -> None:
         """Displays top avoid and clutch sets per player in a given server."""
 
         if scan_more_players and not await utils.is_premium_level_1(interaction, False):
@@ -612,7 +620,8 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
         await interaction.response.defer()
         if ".e-sim.org/battle.html?id=" in custom_api:
             if "round" in custom_api:
-                custom_api = custom_api.replace("battle", "apiFights").replace("id", "battleId").replace("round", "roundId")
+                custom_api = custom_api.replace("battle", "apiFights").replace("id", "battleId").replace("round",
+                                                                                                         "roundId")
             else:
                 custom_api = custom_api.replace("battle", "apiBattles").replace("id", "battleId")
         if ".e-sim.org/" in custom_api and not custom_api.startswith(api_url) and "api" not in custom_api:
