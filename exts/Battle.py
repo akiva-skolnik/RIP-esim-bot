@@ -311,7 +311,7 @@ class Battle(Cog):
             msg = await utils.custom_followup(interaction,
                                               "Progress status: 1%.\n(I will update you after every 10%)" if
                                               last_battle - battle_id > 10 else "I'm on it, Sir. Be patient.",
-                                              file=File("files/typing.gif"))
+                                              file=File(self.bot.typing_gif))
             empty_sides = {"Total": {'weps': [0, 0, 0, 0, 0, 0], 'dmg': 0}}
         else:
             msg = None
@@ -1265,7 +1265,7 @@ class Battle(Cog):
         first, last = min(ids), max(ids)
         try:
             msg = await interaction.channel.send(content="Progress status: 1%.\n(I will update you after every 10%)",
-                                                 file=File("files/typing.gif"))
+                                                 file=File(self.bot.typing_gif))
             battle_type = ""
             my_dict = defaultdict(lambda: {'weps': [0, 0, 0, 0, 0, 0], 'dmg': 0})
             output = StringIO()

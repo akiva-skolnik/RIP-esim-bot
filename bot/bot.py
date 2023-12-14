@@ -73,6 +73,7 @@ class MyClient(Bot):
                          activity=Game("type /"), allowed_mentions=AllowedMentions(
                           replied_user=False), intents=Intents.default(), tree_cls=MyTree)
         self.root = root
+        self.typing_gif = os.path.join(self.root, "files/typing.gif")
         config_path = os.path.join(self.root, "config.json")
         with open(config_path, 'r', encoding="utf-8") as file:
             self.config = json.load(file)

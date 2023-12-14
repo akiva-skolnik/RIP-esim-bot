@@ -107,7 +107,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         data = {}
         api_countries = utils.get_countries(server)
         msg = await utils.custom_followup(interaction, "Progress status: 1%.\n(I will update you after every 10%)",
-                                          file=File("files/typing.gif"))
+                                          file=File(self.bot.typing_gif))
         for index, (k, v) in enumerate(api_countries.items()):
             if await self.bot.should_cancel(interaction, msg):
                 break
@@ -247,7 +247,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         base_url = f"https://{server}.e-sim.org/"
         mm_dict = {}
         msg = await utils.custom_followup(interaction, "Progress status: 1%.\n(I will update you after every 10%)",
-                                          file=File("files/typing.gif"))
+                                          file=File(self.bot.typing_gif))
         countries = utils.get_countries(server, index=2)
         length = len(countries) * 7
         for index, (country_id, mm_name) in enumerate(countries.items()):
@@ -320,7 +320,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 continue
         msg = await utils.custom_followup(
             interaction, "Progress status: 1%.\n(I will update you after every 10%)" if len(data) > 10 else
-            "I'm on it, Sir. Be patient.", file=File("files/typing.gif"))
+            "I'm on it, Sir. Be patient.", file=File(self.bot.typing_gif))
         data1 = {}
         for index, region_id in enumerate(data):
             if await self.bot.should_cancel(interaction, msg):
@@ -600,7 +600,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
 
         msg = await utils.custom_followup(
             interaction, "Progress status: 1%.\n(I will update you after every 10%)" if len(companies) > 10 else
-            "I'm on it, Sir. Be patient.", file=File("files/typing.gif"))
+            "I'm on it, Sir. Be patient.", file=File(self.bot.typing_gif))
         product_raw = {"Weapon": "Iron", "House": "Wood", "Gift": "Diamonds",
                        "Food": "Grain",
                        "Ticket": "Oil", "Defense System": "Stone", "Hospital": "Stone",
@@ -723,7 +723,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         msg = await utils.custom_followup(interaction,
                                           "Progress status: 1%.\n(I will update you after every 10%)"
                                           if last_page + last_page2 > 10 else "I'm on it, Sir. Be patient.",
-                                          file=File("files/typing.gif"))
+                                          file=File(self.bot.typing_gif))
         for page in range(1, last_page):
             if await self.bot.should_cancel(interaction, msg):
                 break

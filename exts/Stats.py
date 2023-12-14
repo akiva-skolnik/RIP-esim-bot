@@ -49,7 +49,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
             last_page = await utils.last_page(link)
 
         msg = await utils.custom_followup(interaction, "Progress status: 1%.\n(I will update you after every 10%)",
-                                          file=File("files/typing.gif"))
+                                          file=File(self.bot.typing_gif))
         count = 0
         output = StringIO()
         csv_writer = writer(output)
@@ -158,7 +158,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
             csv_writer.writerow(header)
         msg = await utils.custom_followup(
             interaction, "Progress status: 1%.\n(I will update you after every 10%)" if len(ids) > 10 else
-            "I'm on it, Sir. Be patient.", file=File("files/typing.gif"))
+            "I'm on it, Sir. Be patient.", file=File(self.bot.typing_gif))
         errors = []
         index = 0
         for index, current_id in enumerate(ids):
@@ -241,29 +241,29 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
 
     @checks.dynamic_cooldown(CoolDownModified(20))
     @command(name="dmg-stats")
-    @describe(battles="first-last or id1, id2, id3...",
-              included_countries="Example: 'Norway, Israel VS Egypt' - all battles of norway plus all Israel VS Egypt battles",
+    @describe(battle_ids="first-last or id1, id2, id3...",
+              included_countries="Example: 'Norway, Israel VS Egypt' - "
+                                 "all battles of norway plus all battles of (Israel VS Egypt)",
               battles_types="Check those types only (default: RWs and attacks)",
               fast_server="used for medkits estimation")
     #         extra_premium_info="True (premium) will give more data, but it will take much longer")
     # @check(utils.is_premium_level_1)
-    async def dmg_stats(self, interaction: Interaction, server: Transform[str, Server], battles: Transform[list, Ids],
+    async def dmg_stats(self, interaction: Interaction, server: Transform[str, Server], battle_ids: Transform[list, Ids],
                         included_countries: Optional[str], battles_types: Optional[Transform[list, BattleTypes]],
                         fast_server: bool = None) -> None:
         """Displays a lot of data about the given battles"""
 
-        if not await utils.is_premium_level_1(interaction, False) and len(battles) > 500:
+        if not await utils.is_premium_level_1(interaction, False) and len(battle_ids) > 500:
             await utils.custom_followup(
                 interaction, "It's too much.. sorry. You can buy premium and remove this limit.", ephemeral=True)
             return
-
-        side_count = []
+        sides = []
         if included_countries:
             included_countries = [country.split(",") for country in included_countries.lower().split("vs")]
         if included_countries and included_countries[0][0]:
             for country in included_countries:
                 try:
-                    side_count.append([all_countries_by_name[x.strip().lower()] for x in country if x.strip()])
+                    sides.append([all_countries_by_name[x.strip().lower()] for x in country if x.strip()])
                 except KeyError:
                     await utils.custom_followup(
                         interaction,
@@ -273,10 +273,43 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
         await interaction.response.defer()
         msg = await utils.custom_followup(interaction,
                                           "Progress status: 1%.\n(I will update you after every 10%)\n"
-                                          f"(I have to check about {len(battles) * 2 * 11} e-sim pages"
+                                          f"(I have to check about {len(battle_ids) * 2 * 11} e-sim pages"
                                           f" (battles, rounds etc.), so be patient)" if len(
-                                              battles) > 10 else "I'm on it, Sir. Be patient.",
-                                          file=File("files/typing.gif"))
+                                              battle_ids) > 10 else "I'm on it, Sir. Be patient.",
+                                          file=File(self.bot.typing_gif))
+
+        def get_where_dmg_stats(exact_sides: list[tuple[str]], any_side: list[str]) -> str:
+            reversed_sides: list[tuple[str]] = [tuple(reversed(side)) for side in exact_sides]
+            str_exact_sides = f"{','.join(map(str, exact_sides))},{','.join(map(str, reversed_sides))}"
+            exact_side_condition = f"(defenderId, attackerId) IN ({str_exact_sides}) "
+            any_side_condition = f"defenderId IN {','.join(any_side)} OR attackerId IN {','.join(any_side)} "
+            if exact_sides:
+                if any_side:
+                    where = f"{exact_side_condition} OR {any_side_condition}"
+                else:
+                    where = exact_side_condition
+            else:
+                if any_side:
+                    where = any_side_condition
+                else:
+                    where = ""
+            return where
+
+        if 0:  # TODO: rewrite this function
+            await db_utils.cache_api_battles(interaction, server, battle_ids)
+            # (defenderId, attacker_id) IN ((sides[0], sides[1]), (sides[1], sides[0]))
+            exact_sides = []  # list of tuples
+            any_side = []  # list of ids (ints)
+            for battles_to_include in (included_countries or "").split(","):
+                if "vs" in battles_to_include:
+                    # append tuple of the 2 sides around "vs":
+                    exact_sides.append(tuple(all_countries_by_name[country.strip().lower()] for country in
+                                             battles_to_include.split("vs")))
+                else:
+                    any_side.append(all_countries_by_name[battles_to_include.strip().lower()])
+
+            api_battles_df = await db_utils.select_many_api_battles(server, battle_ids, custom_condition=where)
+
         my_dict = defaultdict(lambda: {'weps': [0, 0, 0, 0, 0, 0], 'dmg': 0, 'limits': 0, 'medkits': 0,
                                        'last_hit': "2010-01-01 00:00:00:000", 'records': [0, 0, 0],
                                        'restores': {}})
@@ -284,27 +317,31 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
         countries_dict = defaultdict(lambda: {'won': 0, 'lost': 0})
         days = []
         base_url = f"https://{server}.e-sim.org/"
-        first = battles[0]
+        first = battle_ids[0]
         index = battle_id = 0
-        for index, battle_id in enumerate(battles):
-            msg = await utils.update_percent(index, len(battles), msg)
+        restore_battles_type = (
+            'COUNTRY_TOURNAMENT', 'CUP_EVENT_BATTLE', 'MILITARY_UNIT_CUP_EVENT_BATTLE', 'TEAM_TOURNAMENT')
+        for index, battle_id in enumerate(battle_ids):
+            msg = await utils.update_percent(index, len(battle_ids), msg)
             api_battles = await utils.get_content(f'{base_url}apiBattles.html?battleId={battle_id}')
-            battle_restore = api_battles["type"] in (
-                'COUNTRY_TOURNAMENT', 'CUP_EVENT_BATTLE', 'MILITARY_UNIT_CUP_EVENT_BATTLE', 'TEAM_TOURNAMENT')
-            defender, attacker = api_battles['defenderId'], api_battles['attackerId']
-            if len(side_count) > 1:
-                condition = (any(side == defender for side in side_count[0]) and any(
-                    side == attacker for side in side_count[1])) or \
-                            (any(side == defender for side in side_count[1]) and any(
-                                side == attacker for side in side_count[0]))
-            elif len(side_count) == 1:
-                condition = any(side in (attacker, defender) for side in side_count[0])
+            is_restore_battle = api_battles["type"] in restore_battles_type
+            defender_id, attacker_id = api_battles['defenderId'], api_battles['attackerId']
+            if len(sides) > 1:
+                # (defender_id IN (sides[0]) AND attacker_id IN (sides[1])) or
+                # (defender_id IN (sides[1]) AND attacker_id IN (sides[0]))
+                condition = (any(side == defender_id for side in sides[0]) and any(
+                    side == attacker_id for side in sides[1])) or \
+                            (any(side == defender_id for side in sides[1]) and any(
+                                side == attacker_id for side in sides[0]))
+            elif len(sides) == 1:
+                condition = any(side in (attacker_id, defender_id) for side in sides[0])
             else:
                 condition = True
             if not condition or (battles_types and api_battles['type'] not in battles_types):
                 continue
-            if attacker != defender and api_battles["type"] != "MILITARY_UNIT_CUP_EVENT_BATTLE":
-                defender, attacker = all_countries.get(defender, "Defender"), all_countries.get(attacker, "Attacker")
+            if attacker_id != defender_id and api_battles["type"] != "MILITARY_UNIT_CUP_EVENT_BATTLE":
+                defender = all_countries.get(defender_id, "Defender")
+                attacker = all_countries.get(attacker_id, "Attacker")
 
             if api_battles["type"] in ('ATTACK', 'RESISTANCE'):
                 if api_battles["attackerScore"] == 8:
@@ -320,7 +357,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
             else:
                 last = api_battles['currentRound'] + 1
             for round_id in range(1, last):
-                sides = {'defender': 0, 'attacker': 0}
+                sides_dmg = {'defender': 0, 'attacker': 0}
                 attacker_dmg = defaultdict(lambda: {'dmg': 0, "Clutches": 0})
                 defender_dmg = defaultdict(lambda: {'dmg': 0, "Clutches": 0})
                 dmg_in_round = defaultdict(int)
@@ -346,7 +383,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                         # fast server has limits restore
                         if fast_server or (fast_server is None and server not in ("primera", "secura", "suna")):
                             user['limits'] = min(user['limits'] + int(seconds_from_last // 600) * 2 + 2, full_limits)
-                    if battle_restore and user.get("has_restore"):
+                    if is_restore_battle and user.get("has_restore"):
                         user['limits'] = 10 + 10 + 2
                         user["has_restore"] = False
                     user['limits'] -= wep * 0.6 / 5
@@ -374,18 +411,18 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                         continue
                     side = 'defender' if hit['defenderSide'] else 'attacker'
                     (defender_dmg if hit['defenderSide'] else attacker_dmg)[key]['dmg'] += hit['damage']
-                    sides[side] += hit['damage']
+                    sides_dmg[side] += hit['damage']
                     dmg_in_round[key] += hit['damage']
 
                 if api_battles["type"] == "DUEL_TOURNAMENT":
                     continue
-                if sides['attacker'] > sides['defender']:
+                if sides_dmg['attacker'] > sides_dmg['defender']:
                     for key, value in attacker_dmg.items():
-                        if sides['attacker'] - value['dmg'] < sides['defender']:
+                        if sides_dmg['attacker'] - value['dmg'] < sides_dmg['defender']:
                             value['Clutches'] += 1
                 else:
                     for key, value in defender_dmg.items():
-                        if sides['defender'] - value['dmg'] < sides['attacker']:
+                        if sides_dmg['defender'] - value['dmg'] < sides_dmg['attacker']:
                             value['Clutches'] += 1
 
                 for d in (attacker_dmg, defender_dmg):
@@ -406,7 +443,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                 await utils.custom_delay(interaction)
             for k, v in dmg_in_battle.items():
                 my_dict[k]['records'][0] = max(my_dict[k]['records'][0], v["dmg"])
-                if battle_restore and v["hits"] >= 30:
+                if is_restore_battle and v["hits"] >= 30:
                     my_dict[k]["has_restore"] = True
 
         output = StringIO()
@@ -474,12 +511,12 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
         msg = await utils.custom_followup(interaction,
                                           "Progress status: 1%.\n(I will update you after every 10%)" if len(
                                               battles) > 10 else "I'm on it, Sir. Be patient.",
-                                          file=File("files/typing.gif"))
+                                          file=File(self.bot.typing_gif))
 
         base_url = f'https://{server}.e-sim.org/'
         lucky = False
         index = current_id = 0
-        filename = f"temp_files/{time()}.csv"
+        filename = os.path.join(self.bot.root, f"temp_files/{time()}.csv")
         f = open(filename, "w", newline="")
         csv_writer = writer(f)
         for index, current_id in enumerate(battles):
@@ -581,7 +618,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
             link = f'{base_url}achievement.html?type=EQUIPPED_V'
             last_page = await utils.last_page(link)
         msg = await utils.custom_followup(interaction, "Progress status: 1%.\n(I will update you after every 10%)",
-                                          file=File("files/typing.gif"))
+                                          file=File(self.bot.typing_gif))
         count = 0
         for page in range(1, last_page):
             tree = await utils.get_content(f'{link}&page={page}')

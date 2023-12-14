@@ -45,7 +45,7 @@ class Premium(Cog):
         msg = await utils.custom_followup(interaction,
                                           "I'm on it, Sir. Be patient. (I have no idea how long it will take, "
                                           "but i will update this msg every 50 articles)",
-                                          file=File("files/typing.gif"))
+                                          file=File(self.bot.typing_gif))
         base_url = f"https://{server}.e-sim.org/"
         tree = await utils.get_content(f"{base_url}news.html?newsType=LATEST_ARTICLES")
         article_id = int(utils.get_ids_from_path(tree, "//*[@class='articleTitle']")[0]) + 1
@@ -198,7 +198,7 @@ class Premium(Cog):
         msg = await utils.custom_followup(interaction,
                                           "Progress status: 1%.\n(I will update you after every 10%)" if len(
                                               auctions_ids) > 10 else "I'm on it, Sir. Be patient.",
-                                          file=File("files/typing.gif"))
+                                          file=File(self.bot.typing_gif))
         output = StringIO()
         csv_writer = writer(output)
         csv_writer.writerow(["Id", "Seller", "Buyer", "Item", "Price"])
@@ -321,7 +321,7 @@ class Premium(Cog):
         countries_dict = defaultdict(
             lambda: {"euro": 0, 'medkits': 0, 'Q5 LC': 0, 'Q6 item': 0, "gold": 0, "donations": 0, "donors count": 0})
         last = bb_id
-        msg = await utils.custom_followup(interaction, "I'm on it, Sir. Be patient.", file=File("files/typing.gif"))
+        msg = await utils.custom_followup(interaction, "I'm on it, Sir. Be patient.", file=File(self.bot.typing_gif))
         for index in range(500):
             if await self.bot.should_cancel(interaction, msg):
                 break
@@ -386,7 +386,7 @@ class Premium(Cog):
 
         await interaction.response.defer()
         msg = await utils.custom_followup(interaction, "Progress status: 1%.\n(I will update you after every 10%)",
-                                          file=File("files/typing.gif"))
+                                          file=File(self.bot.typing_gif))
         output = StringIO()
         csv_writer = writer(output)
         header = []
@@ -435,7 +435,7 @@ class Premium(Cog):
         countries = utils.get_countries(server, index=0)
         await interaction.response.defer()
         msg = await utils.custom_followup(interaction, "Progress status: 1%.\n(I will update you after every 10%)",
-                                          file=File("files/typing.gif"))
+                                          file=File(self.bot.typing_gif))
         output = StringIO()
         csv_writer = writer(output)
         csv_writer.writerow(["#", "Country", "Congress member (votes)"])
@@ -474,7 +474,7 @@ class Premium(Cog):
         await interaction.response.defer()
         countries = utils.get_countries(server, index=0)
         msg = await utils.custom_followup(interaction, "Progress status: 1%.\n(I will update you after every 10%)",
-                                          file=File("files/typing.gif"))
+                                          file=File(self.bot.typing_gif))
         output = StringIO()
         csv_writer = writer(output)
         csv_writer.writerow(["#", "Country", "CP", "Votes"])
@@ -506,7 +506,7 @@ class Premium(Cog):
 
         await interaction.response.defer()
         msg = await utils.custom_followup(interaction, "Progress status: 1%.\n(I will update you after every 10%)",
-                                          file=File("files/typing.gif"))
+                                          file=File(self.bot.typing_gif))
         output = StringIO()
         csv_writer = writer(output)
         count = 0
@@ -584,7 +584,7 @@ class Premium(Cog):
         msg = await utils.custom_followup(interaction,
                                           "Progress status: 1%.\n(I will update you after every 10%)" if last_page > 10
                                           else "I'm on it, Sir. Be patient.",
-                                          file=File("files/typing.gif"))
+                                          file=File(self.bot.typing_gif))
         for page in range(1, last_page):
             if await self.bot.should_cancel(interaction, msg):
                 break
@@ -738,7 +738,7 @@ class Premium(Cog):
         msg = await utils.custom_followup(interaction,
                                           "Progress status: 1%.\n(I will update you after every 10%)" if len(
                                               stock_companies) > 10 else "I'm on it, Sir. Be patient.",
-                                          file=File("files/typing.gif"))
+                                          file=File(self.bot.typing_gif))
         first = stock_companies[0]
         index = sc_id = 0
         for index, sc_id in enumerate(stock_companies):
@@ -874,7 +874,7 @@ class Premium(Cog):
         msg = await utils.custom_followup(interaction,
                                           "I'm on it, Sir. Be patient. (I have no idea how long it will take, "
                                           "but i will update this msg every 10 shouts pages)",
-                                          file=File("files/typing.gif"))
+                                          file=File(self.bot.typing_gif))
         base_url = f"https://{server}.e-sim.org/"
         my_dict = {"shouts": 0, "replies (by author)": 0, "votes (to author shouts)": 0, "replies (to author)": 0}
         if not include_comments:
