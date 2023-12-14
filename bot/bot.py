@@ -25,7 +25,7 @@ async def load_extensions(reload: bool = False) -> None:
 
 def find_one(collection: str, _id: str) -> dict:
     """find one"""
-    filename = f"../db/{collection}_{_id}.json"
+    filename = f"/root/db/{collection}_{_id}.json"
     if os.path.exists(filename):
         with open(filename, "r", encoding='utf-8') as file:
             return json.load(file)

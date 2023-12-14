@@ -992,7 +992,7 @@ async def get_battles(base_url: str, country_id: int = 0,
 
 async def find_one(collection: str, _id: str) -> dict:
     """find one"""
-    filename = f"../db/{collection}_{_id}.json"
+    filename = f"/root/db/{collection}_{_id}.json"
     if path.exists(filename):
         with open(filename, "r", encoding='utf-8') as file:
             return json.load(file)
@@ -1002,6 +1002,6 @@ async def find_one(collection: str, _id: str) -> dict:
 
 async def replace_one(collection: str, _id: str, data: dict) -> None:
     """replace one"""
-    filename = f"../db/{collection}_{_id}.json"
+    filename = f"/root/db/{collection}_{_id}.json"
     with open(filename, "w", encoding='utf-8', errors='ignore') as file:
         json.dump(data, file)
