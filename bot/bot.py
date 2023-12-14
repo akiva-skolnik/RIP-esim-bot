@@ -69,7 +69,7 @@ class MyClient(Bot):
         super().__init__(command_prefix=when_mentioned, case_insensitive=True,
                          activity=Game("type /"), allowed_mentions=AllowedMentions(
                           replied_user=False), intents=Intents.default(), tree_cls=MyTree)
-        with open("./config.json", 'r', encoding="utf-8") as file:
+        with open("/root/RIP-esim-bot/config.json", 'r', encoding="utf-8") as file:
             self.config = json.load(file)
             # {"db_url": "", "TOKEN": ""}
         self.before_invoke(reset_cancel)
