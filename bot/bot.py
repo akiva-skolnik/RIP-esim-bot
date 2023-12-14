@@ -10,23 +10,25 @@ from discord import (AllowedMentions, Forbidden, Game, HTTPException, Intents,
                      Interaction, Message, NotFound, app_commands)
 from discord.ext.commands import Bot, when_mentioned
 
+root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 
 async def load_extensions(reload: bool = False) -> None:
     """Loads extensions"""
-    exts_path = os.path.join(bot.root, "exts")
+    exts_path = os.path.join(root, "exts")
     for dirpath, dirnames, filenames in os.walk(exts_path):
         for file_name in filenames:
             if not file_name.startswith("_"):
                 if reload:
-                    await bot.reload_extension(f'exts.{file_name.replace(".py", "")}')
+                    await bot.reload_extension(f'exts.{file_name.replace(".py", "")}', package=exts_path)
                 else:
-                    await bot.load_extension(f'exts.{file_name.replace(".py", "")}')
+                    await bot.load_extension(f'exts.{file_name.replace(".py", "")}', package=exts_path)
         break
 
 
 def find_one(collection: str, _id: str) -> dict:
     """find one"""
-    filename = os.path.join(os.path.dirname(bot.root), f"db/{collection}_{_id}.json")
+    filename = os.path.join(os.path.dirname(root), f"db/{collection}_{_id}.json")
     if os.path.exists(filename):
         with open(filename, "r", encoding='utf-8') as file:
             return json.load(file)
@@ -70,7 +72,7 @@ class MyClient(Bot):
         super().__init__(command_prefix=when_mentioned, case_insensitive=True,
                          activity=Game("type /"), allowed_mentions=AllowedMentions(
                           replied_user=False), intents=Intents.default(), tree_cls=MyTree)
-        self.root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        self.root = root
         config_path = os.path.join(self.root, "config.json")
         with open(config_path, 'r', encoding="utf-8") as file:
             self.config = json.load(file)
