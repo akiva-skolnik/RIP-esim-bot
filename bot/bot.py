@@ -13,7 +13,8 @@ from discord.ext.commands import Bot, when_mentioned
 
 async def load_extensions(reload: bool = False) -> None:
     """Loads extensions"""
-    for (_, _, filenames) in os.walk("exts"):
+    exts_path = os.path.join(bot.root, "exts")
+    for dirpath, dirnames, filenames in os.walk(exts_path):
         for file_name in filenames:
             if not file_name.startswith("_"):
                 if reload:
@@ -25,7 +26,7 @@ async def load_extensions(reload: bool = False) -> None:
 
 def find_one(collection: str, _id: str) -> dict:
     """find one"""
-    filename = f"/root/db/{collection}_{_id}.json"
+    filename = os.path.join(os.path.dirname(bot.root), f"db/{collection}_{_id}.json")
     if os.path.exists(filename):
         with open(filename, "r", encoding='utf-8') as file:
             return json.load(file)
@@ -69,7 +70,9 @@ class MyClient(Bot):
         super().__init__(command_prefix=when_mentioned, case_insensitive=True,
                          activity=Game("type /"), allowed_mentions=AllowedMentions(
                           replied_user=False), intents=Intents.default(), tree_cls=MyTree)
-        with open("/root/RIP-esim-bot/config.json", 'r', encoding="utf-8") as file:
+        self.root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        config_path = os.path.join(self.root, "config.json")
+        with open(config_path, 'r', encoding="utf-8") as file:
             self.config = json.load(file)
             # {"db_url": "", "TOKEN": ""}
         self.before_invoke(reset_cancel)
@@ -91,7 +94,8 @@ class MyClient(Bot):
     async def setup_hook(self) -> None:
         headers = {"User-Agent": self.config["headers"]}
         self.session = ClientSession(timeout=ClientTimeout(total=100), headers=headers)
-        self.pool = await asyncmy.create_pool(host="localhost", user="root",
+        self.pool = await asyncmy.create_pool(host=self.config.get("db_host", "localhost"),
+                                              user=self.config.get("db_user", "root"),
                                               password=self.config["db_password"], autocommit=True)
 
         await load_extensions()
