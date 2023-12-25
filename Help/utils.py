@@ -966,7 +966,7 @@ async def get_battles(base_url: str, country_id: int = 0,
         sides = tree.xpath('//*[@class="battleHeader"]//em/text()')
         battle_ids = tree.xpath('//*[@class="battleHeader"]//a/@href')
         battle_regions = tree.xpath('//*[@class="battleHeader"]//a/text()')
-        scores = tree.xpath('//*[@class="battleFooterScore hoverText"]/text()')
+        scores = tree.xpath('//*[@class="battleFooterScore hovertext"]/text()')
 
         types = tree.xpath('//*[@class="battleHeader"]//i/@data-hover')
         for i, (dmg, progress_attacker, counter, sides, battle_id, battle_region, score, battle_type) in enumerate(zip(
