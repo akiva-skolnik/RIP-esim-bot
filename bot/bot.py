@@ -18,12 +18,12 @@ async def load_extensions(reload: bool = False) -> None:
     exts_path = os.path.join(root, "exts")
     for dirpath, dirnames, filenames in os.walk(exts_path):
         for file_name in filenames:
-            if not file_name.startswith("_"):
+            if file_name.endswith(".py"):
                 if reload:
                     await bot.reload_extension(f'exts.{file_name.replace(".py", "")}', package=exts_path)
                 else:
                     await bot.load_extension(f'exts.{file_name.replace(".py", "")}', package=exts_path)
-        break
+        break  # only walk the first level
 
 
 def find_one(collection: str, _id: str) -> dict:

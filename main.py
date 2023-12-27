@@ -3,7 +3,7 @@ import asyncio
 import importlib
 import subprocess
 from datetime import datetime
-from os import walk
+import os
 from sys import modules
 from traceback import format_exc
 
@@ -13,7 +13,7 @@ from discord.app_commands import guilds
 from discord.utils import setup_logging
 from pytz import timezone
 
-from bot.bot import bot
+from bot.bot import bot, load_extensions
 from exts.Battle import (motivate_func, ping_func, watch_auction_func,
                          watch_func)
 from exts.General import remind_func
@@ -127,10 +127,7 @@ async def update_from_source(interaction: Interaction) -> None:
         await interaction.response.send_message(output.decode("utf-8") or "Error")
     else:  # local
         await interaction.response.send_message("Reloading all extensions...")
-    for (_, _, filenames) in walk("exts"):
-        for file_name in filenames:
-            if file_name.endswith(".py"):
-                await bot.reload_extension(f'exts.{file_name.replace(".py", "")}')
+    await load_extensions(reload=True)
     importlib.reload(modules["Help"])
 
 
