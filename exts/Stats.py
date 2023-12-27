@@ -554,7 +554,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                             key = item.replace("Equipment parameter ", "")
                             if key not in my_dict[(nick, link)]:
                                 my_dict[(nick, link)][key] = 0
-                        my_dict[(nick, link)][key] += 1
+                            my_dict[(nick, link)][key] += 1
             except Exception as error:
                 await utils.send_error(interaction, error, current_id)
                 break
