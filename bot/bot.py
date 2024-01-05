@@ -40,7 +40,7 @@ class MyTree(app_commands.CommandTree):
     """Lock new server"""
     async def interaction_check(self, interaction: Interaction) -> bool:
         """Lock new server"""
-        if not any("vega" in str(v) for v in interaction.data.values()):
+        if not any("arcadia" in str(v) for v in interaction.data.values()):
             return True
 
         # remove expired users
@@ -58,7 +58,7 @@ class MyTree(app_commands.CommandTree):
             return True
         try:
             await interaction.response.send_message(
-                "vega server is for premium users only. You can use one command per day for free."
+                "arcadia server is for premium users only. You can use one command per day for free."
                 "\nGet premium at <https://www.buymeacoffee.com/RipEsim> :coffee:"
                 "\nSupport: https://discord.com/invite/q96wSd6")
         except HTTPException:

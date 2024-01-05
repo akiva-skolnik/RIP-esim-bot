@@ -171,7 +171,12 @@ countries_per_server = {
              30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56,
              57, 58, 59, 60, 62, 63, 64, 71, 72, 80, 110, 111, 112, 115, 119, 120, 121, 122, 123, 124, 125, 126, 127,
              128, 130, 131, 132, 133, 134, 135, 136, 138, 142, 143, 144, 145, 147, 148, 149, 150, 152, 155, 156, 162,
-             165]
+             165],
+    'arcadia': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28,
+                29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54,
+                55, 56, 57, 58, 59, 60, 62, 63, 64, 71, 72, 80, 110, 111, 112, 115, 116, 119, 120, 121, 122, 123, 124,
+                125, 126, 127, 128, 130, 131, 132, 133, 134, 135, 136, 138, 142, 143, 144, 145, 147, 148, 149, 150, 152,
+                155, 156, 162, 165]
 }
 
 config_ids = {
@@ -193,13 +198,14 @@ gids = {
     "suna": ["1imlsoLdaEb45NnJGmo5T7mQxsjzzTGbrkvqfcR8pMlE", 2061648609, 563437000],
     "alpha": ["1KqxbZ9LqS191wRf1VGLNl-aw6UId9kmUE0k7NfKQdI4", 1445005647, 1812695346],
     "nika": ["141302UWgwAMoNO55NfWzeQkvCtq7IY_MAYSGnqfTy2I", 1876322398, 1719163363],
-    "vega": ["19fmlmxwWrzA2PgvzKvB-tNhiSUDTfVBtooLIOnc38vI", 1876322398, 845606470]
+    "vega": ["19fmlmxwWrzA2PgvzKvB-tNhiSUDTfVBtooLIOnc38vI", 1876322398, 845606470],
+    "arcadia": ["1Tx-3WqitqY0gqDZbohT0eXYQTxhWEBSVnM-OtzcJwD0", 1876322398, 845606470]
 }
 
 api_url = "http://23.95.130.52:5000/"
 date_format = "%d-%m-%Y %H:%M:%S"
 
-all_servers = ['primera', 'secura', 'suna', 'alpha', 'luxia', 'nika', 'vega']
+all_servers = ['primera', 'secura', 'suna', 'alpha', 'luxia', 'nika', 'vega', 'arcadia']
 
 all_products = ["iron", "grain", "oil", "stone", "wood", "diamonds",  # raw
                 "weapon", "house", "gift", "food", "ticket", "defense_system", "hospital", "estate"]
