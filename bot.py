@@ -21,6 +21,7 @@ DATETIME_FORMAT = "%d-%m-%Y %H:%M:%S"
 
 PRODUCT_SHEET = "17y8qEU4aHQRTXKdnlM278z3SDzY16bmxMwrZ0RKWcEI"
 servers = {
+    "arcadia": "1Tx-3WqitqY0gqDZbohT0eXYQTxhWEBSVnM-OtzcJwD0",
     "vega": "19fmlmxwWrzA2PgvzKvB-tNhiSUDTfVBtooLIOnc38vI",
     "nika": "141302UWgwAMoNO55NfWzeQkvCtq7IY_MAYSGnqfTy2I",
     "luxia": "1mx_JkHVnTVikNdTSxhvfFh4Pzuepp9ZGakCAtxnGxyY",
@@ -195,7 +196,8 @@ async def update_time(server: str) -> None:
         "primera": ["Minutes online (since 10/12/20)", "09/12/2020", "10/12/2020"],
         "luxia": ["Minutes online (since day 1)", "10/02/2022", "11/02/2022"],
         "nika": ["Minutes online (since day 1)", "07/09/2023", "08/09/2023"],
-        "vega": ["Minutes online (since day 1)", "05/11/2023", "06/11/2023"]
+        "vega": ["Minutes online (since day 1)", "05/11/2023", "06/11/2023"],
+        "arcadia": ["Minutes online (since day 1)", "04/01/2024", "05/01/2024"],
     }
 
     # Define the headers for the data collection
@@ -382,7 +384,7 @@ async def update_prices(server: str) -> None:
 
             # Update the history
             now = datetime.now().astimezone(pytz.timezone(TIMEZONE))
-            if server not in ('nika', 'vega'):
+            if server not in ('nika', 'vega', 'arcadia'):
                 this_month = "01-" + now.strftime("%m-%Y")
             else:
                 this_month = now.strftime("%d-%m-%Y")
