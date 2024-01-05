@@ -49,7 +49,7 @@ async def update_buffs(server: str) -> None:
             now_s = now.strftime(DATETIME_FORMAT)
             last_update = buffs_data.get("Last update:", [now_s])[0]
             buffs_data.pop("Nick", None)
-            buffs_data.pop("Last update", None)
+            buffs_data.pop("Last update:", None)
 
             for player_info in await utils.get_content(f"{base_url}apiOnlinePlayers.html"):
                 player = json.loads(player_info)
