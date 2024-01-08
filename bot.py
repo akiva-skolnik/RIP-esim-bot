@@ -182,7 +182,7 @@ async def update_buffs(server: str) -> None:
             sorted_data.clear()
         except Exception as e:
             error_traceback = traceback.format_exc()
-            print(error_traceback if len(error_traceback) < 1000 else "buffs long error")
+            print(error_traceback if len(error_traceback) < 10000 else "buffs long error")
         await asyncio.sleep(max(300 - time.time() + loop_start_time, 1))
 
 
@@ -212,8 +212,10 @@ async def update_time(server: str) -> None:
             now = datetime.now().astimezone(pytz.timezone(TIMEZONE))
             player_data = await utils.find_one("time_online", server)  # Retrieve current player time online data
             player_data.pop("_headers", None)  # Remove headers if they are in the data already
-
-            max_month_minutes = next(iter(player_data.values()))[MONTH_MINUTES]
+            if player_data:
+                max_month_minutes = next(iter(player_data.values()))[MONTH_MINUTES]
+            else:
+                max_month_minutes = 0
 
             # Update player data from the API content
             for player_info in await utils.get_content(f"{base_url}apiOnlinePlayers.html"):
@@ -269,7 +271,7 @@ async def update_time(server: str) -> None:
             player_data.clear()
         except Exception:
             error_traceback = traceback.format_exc()
-            print(error_traceback if len(error_traceback) < 1000 else "time online long error")
+            print(error_traceback if len(error_traceback) < 10000 else "time online long error")
 
         await asyncio.sleep(max(60 - time.time() + loop_start_time, 1))
 
@@ -340,7 +342,7 @@ async def update_monetary_market():
                 await utils.spreadsheets(PRODUCT_SHEET, "Monetary Market", f"A1:K{len(values) + 1}", values, True)
             except Exception:
                 error_traceback = traceback.format_exc()
-                print(error_traceback if len(error_traceback) < 1000 else "monetary_market long error")
+                print(error_traceback if len(error_traceback) < 10000 else "monetary_market long error")
 
         values.clear()
         await asyncio.sleep(max(3600 - time.time() + loop_start_time, 1))
@@ -451,7 +453,7 @@ async def update_prices(server: str) -> None:
             new_values.clear()
         except Exception:
             error_traceback = traceback.format_exc()
-            print(error_traceback if len(error_traceback) < 1000 else "price long error")
+            print(error_traceback if len(error_traceback) < 10000 else "price long error")
 
         await asyncio.sleep(max(1000 - time.time() + loop_start_time, 1))
 
