@@ -197,7 +197,7 @@ async def update_time(server: str) -> None:
         "luxia": ["Minutes online (since day 1)", "10/02/2022", "11/02/2022"],
         "nika": ["Minutes online (since day 1)", "07/09/2023", "08/09/2023"],
         "vega": ["Minutes online (since day 1)", "05/11/2023", "06/11/2023"],
-        "arcadia": ["Minutes online (since day 1)", "04/01/2024", "05/01/2024"],
+        "arcadia": ["Minutes online (since 09/01/24)", "08/01/2024", "09/01/2024"],
     }
 
     # Define the headers for the data collection
