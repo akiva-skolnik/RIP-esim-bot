@@ -50,7 +50,7 @@ class MyTree(app_commands.CommandTree):
 
         today = str(date.today())
         if bot.premium_users.get(str(interaction.user.id), {}).get("level", -1) >= 1 or (
-                interaction.guild and str(interaction.guild.id) in bot.premium_servers):
+                interaction.guild and interaction.guild.id in bot.premium_servers):
             return True
         if bot.premium_users.get(str(interaction.user.id), {}).get("added_at", "") != today:
             bot.premium_users[str(interaction.user.id)] = {"added_at": today}
