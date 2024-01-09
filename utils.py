@@ -45,7 +45,9 @@ locked_session = ClientSession(
 
 def get_creds():
     """get creds callback"""
-    creds = Credentials.from_service_account_file("credentials.json")
+    root = os.path.dirname(os.path.abspath(__file__))
+    creds_path = os.path.join(root, "credentials.json")
+    creds = Credentials.from_service_account_file(creds_path)
     return creds.with_scopes(["https://www.googleapis.com/auth/spreadsheets"])
 
 
