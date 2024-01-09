@@ -182,7 +182,8 @@ def get_eqs(tree) -> iter:
 
 
 async def find_one(collection: str, _id: str) -> dict:
-    filename = f"../db/{collection}_{_id}.json"
+    root = os.path.dirname(os.path.abspath(__file__))
+    filename = os.path.join(os.path.dirname(root), f"db/{collection}_{_id}.json")
     if os.path.exists(filename):
         with open(filename, "r", encoding='utf-8') as file:
             return json.load(file)
@@ -191,7 +192,8 @@ async def find_one(collection: str, _id: str) -> dict:
 
 
 async def replace_one(collection: str, _id: str, data: dict) -> None:
-    filename = f"../db/{collection}_{_id}.json"
+    root = os.path.dirname(os.path.abspath(__file__))
+    filename = os.path.join(os.path.dirname(root), f"db/{collection}_{_id}.json")
     with open(filename, "w", encoding='utf-8', errors='ignore') as file:
         json.dump(data, file)
 
