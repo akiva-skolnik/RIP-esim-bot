@@ -1159,7 +1159,7 @@ class Battle(Cog):
         find_watch = await utils.find_one("collection", "watch") or {"watch": []}
         find_auctions = await utils.find_one("collection", "auctions") or {"auctions": []}
         for watch_dict in find_watch["watch"] + find_auctions["auctions"]:
-            if watch_dict["channel_id"] == interaction.channel.id and not watch_dict["removed"]:
+            if watch_dict["channel_id"] == interaction.channel.id and not watch_dict.get("removed"):
                 data.append(f"<{watch_dict['link']}> (at T{watch_dict['t']})")
         await interaction.response.send_message('\n'.join(["**Watch List:**"] + data + [
             "\nIf you want to remove any, write `/unwatch link: <link>`",
