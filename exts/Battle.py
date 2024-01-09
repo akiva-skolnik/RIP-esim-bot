@@ -1228,6 +1228,7 @@ class Battle(Cog):
 
     @checks.dynamic_cooldown(utils.CoolDownModified(5))
     @hybrid_command()
+    @describe(link="The battle or auction link you want to unwatch (can also be 'all')")
     async def unwatch(self, ctx, link: str) -> None:
         """Stop watching a battle / auction"""
 
@@ -1237,15 +1238,18 @@ class Battle(Cog):
 
         removed = []
         for watch_dict in find_watch["watch"]:
-            if watch_dict["channel_id"] == channel_id and watch_dict["link"] == link:
+            if (watch_dict["channel_id"] == channel_id and watch_dict["link"] == link) or link.lower() == "all":
                 watch_dict["removed"] = True
                 removed.append(f"<{link}>")
         for auction_dict in find_auctions["auctions"]:
-            if auction_dict["channel_id"] == channel_id and auction_dict["link"] == link:
+            if (auction_dict["channel_id"] == channel_id and auction_dict["link"] == link) or link.lower() == "all":
                 auction_dict["removed"] = True
                 removed.append(f"<{link}>")
         if not removed:
-            await ctx.send(f"I'm not watching {link} in this server")
+            if link.lower() == "all":
+                await ctx.send("I'm not watching anything in this server")
+            else:
+                await ctx.send(f"I'm not watching {link} in this server")
         else:
             await ctx.send("Removed the following links " + "\n".join(removed))
             await utils.replace_one("collection", "watch", find_watch)
