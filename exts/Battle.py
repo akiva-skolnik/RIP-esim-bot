@@ -1239,12 +1239,12 @@ class Battle(Cog):
         removed = []
         for watch_dict in find_watch["watch"]:
             if watch_dict["channel_id"] == channel_id and (
-                    watch_dict["link"] == link or link.lower() == "all"):
+                    watch_dict["link"] == link or link.lower() == "all") and not watch_dict.get("removed"):
                 watch_dict["removed"] = True
                 removed.append(f'<{watch_dict["link"]}>')
         for auction_dict in find_auctions["auctions"]:
             if auction_dict["channel_id"] == channel_id and (
-                    auction_dict["link"] == link or link.lower() == "all"):
+                    auction_dict["link"] == link or link.lower() == "all") and not auction_dict.get("removed"):
                 auction_dict["removed"] = True
                 removed.append(f'<{auction_dict["link"]}>')
         if not removed:
