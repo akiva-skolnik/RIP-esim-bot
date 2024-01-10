@@ -246,6 +246,8 @@ class FieldPageSource(menus.ListPageSource):
 
         maximum = self.get_max_pages()
         if maximum > 1:
+            if self.embed.footer.text and self.embed.footer.text.splitlines()[-1].startswith('Page'):
+                self.embed.set_footer(text=self.embed.footer.text.rsplit('\n', 1)[0])
             self.embed.set_footer(text=(self.embed.footer.text or '') + f'\nPage {menu.current_page + 1}/{maximum}')
 
         return self.embed

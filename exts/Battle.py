@@ -895,7 +895,7 @@ class Battle(Cog):
                     value.split(":")[2]) - update_seconds
                 values[num] = str(timedelta(seconds=actual_time)) if actual_time > 0 else "round is over"
             embed.set_field_at(0, name=embed.fields[0].name, value="\n".join(values))
-            embed.timestamp = datetime.utcnow()
+            embed.timestamp = datetime.now()
             try:
                 await interaction.edit_original_response(embed=await utils.convert_embed(interaction, deepcopy(embed)))
             except Exception:
