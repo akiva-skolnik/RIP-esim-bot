@@ -1,9 +1,10 @@
 """Main Module"""
 import asyncio
 import importlib
+import logging
+import os
 import subprocess
 from datetime import datetime
-import os
 from sys import modules
 from traceback import format_exc
 
@@ -136,7 +137,9 @@ async def main() -> None:
     async with bot:
         bot.loop.create_task(start())
         # bot.tree.copy_global_to(guild=Object(id=937490523227312200))
-        setup_logging()
+
+        handler = logging.FileHandler(filename=os.path.join(bot.root, "ripesim.log"), encoding='utf-8', mode='w')
+        setup_logging(handler=handler, level=logging.INFO)
         await bot.start(bot.config["TOKEN"])
 
 

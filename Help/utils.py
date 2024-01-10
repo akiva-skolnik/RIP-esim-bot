@@ -33,6 +33,9 @@ from .constants import (all_parameters, all_servers, api_url, config_ids,
                         flags_codes)
 from .paginator import FieldPageSource, Pages
 
+hidden_guild = config_ids["commands_server_id"]
+font = ImageFont.truetype(path.join(path.dirname(__file__), "DejaVuSansMono.ttf"), 100)
+
 
 class CoolDownModified:
     """CoolDownModified"""
@@ -45,10 +48,6 @@ class CoolDownModified:
         if await is_premium_level_0(message):
             return None  # remove cooldown
         return Cooldown(self.rate, self.per)
-
-
-hidden_guild = config_ids["commands_server_id"]
-font = path.join(path.dirname(__file__), "DejaVuSansMono.ttf")
 
 
 def server_validation(server: str) -> str:
@@ -101,8 +100,7 @@ def draw_pil_table(my_table: list, header: list, new_lines: int = 0) -> BytesIO:
     tabulate_table = tabulate(my_table, headers=header, tablefmt='grid', numalign="center", stralign="center")
     table_len = len(tabulate_table) / (len(my_table) * 2 + 3 + new_lines)
     img = Image.new('RGB', (int(60 * table_len), 300 + new_lines * 100 + len(my_table) * 200), color=(44, 47, 51))
-    d = ImageDraw.Draw(img)
-    d.text((10, 10), tabulate_table, font=ImageFont.truetype(font, 100))
+    ImageDraw.Draw(img).text((10, 10), tabulate_table, font=font)
     output_buffer = BytesIO()
     img.save(output_buffer, format='JPEG', subsampling=0, quality=95)
     output_buffer.seek(0)
