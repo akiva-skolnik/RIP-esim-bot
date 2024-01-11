@@ -342,6 +342,10 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
             if attacker_id != defender_id and api_battles["type"] != "MILITARY_UNIT_CUP_EVENT_BATTLE":
                 defender = all_countries.get(defender_id, "Defender")
                 attacker = all_countries.get(attacker_id, "Attacker")
+            else:
+                defender = all_countries.get(defender_id, "Country")
+                attacker = "Country"
+
 
             if api_battles["type"] in ('ATTACK', 'RESISTANCE'):
                 if api_battles["attackerScore"] == 8:

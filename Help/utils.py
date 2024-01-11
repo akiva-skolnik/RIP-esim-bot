@@ -572,9 +572,20 @@ async def update_percent(current_id: int, ids_length: int, msg: Message) -> Mess
     return msg
 
 
+async def reset_cooldown(interaction: Interaction) -> None:
+    """reset cooldown"""
+    interaction.command.reset_cooldown(interaction)
+
+
+async def is_premium_guild(interaction: Interaction) -> bool:
+    """is premium guild"""
+    return interaction.guild and interaction.guild.id in bot.premium_servers
+
+
 async def is_premium_level_0(interaction: Interaction) -> bool:  # reset cooldown
     """for cooldown reset"""
-    return bot.premium_users.get(str(interaction.user.id), {}).get("level", -1) >= 0
+    return (bot.premium_users.get(str(interaction.user.id), {}).get("level", -1) >= 0 or
+            await is_premium_guild(interaction))
 
 
 async def is_premium_level_1(interaction: Interaction, send_error_msg: bool = True, allow_trial: bool = True) -> bool:
@@ -585,8 +596,8 @@ async def is_premium_level_1(interaction: Interaction, send_error_msg: bool = Tr
         del bot.premium_users[str(interaction.user.id)]
 
     today = str(date.today())
-    if bot.premium_users.get(str(interaction.user.id), {}).get("level", -1) >= 1 or (
-            interaction.guild and interaction.guild.id in bot.premium_servers):
+    if (bot.premium_users.get(str(interaction.user.id), {}).get("level", -1) >= 1 or
+            await is_premium_guild(interaction)):
         return True
     if allow_trial and bot.premium_users.get(str(interaction.user.id), {}).get("added_at", "") != today:
         bot.premium_users[str(interaction.user.id)] = {"added_at": today}

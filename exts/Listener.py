@@ -74,6 +74,7 @@ class Listener(Cog):
         user_error = "Unknown error"
 
         if isinstance(error, errors.NotFound):
+            await utils.reset_cooldown(interaction)
             return
         elif isinstance(error, CommandOnCooldown):
             return await utils.custom_followup(
