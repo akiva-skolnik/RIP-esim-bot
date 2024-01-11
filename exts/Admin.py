@@ -53,7 +53,7 @@ class Admin(Cog):
                                           militaryUnit SMALLINT UNSIGNED,
                                           PRIMARY KEY (citizenId, time)
                                           -- FOREIGN KEY (battle_id) REFERENCES apiBattles(battle_id)
-                                          -- this does not allow me to update apiBattles because of foreign key constraint
+                                          -- this does not allow me to update apiBattles because of foreign key
                                           )''')
 
                     await cursor.execute(f"CREATE INDEX battle_id_index ON {server}.apiFights (battle_id)")

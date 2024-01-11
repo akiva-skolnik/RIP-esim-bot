@@ -623,7 +623,7 @@ async def send_error(interaction: Optional[Interaction], error: Exception, cmd: 
     """send error"""
     if interaction:
         data = interaction.data["name"] + " " + "  ".join(
-            f"**{x['name']}**: {x.get('value')}" for x in interaction.data.get('options', []))
+            f"**{x.get('name')}**: {x.get('value')}" for x in interaction.data.get('options', []))
     else:
         data = cmd
     msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)}] : {data}"
@@ -964,8 +964,8 @@ async def get_battles(base_url: str, country_id: int = 0,
         sides = tree.xpath('//*[@class="battleHeader"]//em/text()')
         battle_ids = tree.xpath('//*[@class="battleHeader"]//a/@href')
         battle_regions = tree.xpath('//*[@class="battleHeader"]//a/text()')
-        scores = tree.xpath('//*[@class="battleFooterScore hovertext"]/text()') or \
-                 tree.xpath('//*[@class="battleFooterScore hoverText"]/text()')
+        scores = (tree.xpath('//*[@class="battleFooterScore hovertext"]/text()') or
+                  tree.xpath('//*[@class="battleFooterScore hoverText"]/text()'))
 
         types = tree.xpath('//*[@class="battleHeader"]//i/@data-hover')
         for i, (dmg, progress_attacker, counter, sides, battle_id, battle_region, score, battle_type) in enumerate(zip(

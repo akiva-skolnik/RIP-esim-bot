@@ -5,8 +5,7 @@ tabulate
 lxml
 Pillow
 wolframalpha
-matplotlib==3.5.0
+matplotlib==3.5.0  # TODO: make it work for latest
 pytz
-aiosqlite
-pandas==1.5.3
+pandas==1.5.3  # TODO: make it work for latest
 asyncmy

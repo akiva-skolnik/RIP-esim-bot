@@ -58,7 +58,7 @@ class Listener(Cog):
         """on app command error"""
         error = getattr(error, 'original', error)
         data = interaction.data["name"] + " " + " ".join(
-            f"**{x['name']}**: {x.get('value')}" for x in interaction.data.get('options', []))
+            f"**{x.get('name')}**: {x.get('value')}" for x in interaction.data.get('options', []))
         msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)}] : {data}"
 
         error_channel = self.bot.get_channel(config_ids["error_channel_id"])

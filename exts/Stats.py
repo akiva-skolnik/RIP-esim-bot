@@ -277,38 +277,38 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                                           f" (battles, rounds etc.), so be patient)" if len(
                                               battle_ids) > 10 else "I'm on it, Sir. Be patient.",
                                           file=File(self.bot.typing_gif))
-
-        def get_where_dmg_stats(exact_sides: list[tuple[str]], any_side: list[str]) -> str:
-            reversed_sides: list[tuple[str]] = [tuple(reversed(side)) for side in exact_sides]
-            str_exact_sides = f"{','.join(map(str, exact_sides))},{','.join(map(str, reversed_sides))}"
-            exact_side_condition = f"(defenderId, attackerId) IN ({str_exact_sides}) "
-            any_side_condition = f"defenderId IN {','.join(any_side)} OR attackerId IN {','.join(any_side)} "
-            if exact_sides:
-                if any_side:
-                    where = f"{exact_side_condition} OR {any_side_condition}"
-                else:
-                    where = exact_side_condition
-            else:
-                if any_side:
-                    where = any_side_condition
-                else:
-                    where = ""
-            return where
-
-        if 0:  # TODO: rewrite this function
-            await db_utils.cache_api_battles(interaction, server, battle_ids)
-            # (defenderId, attacker_id) IN ((sides[0], sides[1]), (sides[1], sides[0]))
-            exact_sides = []  # list of tuples
-            any_side = []  # list of ids (ints)
-            for battles_to_include in (included_countries or "").split(","):
-                if "vs" in battles_to_include:
-                    # append tuple of the 2 sides around "vs":
-                    exact_sides.append(tuple(all_countries_by_name[country.strip().lower()] for country in
-                                             battles_to_include.split("vs")))
-                else:
-                    any_side.append(all_countries_by_name[battles_to_include.strip().lower()])
-
-            api_battles_df = await db_utils.select_many_api_battles(server, battle_ids, custom_condition=where)
+        # TODO: finish this
+        # def get_where_dmg_stats(exact_sides: list[tuple[str]], any_side: list[str]) -> str:
+        #     reversed_sides: list[tuple] = [tuple(reversed(side)) for side in exact_sides]
+        #     str_exact_sides = f"{','.join(map(str, exact_sides))},{','.join(map(str, reversed_sides))}"
+        #     exact_side_condition = f"(defenderId, attackerId) IN ({str_exact_sides}) "
+        #     any_side_condition = f"defenderId IN {','.join(any_side)} OR attackerId IN {','.join(any_side)} "
+        #     if exact_sides:
+        #         if any_side:
+        #             where = f"{exact_side_condition} OR {any_side_condition}"
+        #         else:
+        #             where = exact_side_condition
+        #     else:
+        #         if any_side:
+        #             where = any_side_condition
+        #         else:
+        #             where = ""
+        #     return where
+        #
+        # if 0:  # TODO: rewrite this function
+        #     await db_utils.cache_api_battles(interaction, server, battle_ids)
+        #     # (defenderId, attacker_id) IN ((sides[0], sides[1]), (sides[1], sides[0]))
+        #     exact_sides = []  # list of tuples
+        #     any_side = []  # list of ids (ints)
+        #     for battles_to_include in (included_countries or "").split(","):
+        #         if "vs" in battles_to_include:
+        #             # append tuple of the 2 sides around "vs":
+        #             exact_sides.append(tuple(all_countries_by_name[country.strip().lower()] for country in
+        #                                      battles_to_include.split("vs")))
+        #         else:
+        #             any_side.append(all_countries_by_name[battles_to_include.strip().lower()])
+        #
+        #     api_battles_df = await db_utils.select_many_api_battles(server, battle_ids, custom_condition=where)
 
         my_dict = defaultdict(lambda: {'weps': [0, 0, 0, 0, 0, 0], 'dmg': 0, 'limits': 0, 'medkits': 0,
                                        'last_hit': "2010-01-01 00:00:00:000", 'records': [0, 0, 0],

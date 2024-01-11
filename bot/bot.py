@@ -91,7 +91,7 @@ class MyClient(Bot):
         self.premium_users = find_one("collection", "donors")
         self.premium_servers = (find_one("collection", "premium_guilds") or {"guilds": []})["guilds"]
         self.custom_delay_dict = find_one("collection", "delay")
-        self.pool: asyncmy.Pool = None
+        self.pool: asyncmy.Pool = None  # type: ignore
         self.db_lock = asyncio.Lock()
 
     async def setup_hook(self) -> None:

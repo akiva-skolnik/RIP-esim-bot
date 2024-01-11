@@ -124,7 +124,8 @@ class Battle(Cog):
                       'Q<wep quality> (default: Q5), X<limits> (default: X1), <bonus dmg>% (default: 0%), '
                       'new (ignore set and rank)')
     @command()
-    async def calc(self, interaction: Interaction, server: Transform[str, Server], nick: str, bonuses: str = "") -> None:
+    async def calc(self, interaction: Interaction, server: Transform[str, Server],
+                   nick: str, bonuses: str = "") -> None:
         """DMG calculator"""
         api = await utils.get_content(f"https://{server}.e-sim.org/apiCitizenByName.html?name={nick.lower()}")
         dmg = await dmg_calculator(api, bonuses)
@@ -202,7 +203,8 @@ class Battle(Cog):
                 if server in query and query != db_key:
                     view = utils.Confirm()
                     await interaction.edit_original_response(
-                        content=f"Would you like to change your request (`{db_key}`) into `{query}`? It will be much faster.\n"
+                        content=f"Would you like to change your request (`{db_key}`) into `{query}`?"
+                                f" It will be much faster.\n"
                                 f"(Someone else is running the command right now, and you can get their result)",
                         view=view)
 
@@ -245,7 +247,7 @@ class Battle(Cog):
         **Notes:**
         - If your nick is the same string as some country (or close enough), add a dash before your nick. Example: `-Israel`
         - For range of battles, use `<first>_<last>` instead of `<link>` (`/dmg battle_link: alpha 1165_1167 country: Israel`)
-        """
+        """  # noqa
 
         server, battle_id, round_id = battle_link["server"], battle_link["id"], battle_link["round"]
         last_battle = battle_link["last"] if battle_link["last"] else battle_id
@@ -914,7 +916,7 @@ class Battle(Cog):
         Displays citizens online & buffs info in a bonus location of a battle or in a country.
 
         Use `online+` to get more info (you will have to wait a bit longer).
-        online+ output: http://prntscr.com/v8diez
+        online+ output: https://prntscr.com/v8diez
         """
 
         if extra_premium_info and not await utils.is_premium_level_1(interaction, False):
@@ -1067,7 +1069,8 @@ class Battle(Cog):
         ping_id = randint(1000, 9999)
         await utils.custom_followup(
             interaction, f"I will write here at the last {t} minutes of every battle in "
-                         f"{server if not country else country}.\nIf you want to stop it, type `/stop ping_id: {ping_id}`")
+                         f"{server if not country else country}.\n"
+                         f"If you want to stop it, type `/stop ping_id: {ping_id}`")
         ping_id = f"{interaction.channel.id} {ping_id}"
         try:
             role = role.mention
@@ -1264,136 +1267,136 @@ class Battle(Cog):
         PDF(X) = e^(-(x-np)^2/(2np(1-p))) / sqrt(2*PI*np(1-p))"""
         return math.exp(- math.pow((x - mean) / std, 2) / 2) / (math.sqrt(2 * math.pi) * std)
 
-    async def old_cup_func(self, interaction: Interaction, db_key: str, server: str, ids: iter, new_cup: bool) -> None:
-        """cup func"""
-        base_url = f'https://{server}.e-sim.org/'
-        first, last = min(ids), max(ids)
-        try:
-            msg = await interaction.channel.send(content="Progress status: 1%.\n(I will update you after every 10%)",
-                                                 file=File(self.bot.typing_gif))
-            battle_type = ""
-            my_dict = defaultdict(lambda: {'weps': [0, 0, 0, 0, 0, 0], 'dmg': 0})
-            output = StringIO()
-            csv_writer = writer(output)
-            for index, battle_id in enumerate(ids):
-                msg = await utils.update_percent(index, len(ids), msg)
-                api_battles = await utils.get_content(f'{base_url}apiBattles.html?battleId={battle_id}')
-                if not new_cup:
-                    if api_battles['frozen']:
-                        continue
-                    if not battle_type:
-                        battle_type = api_battles['type']
-                        if battle_type not in ['TEAM_TOURNAMENT', "COUNTRY_TOURNAMENT", "LEAGUE", "CUP_EVENT_BATTLE",
-                                               "MILITARY_UNIT_CUP_EVENT_BATTLE", "TEAM_NATIONAL_CUP_BATTLE"]:
-                            await interaction.edit_original_response(
-                                content=f"First battle must be a cup (not `{battle_type}`)")
-                            db_dict = await utils.find_one("collection", interaction.command.name)
-                            del db_dict[db_key]
-                            return await utils.replace_one("collection", interaction.command.name, db_dict)
-                        await interaction.edit_original_response(
-                            content=f"\nChecking battles of type {battle_type} (id {first}) from id {first} to id {last}")
-                if new_cup or api_battles['type'] == battle_type:
-                    if api_battles['defenderScore'] == 8 or api_battles['attackerScore'] == 8:
-                        last_round = api_battles['currentRound']
-                    else:
-                        last_round = api_battles['currentRound'] + 1
-                    for round_id in range(1, last_round):
-                        for hit in await utils.get_content(
-                                f'{base_url}apiFights.html?battleId={battle_id}&roundId={round_id}'):
-                            key = hit['citizenId']
-                            my_dict[key]['weps'][hit['weapon']] += 5 if hit['berserk'] else 1
-                            my_dict[key]['dmg'] += hit['damage']
-                            csv_writer.writerow([key, hit["time"], hit['damage']])
-                        await utils.custom_delay(interaction)
-
-            my_dict = dict(sorted(my_dict.items(), key=lambda kv: kv[1]['dmg'], reverse=True))
-            top_10 = list(my_dict.keys())[:10]
-            hit_time = {k: {"dmg": [], "time": []} for k in top_10}
-            output.seek(0)
-            for hit in sorted(reader(output), key=lambda row: utils.get_time(row[1])):
-                citizen, time_remaining, dmg = int(hit[0]), hit[1], int(hit[2])
-                if citizen in top_10:
-                    hit_time[citizen]["time"].append(utils.get_time(time_remaining))
-                    if hit_time[citizen]["dmg"]:
-                        hit_time[citizen]["dmg"].append(hit_time[citizen]["dmg"][-1] + dmg)
-                    else:
-                        hit_time[citizen]["dmg"].append(dmg)
-
-            output = StringIO()
-            csv_writer = writer(output)
-            csv_writer.writerow(["#", "Citizen Id", "DMG", "Q0 wep", "Q1", "Q2", "Q3", "Q4", "Q5 wep"])
-            final = defaultdict(lambda: {'hits': 0, 'dmg': 0})
-            for index, (channel_id, data) in enumerate(my_dict.items(), 1):
-                if index <= 10:
-                    api_citizen_by_id = await utils.get_content(f'{base_url}apiCitizenById.html?id={channel_id}')
-                    hyperlink = f"{utils.codes(api_citizen_by_id['citizenship'])}" \
-                                f" [{api_citizen_by_id['login'][:25]}]({base_url}profile.html?id={channel_id})"
-                    final[hyperlink]['dmg'] = data['dmg']
-                    final[hyperlink]['hits'] = sum(data['weps'])
-                    hit_time[api_citizen_by_id['login']] = hit_time.pop(channel_id)
-                csv_writer.writerow([index, channel_id, data['dmg']] + data['weps'])
-            hit_time = dict(sorted(hit_time.items(), key=lambda kv: kv[1]["dmg"][-1], reverse=True)[:5])
-            output_buffer = await Battle.cup_trend(self.bot, hit_time)
-            if not output_buffer:
-                output_buffer = await dmg_trend(hit_time, server, f"{first} - {last}")
-            hit_time.clear()
-
-            embed = Embed(colour=0x3D85C6, title=f"{server}, {first}-{last}")
-            embed.add_field(name="**CS, Nick**", value="\n".join(final.keys()))
-            embed.add_field(name="**Damage**", value="\n".join([f'{v["dmg"]:,}' for v in final.values()]))
-            embed.add_field(name="**Hits**", value="\n".join([f'{v["hits"]:,}' for v in final.values()]))
-
-            db_dict = await utils.find_one("collection", interaction.command.name) or {}
-            for cup_dict in db_dict.get(db_key, {}):
-                for channel_id, data in cup_dict.items():
-                    output_buffer.seek(0)
-                    output.seek(0)
-                    graph = File(fp=output_buffer, filename=f"{interaction.id}.png")
-                    embed.set_thumbnail(url=f"attachment://{interaction.id}.png")
-                    added_fields = False
-                    if data["nick"] and data["nick"] != "-":
-                        try:
-                            api = await utils.get_content(
-                                f'{base_url}apiCitizenByName.html?name={data["nick"].lower()}')
-                            key = f"{utils.codes(api['citizenship'])} [{api['login']}]({base_url}profile.html?id={api['id']})"
-                            if key not in final:
-                                embed.add_field(name="\u200B",
-                                                value=f"{list(my_dict.keys()).index(api['id']) + 1}. __{key}__")
-                                embed.add_field(name="\u200B", value=f'{my_dict[api["id"]]["dmg"]:,}')
-                                embed.add_field(name="\u200B", value=f'{sum(my_dict[api["id"]]["weps"]):,}')
-                                added_fields = True
-                        except Exception:
-                            pass
-
-                    try:
-                        channel = self.bot.get_channel(int(channel_id))
-                        await channel.send(embed=await utils.convert_embed(int(data["author_id"]), embed),
-                                           files=[File(fp=BytesIO(output.getvalue().encode()),
-                                                       filename=f"Fighters_{server}_{first}-{last}.csv"), graph])
-                    except Exception as error:
-                        await utils.send_error(interaction, error)
-                    if added_fields:
-                        for _ in range(3):
-                            embed.remove_field(-1)
-                    await sleep(0.4)
-
-        except Exception as error:
-            await utils.send_error(interaction, error)
-            db_dict = await utils.find_one("collection", interaction.command.name)
-            if db_key in db_dict:
-                for cup_dict in db_dict[db_key]:
-                    for channel_id, _ in cup_dict.items():
-                        try:
-                            channel = self.bot.get_channel(int(channel_id))
-                            await channel.send("I am sorry, but it looks like e-sim rejected this request.")
-                            await sleep(0.4)
-                        except Exception:
-                            traceback.print_exc()
-
-        db_dict = await utils.find_one("collection", interaction.command.name)
-        if db_key in db_dict:
-            del db_dict[db_key]
-            await utils.replace_one("collection", interaction.command.name, db_dict)
+    # async def old_cup_func(self, interaction: Interaction, db_key: str, server: str, ids: iter, new_cup: bool) -> None:
+    #     """cup func"""
+    #     base_url = f'https://{server}.e-sim.org/'
+    #     first, last = min(ids), max(ids)
+    #     try:
+    #         msg = await interaction.channel.send(content="Progress status: 1%.\n(I will update you after every 10%)",
+    #                                              file=File(self.bot.typing_gif))
+    #         battle_type = ""
+    #         my_dict = defaultdict(lambda: {'weps': [0, 0, 0, 0, 0, 0], 'dmg': 0})
+    #         output = StringIO()
+    #         csv_writer = writer(output)
+    #         for index, battle_id in enumerate(ids):
+    #             msg = await utils.update_percent(index, len(ids), msg)
+    #             api_battles = await utils.get_content(f'{base_url}apiBattles.html?battleId={battle_id}')
+    #             if not new_cup:
+    #                 if api_battles['frozen']:
+    #                     continue
+    #                 if not battle_type:
+    #                     battle_type = api_battles['type']
+    #                     if battle_type not in ['TEAM_TOURNAMENT', "COUNTRY_TOURNAMENT", "LEAGUE", "CUP_EVENT_BATTLE",
+    #                                            "MILITARY_UNIT_CUP_EVENT_BATTLE", "TEAM_NATIONAL_CUP_BATTLE"]:
+    #                         await interaction.edit_original_response(
+    #                             content=f"First battle must be a cup (not `{battle_type}`)")
+    #                         db_dict = await utils.find_one("collection", interaction.command.name)
+    #                         del db_dict[db_key]
+    #                         return await utils.replace_one("collection", interaction.command.name, db_dict)
+    #                     await interaction.edit_original_response(
+    #                         content=f"\nChecking battles of type {battle_type} (id {first}) from id {first} to id {last}")
+    #             if new_cup or api_battles['type'] == battle_type:
+    #                 if api_battles['defenderScore'] == 8 or api_battles['attackerScore'] == 8:
+    #                     last_round = api_battles['currentRound']
+    #                 else:
+    #                     last_round = api_battles['currentRound'] + 1
+    #                 for round_id in range(1, last_round):
+    #                     for hit in await utils.get_content(
+    #                             f'{base_url}apiFights.html?battleId={battle_id}&roundId={round_id}'):
+    #                         key = hit['citizenId']
+    #                         my_dict[key]['weps'][hit['weapon']] += 5 if hit['berserk'] else 1
+    #                         my_dict[key]['dmg'] += hit['damage']
+    #                         csv_writer.writerow([key, hit["time"], hit['damage']])
+    #                     await utils.custom_delay(interaction)
+    #
+    #         my_dict = dict(sorted(my_dict.items(), key=lambda kv: kv[1]['dmg'], reverse=True))
+    #         top_10 = list(my_dict.keys())[:10]
+    #         hit_time = {k: {"dmg": [], "time": []} for k in top_10}
+    #         output.seek(0)
+    #         for hit in sorted(reader(output), key=lambda row: utils.get_time(row[1])):
+    #             citizen, time_remaining, dmg = int(hit[0]), hit[1], int(hit[2])
+    #             if citizen in top_10:
+    #                 hit_time[citizen]["time"].append(utils.get_time(time_remaining))
+    #                 if hit_time[citizen]["dmg"]:
+    #                     hit_time[citizen]["dmg"].append(hit_time[citizen]["dmg"][-1] + dmg)
+    #                 else:
+    #                     hit_time[citizen]["dmg"].append(dmg)
+    #
+    #         output = StringIO()
+    #         csv_writer = writer(output)
+    #         csv_writer.writerow(["#", "Citizen Id", "DMG", "Q0 wep", "Q1", "Q2", "Q3", "Q4", "Q5 wep"])
+    #         final = defaultdict(lambda: {'hits': 0, 'dmg': 0})
+    #         for index, (channel_id, data) in enumerate(my_dict.items(), 1):
+    #             if index <= 10:
+    #                 api_citizen_by_id = await utils.get_content(f'{base_url}apiCitizenById.html?id={channel_id}')
+    #                 hyperlink = f"{utils.codes(api_citizen_by_id['citizenship'])}" \
+    #                             f" [{api_citizen_by_id['login'][:25]}]({base_url}profile.html?id={channel_id})"
+    #                 final[hyperlink]['dmg'] = data['dmg']
+    #                 final[hyperlink]['hits'] = sum(data['weps'])
+    #                 hit_time[api_citizen_by_id['login']] = hit_time.pop(channel_id)
+    #             csv_writer.writerow([index, channel_id, data['dmg']] + data['weps'])
+    #         hit_time = dict(sorted(hit_time.items(), key=lambda kv: kv[1]["dmg"][-1], reverse=True)[:5])
+    #         output_buffer = await Battle.cup_trend(self.bot, hit_time)
+    #         if not output_buffer:
+    #             output_buffer = await dmg_trend(hit_time, server, f"{first} - {last}")
+    #         hit_time.clear()
+    #
+    #         embed = Embed(colour=0x3D85C6, title=f"{server}, {first}-{last}")
+    #         embed.add_field(name="**CS, Nick**", value="\n".join(final.keys()))
+    #         embed.add_field(name="**Damage**", value="\n".join([f'{v["dmg"]:,}' for v in final.values()]))
+    #         embed.add_field(name="**Hits**", value="\n".join([f'{v["hits"]:,}' for v in final.values()]))
+    #
+    #         db_dict = await utils.find_one("collection", interaction.command.name) or {}
+    #         for cup_dict in db_dict.get(db_key, {}):
+    #             for channel_id, data in cup_dict.items():
+    #                 output_buffer.seek(0)
+    #                 output.seek(0)
+    #                 graph = File(fp=output_buffer, filename=f"{interaction.id}.png")
+    #                 embed.set_thumbnail(url=f"attachment://{interaction.id}.png")
+    #                 added_fields = False
+    #                 if data["nick"] and data["nick"] != "-":
+    #                     try:
+    #                         api = await utils.get_content(
+    #                             f'{base_url}apiCitizenByName.html?name={data["nick"].lower()}')
+    #                         key = f"{utils.codes(api['citizenship'])} [{api['login']}]({base_url}profile.html?id={api['id']})"
+    #                         if key not in final:
+    #                             embed.add_field(name="\u200B",
+    #                                             value=f"{list(my_dict.keys()).index(api['id']) + 1}. __{key}__")
+    #                             embed.add_field(name="\u200B", value=f'{my_dict[api["id"]]["dmg"]:,}')
+    #                             embed.add_field(name="\u200B", value=f'{sum(my_dict[api["id"]]["weps"]):,}')
+    #                             added_fields = True
+    #                     except Exception:
+    #                         pass
+    #
+    #                 try:
+    #                     channel = self.bot.get_channel(int(channel_id))
+    #                     await channel.send(embed=await utils.convert_embed(int(data["author_id"]), embed),
+    #                                        files=[File(fp=BytesIO(output.getvalue().encode()),
+    #                                                    filename=f"Fighters_{server}_{first}-{last}.csv"), graph])
+    #                 except Exception as error:
+    #                     await utils.send_error(interaction, error)
+    #                 if added_fields:
+    #                     for _ in range(3):
+    #                         embed.remove_field(-1)
+    #                 await sleep(0.4)
+    #
+    #     except Exception as error:
+    #         await utils.send_error(interaction, error)
+    #         db_dict = await utils.find_one("collection", interaction.command.name)
+    #         if db_key in db_dict:
+    #             for cup_dict in db_dict[db_key]:
+    #                 for channel_id, _ in cup_dict.items():
+    #                     try:
+    #                         channel = self.bot.get_channel(int(channel_id))
+    #                         await channel.send("I am sorry, but it looks like e-sim rejected this request.")
+    #                         await sleep(0.4)
+    #                     except Exception:
+    #                         traceback.print_exc()
+    #
+    #     db_dict = await utils.find_one("collection", interaction.command.name)
+    #     if db_key in db_dict:
+    #         del db_dict[db_key]
+    #         await utils.replace_one("collection", interaction.command.name, db_dict)
 
     async def cup_func(self, interaction: Interaction, db_key: str, server: str, battle_ids: iter) -> None:
         """cup func"""
@@ -1531,7 +1534,7 @@ def generate_cup_plot(df: pd.DataFrame, names: dict) -> Optional[BytesIO]:
     else:
         # remove ax1 and expand ax0
         fig.delaxes(ax1)
-        ax0.change_geometry(1, 1, 1)
+        ax0.change_geometry(1, 1, 1)  # TODO: find alternative to change_geometry, which is deprecated
 
     fig.suptitle('Total Damage vs Time')
     ax0.set_ylabel('Total Damage')

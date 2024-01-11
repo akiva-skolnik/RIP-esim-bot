@@ -605,6 +605,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                        "Food": "Grain",
                        "Ticket": "Oil", "Defense System": "Stone", "Hospital": "Stone",
                        "Estate": "Stone"}
+        index = 0
         for index, (company, company_type) in enumerate(zip(companies, types)):
             if await self.bot.should_cancel(interaction, msg):
                 break

@@ -264,7 +264,7 @@ class Premium(Cog):
     # Admin blocked access
     # @command()
     # @check(utils.is_premium_level_1)
-    # @describe(fund_raising_link="if you have a working link, pls provide it (faster result), otherwise i will do my best.")
+    # @describe(fund_raising_link="if you have a working link, pls provide it (faster result), otherwise I will do my best.")
     async def bb(self, interaction: Interaction, server: Transform[str, Server], fund_raising_link: Optional[str]) -> None:
         """Displays baby boom (fund-raising) stats for a given server."""
         if fund_raising_link and "fundRaising" not in fund_raising_link:
@@ -585,6 +585,7 @@ class Premium(Cog):
                                           "Progress status: 1%.\n(I will update you after every 10%)" if last_page > 10
                                           else "I'm on it, Sir. Be patient.",
                                           file=File(self.bot.typing_gif))
+        date = page = None
         for page in range(1, last_page):
             if await self.bot.should_cancel(interaction, msg):
                 break
