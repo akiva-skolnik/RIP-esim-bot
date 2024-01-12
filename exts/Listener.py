@@ -27,7 +27,7 @@ class Listener(Cog):
         if "name" not in interaction.data or not command:
             return
         data = interaction.data["name"] + " " + " ".join(
-            f"**{x['name']}**: {x.get('value')}" for x in interaction.data.get('options', []))
+            f"**{x.get('name')}**: {x.get('value')}" for x in interaction.data.get('options', []))
 
         msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)}] : {data}"
 
@@ -62,11 +62,10 @@ class Listener(Cog):
         msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)}] : {data}"
 
         error_channel = self.bot.get_channel(config_ids["error_channel_id"])
-        try:
-            await error_channel.send(
-                f"{msg}\n```{''.join(format_exception(type(error), error, error.__traceback__))}```"[:1950])
-        except Exception:  # Big msg
-            await error_channel.send(f"{msg}\n{error}"[:1950])
+        error_msg = f"{msg}\n```{''.join(format_exception(type(error), error, error.__traceback__))}```"
+        if len(error_msg) > 2000:
+            error_msg = error_msg[:990] + "\n...\n" + error_msg[-990:]
+        await error_channel.send(error_msg)
 
         if isinstance(error, CheckFailure):
             return await utils.custom_followup(interaction, str(error))

@@ -138,7 +138,7 @@ async def main() -> None:
         bot.loop.create_task(start())
         # bot.tree.copy_global_to(guild=Object(id=937490523227312200))
 
-        handler = logging.FileHandler(filename=os.path.join(bot.root, "ripesim.log"), encoding='utf-8', mode='w')
+        handler = logging.FileHandler(filename=os.path.join(bot.root, "ripesim.log"))
         setup_logging(handler=handler, level=logging.INFO)
         await bot.start(bot.config["TOKEN"])
 

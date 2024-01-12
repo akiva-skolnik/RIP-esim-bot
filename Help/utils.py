@@ -34,7 +34,7 @@ from .constants import (all_parameters, all_servers, api_url, config_ids,
 from .paginator import FieldPageSource, Pages
 
 hidden_guild = config_ids["commands_server_id"]
-font = ImageFont.truetype(path.join(path.dirname(__file__), "DejaVuSansMono.ttf"), 100)
+font = ImageFont.truetype(path.join(path.dirname(path.dirname(__file__)), "files", "DejaVuSansMono.ttf"), 100)
 
 
 class CoolDownModified:
@@ -1001,7 +1001,7 @@ async def get_battles(base_url: str, country_id: int = 0,
 
 
 async def find_one(collection: str, _id: str) -> dict:
-    """find one"""
+    """find one"""  # TODO: use msgpack
     filename = path.join(path.dirname(bot.root), f"db/{collection}_{_id}.json")
     if path.exists(filename):
         with open(filename, "r", encoding='utf-8') as file:
@@ -1015,3 +1015,8 @@ async def replace_one(collection: str, _id: str, data: dict) -> None:
     filename = path.join(path.dirname(bot.root), f"db/{collection}_{_id}.json")
     with open(filename, "w", encoding='utf-8', errors='ignore') as file:
         json.dump(data, file)
+
+
+async def remove_old_donors():
+    bot.premium_users = {k: v for k, v in bot.premium_users.items() if "level" in v}
+    await replace_one("collection", "donors", bot.premium_users)

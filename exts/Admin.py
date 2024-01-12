@@ -101,7 +101,7 @@ class Admin(Cog):
             exec(to_compile, env)
         except Exception as error:
             await utils.custom_followup(
-                interaction, f'```py\n{error.__class__.__name__}: {error}\n```')
+                interaction, f'```py\n{error.__class__.__name__}: {error}\n```'[:1950])
             return
         func = env['func']
         try:
@@ -111,15 +111,16 @@ class Admin(Cog):
             value = stdout.getvalue()
             if value:
                 await utils.custom_followup(
-                    interaction, f'```py\n{value}{traceback.format_exc()}\n```')
+                    interaction, f'```py\n{value}{traceback.format_exc()}\n```'[:1950])
         else:
             value = stdout.getvalue()
             if value:
-                try:
-                    await utils.custom_followup(interaction, f'```py\n{value}{ret or ""}\n```')
-                except HTTPException:
+                content = value + (ret or "")
+                if len(content) < 1950:
+                    await utils.custom_followup(interaction, f'```py\n{content}\n```')
+                else:
                     io_output = BytesIO()
-                    io_output.write((value + (ret or "")).encode())
+                    io_output.write(content.encode())
                     io_output.seek(0)
                     await utils.custom_followup(interaction,
                                                 file=File(fp=io_output, filename="output.txt"))
