@@ -1262,7 +1262,7 @@ class Battle(Cog):
             else:
                 await ctx.send(f"I'm not watching {link} in this server")
         else:
-            await ctx.send("Removed the following links " + "\n".join(removed))
+            await ctx.send("Removed the following links:\n" + "\n".join(removed))
             await utils.replace_one("collection", "watch", find_watch)
             await utils.replace_one("collection", "auctions", find_auctions)
 

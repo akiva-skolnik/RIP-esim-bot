@@ -73,7 +73,9 @@ class Listener(Cog):
         user_error = "Unknown error"
 
         if isinstance(error, errors.NotFound):
-            await utils.reset_cooldown(interaction)
+            #     interaction.command.reset_cooldown(interaction)
+            # AttributeError: 'Command' object has no attribute 'reset_cooldown'
+            # await utils.reset_cooldown(interaction)
             return
         elif isinstance(error, CommandOnCooldown):
             return await utils.custom_followup(
