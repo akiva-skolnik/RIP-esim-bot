@@ -1198,11 +1198,14 @@ class Battle(Cog):
         if is_auction:
             link = f'https://{server}.e-sim.org/auction.html?id={link_id}'
             find_auctions = await utils.find_one("collection", "auctions") or {"auctions": []}
-            find_auctions["auctions"].append(
-                {"channel_id": interaction.channel.id,
-                 "author_id": interaction.user.id, "link": link, "t": t, "role": role, "custom": custom_msg})
-            await utils.replace_one("collection", "auctions", find_auctions)
-            await watch_auction_func(interaction.channel, link, t, custom_msg)
+            new_auction = {"channel_id": interaction.channel.id, "author_id": interaction.user.id, "link": link,
+                           "t": t, "role": role, "custom": custom_msg}
+            if new_auction in find_auctions["auctions"]:
+                await utils.custom_followup(interaction, "I'm already watching this auction!", ephemeral=True)
+            else:
+                find_auctions["auctions"].append(new_auction)
+                await utils.replace_one("collection", "auctions", find_auctions)
+                await watch_auction_func(interaction.channel, link, t, custom_msg)
 
         else:
             link = f"https://{server}.e-sim.org/battle.html?id={link_id}"
@@ -1222,12 +1225,15 @@ class Battle(Cog):
             embed.add_field(name="Score", value=f'{api_battles["defenderScore"]}:{api_battles["attackerScore"]}')
             embed.set_footer(text="If you want me to stop watching this battle, use /unwatch")
             find_watch = await utils.find_one("collection", "watch") or {"watch": []}
-            find_watch["watch"].append(
-                {"channel_id": interaction.channel.id,
-                 "author_id": interaction.user.id, "link": link, "t": t, "role": role, "custom": custom_msg})
-            await utils.replace_one("collection", "watch", find_watch)
-            await utils.custom_followup(interaction, embed=await utils.convert_embed(interaction, embed))
-            await watch_func(self.bot, interaction.channel, link, t, role, custom_msg)
+            new_watch = {"channel_id": interaction.channel.id, "author_id": interaction.user.id, "link": link,
+                         "t": t, "role": role, "custom": custom_msg}
+            if new_watch in find_watch["watch"]:
+                await utils.custom_followup(interaction, "I'm already watching this battle!", ephemeral=True)
+            else:
+                find_watch["watch"].append(new_watch)
+                await utils.replace_one("collection", "watch", find_watch)
+                await utils.custom_followup(interaction, embed=await utils.convert_embed(interaction, embed))
+                await watch_func(self.bot, interaction.channel, link, t, role, custom_msg)
 
     @checks.dynamic_cooldown(utils.CoolDownModified(5))
     @hybrid_command()
