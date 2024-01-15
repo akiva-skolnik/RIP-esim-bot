@@ -123,6 +123,7 @@ async def start() -> None:
     await activate_reminder()
     await activate_watch_and_ping()
     await activate_motivate()
+    print("Bot is ready")
 
 
 @bot.tree.command()

@@ -260,8 +260,7 @@ class Battle(Cog):
         await interaction.response.defer()
         server = utils.server_validation(server or "")
         base_url = f"https://{server}.e-sim.org/"
-        attacker, defender = 0, 0
-        api = await utils.get_content(f'{base_url}apiBattles.html?battleId={battle_id}')
+        api_battles = await utils.get_content(f'{base_url}apiBattles.html?battleId={battle_id}')
         key = None
         if country:
             nick = country
@@ -289,22 +288,20 @@ class Battle(Cog):
 
         if not key:
             key = "citizenId"
-            if api["type"] == "MILITARY_UNIT_CUP_EVENT_BATTLE" and not range_of_battles:
+            if api_battles["type"] == "MILITARY_UNIT_CUP_EVENT_BATTLE" and not range_of_battles:
                 header = ["Military unit", "Q0 wep", "Q1", "Q5", "DMG"]
-                attacker = (await utils.get_content(f'{base_url}apiMilitaryUnitById.html?id={api["attackerId"]}'))[
-                    "name"]
-                defender = (await utils.get_content(f'{base_url}apiMilitaryUnitById.html?id={api["defenderId"]}'))[
-                    "name"]
+                attacker_id = (await utils.get_content(
+                    f'{base_url}apiMilitaryUnitById.html?id={api_battles["attackerId"]}'))["name"]
+                defender_id = (await utils.get_content(
+                    f'{base_url}apiMilitaryUnitById.html?id={api_battles["defenderId"]}'))["name"]
             else:
-                attacker = api["attackerId"]
-                defender = api["defenderId"]
+                attacker_id = api_battles["attackerId"]
+                defender_id = api_battles["defenderId"]
                 header = ["Side", "Q0 wep", "Q1", "Q5", "DMG"]
-
-        if attacker != defender and api["type"] != "MILITARY_UNIT_CUP_EVENT_BATTLE":
-            attacker = all_countries.get(attacker, "attacker")
-            defender = all_countries.get(defender, "defender")
         else:
-            attacker, defender = "Attacker", "Defender"
+            attacker_id, defender_id = 0, 0
+
+        attacker, defender = utils.get_sides(api_battles, attacker_id, defender_id)
 
         hit_time = defaultdict(lambda: {"dmg": [], "time": []})
         tops = False
@@ -327,10 +324,10 @@ class Battle(Cog):
                 if range_of_battles:
                     msg = await utils.update_percent(index, last_battle - battle_id, msg)
 
-                if api['defenderScore'] == 8 or api['attackerScore'] == 8:
-                    last = api['currentRound']
+                if api_battles['defenderScore'] == 8 or api_battles['attackerScore'] == 8:
+                    last = api_battles['currentRound']
                 else:
-                    last = api['currentRound'] + 1
+                    last = api_battles['currentRound'] + 1
                 for round_i in range(1, last):
                     defender_details = defaultdict(lambda: {'weps': [0, 0, 0, 0, 0, 0], 'dmg': 0})
                     attacker_details = defaultdict(lambda: {'weps': [0, 0, 0, 0, 0, 0], 'dmg': 0})
@@ -504,7 +501,7 @@ class Battle(Cog):
             msg = await utils.custom_followup(interaction, files=files,
                                               embed=await utils.convert_embed(interaction, deepcopy(embed)), view=view)
         else:
-            embed.description = f'**Battle type: {api["type"]}**'
+            embed.description = f'**Battle type: {api_battles["type"]}**'
             output_buffer1 = await self.bot.loop.run_in_executor(None, draw_pil_table, table, header)
             msg = await utils.custom_followup(interaction,
                                               embed=await utils.convert_embed(interaction, deepcopy(embed)),
@@ -521,9 +518,9 @@ class Battle(Cog):
                 values = field.value.splitlines()
                 for num, value in enumerate(values):
                     value = value.split("[")[1].split("]")[0]
-                    api = await utils.get_content(f'{base_url}{keys[embed_name]["api_url"]}.html?id={value}')
-                    flag = utils.codes(all_countries[api[keys[embed_name]['cs_key']]])
-                    values[num] = f"{flag} [{api[keys[embed_name]['api_key'][:20]]}]" \
+                    api_battles = await utils.get_content(f'{base_url}{keys[embed_name]["api_url"]}.html?id={value}')
+                    flag = utils.codes(all_countries[api_battles[keys[embed_name]['cs_key']]])
+                    values[num] = f"{flag} [{api_battles[keys[embed_name]['api_key'][:20]]}]" \
                                   f"({base_url}{keys[embed_name]['final_link']}.html?id={value})"
                     await utils.custom_delay(interaction)
                 embed.set_field_at(index, name=field.name[:-5] + "**", value="\n".join(values))
@@ -1163,9 +1160,14 @@ class Battle(Cog):
         find_auctions = await utils.find_one("collection", "auctions") or {"auctions": []}
         for watch_dict in find_watch["watch"] + find_auctions["auctions"]:
             if watch_dict["channel_id"] == interaction.channel.id and not watch_dict.get("removed"):
-                data.append(f"<{watch_dict['link']}> (at T{watch_dict['t']})")
+                sides = watch_dict.get("sides")
+                score = watch_dict.get("score")
+                row = f"<{watch_dict['link']}> at T{utils.remove_decimal(watch_dict['t'])}"
+                if sides and score:  # there can't be one without the other
+                    row += f", **Sides:** {sides} ({score})"
+                data.append(row)
         await interaction.response.send_message('\n'.join(["**Watch List:**"] + data + [
-            "\nIf you want to remove any, write `/unwatch link: <link>`",
+            "\nIf you want to remove any, write `/unwatch link: <link>` or `/unwatch link: ALL`",
             f"Example: `/unwatch link: {data[0].split()[0]}`"]) if data else
                                                 "Currently, I'm not watching any battle. "
                                                 "Type `/watch` if you want to watch one.")
@@ -1209,7 +1211,8 @@ class Battle(Cog):
 
         else:
             link = f"https://{server}.e-sim.org/battle.html?id={link_id}"
-            api_battles = await utils.get_content(link.replace("battle", "apiBattles").replace("id", "battleId"))
+            api_battles = await utils.get_content(link.replace(
+                "battle", "apiBattles").replace("id", "battleId"))
             if 8 in (api_battles['defenderScore'], api_battles['attackerScore']):
                 await utils.custom_followup(interaction, "This battle is over!", ephemeral=True)
                 return
@@ -1240,7 +1243,7 @@ class Battle(Cog):
     @describe(link="The battle or auction link you want to unwatch (can also be 'all')")
     async def unwatch(self, ctx, link: str) -> None:
         """Stop watching a battle / auction"""
-
+        link = link.strip("<> ")
         find_watch = await utils.find_one("collection", "watch") or {"watch": []}
         find_auctions = await utils.find_one("collection", "auctions") or {"auctions": []}
         channel_id = ctx.channel.id if isinstance(ctx, Context) else ctx.id
@@ -1658,50 +1661,54 @@ async def ping_func(channel: TextChannel, t: float, server: str, ping_id: str, c
         find_ping = await utils.find_one("collection", "ping")
 
 
+async def watch_should_break(link: str, api_battles: dict) -> bool:
+    """Returns True if link should be removed from watch dict:
+        1. if battle is over
+        2. if battle is frozen
+        3. if battle is not in watch dict
+    also updates the watch dict with the current score and sides"""
+
+    attacker, defender = utils.get_sides(api_battles)
+    should_break = True
+    find_watch = await utils.find_one("collection", "watch") or {"watch": []}
+    for watch_dict in list(find_watch["watch"]):
+        if watch_dict["link"] != link:
+            continue
+        if (8 in (api_battles['defenderScore'], api_battles['attackerScore'])
+                or find_watch.get("removed")
+                or api_battles['frozen']):
+            find_watch["watch"].remove(watch_dict)
+        else:
+            watch_dict["sides"] = f"{defender} vs {attacker}"
+            watch_dict["score"] = f"{api_battles['defenderScore']}:{api_battles['attackerScore']}"
+            should_break = False  # If not all battles are over, don't break
+
+    await utils.replace_one("collection", "watch", find_watch)
+    return should_break
+
 async def watch_func(bot, channel: TextChannel, link: str, t: float, role: str, custom: str,
                      author_id: int = 0) -> None:
     """watch func"""
     for _ in range(20):  # Max rounds: 15, plus option for some freeze/delay
         api_battles = await utils.get_content(link.replace("battle", "apiBattles").replace("id", "battleId"))
-        if 8 in (api_battles['defenderScore'], api_battles['attackerScore']):
-            find_watch = await utils.find_one("collection", "watch") or {"watch": []}
-            for watch_dict in list(find_watch["watch"]):
-                if watch_dict["link"] == link:
-                    find_watch["watch"].remove(watch_dict)
-            return await utils.replace_one("collection", "watch", find_watch)
-        h, m, s = api_battles["hoursRemaining"], api_battles["minutesRemaining"], api_battles["secondsRemaining"]
-        sleep_time = h * 3600 + m * 60 + s - t * 60
-        await sleep(max(0, sleep_time))
-        find_watch = await utils.find_one("collection", "watch") or {"watch": []}
-        # if the battle is not in the watch list, or it has been marked as removed - stop watching it
-        for watch_dict in list(find_watch["watch"]):
-            if watch_dict["channel_id"] == channel.id and watch_dict["link"] == link and watch_dict.get("removed"):
-                find_watch["watch"].remove(watch_dict)
-                return await utils.replace_one("collection", "watch", find_watch)
-
-        if not any(watch_dict["channel_id"] == channel.id and watch_dict["link"] == link
-                   for watch_dict in find_watch["watch"]):
+        if await watch_should_break(link, api_battles):
             break
 
-        # check again, in case e-sim froze the battle
-        api_battles = await utils.get_content(link.replace("battle", "apiBattles").replace("id", "battleId"))
-        h, m, s = api_battles["hoursRemaining"], api_battles["minutesRemaining"], api_battles["secondsRemaining"]
-        sleep_time = h * 3600 + m * 60 + s - t * 60
-        await sleep(max(0, sleep_time))
-        if api_battles['frozen']:
-            await sleep(300)
-            continue
-        attacker = api_battles["attackerId"]
-        defender = api_battles["defenderId"]
-        if attacker != defender and attacker in all_countries and defender in all_countries and \
-                api_battles["type"] != "MILITARY_UNIT_CUP_EVENT_BATTLE":
-            attacker = all_countries[attacker]
-            defender = all_countries[defender]
-        else:
-            attacker, defender = "Attacker", "Defender"
-        api_fights = link.replace("battle", "apiFights").replace(
+        for _ in range(5):  # allow 5 delays from e-sim
+            h, m, s = api_battles["hoursRemaining"], api_battles["minutesRemaining"], api_battles["secondsRemaining"]
+            sleep_time = h * 3600 + m * 60 + s - t * 60
+            await sleep(max(0, sleep_time))
+            if sleep_time < 30:
+                break  # If less than 30 seconds left, don't sleep again
+
+            # check again, in case e-sim froze the battle / delayed it
+            api_battles = await utils.get_content(
+                link.replace("battle", "apiBattles").replace("id", "battleId"))
+
+        attacker, defender = utils.get_sides(api_battles)
+        api_fights_link = link.replace("battle", "apiFights").replace(
             "id", "battleId") + f"&roundId={api_battles['currentRound']}"
-        my_dict, hit_time = await utils.save_dmg_time(api_fights, attacker, defender)
+        my_dict, hit_time = await utils.save_dmg_time(api_fights_link, attacker, defender)
         output_buffer = await dmg_trend(hit_time, link.split("//")[1].split(".e-sim.org")[0],
                                         f'{link.split("=")[1].split("&")[0]}-{api_battles["currentRound"]}')
         hit_time.clear()

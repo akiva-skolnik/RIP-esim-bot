@@ -30,7 +30,7 @@ from bot.bot import bot
 
 from .constants import (all_parameters, all_servers, api_url, config_ids,
                         countries_per_id, countries_per_server, date_format,
-                        flags_codes)
+                        flags_codes, all_countries)
 from .paginator import FieldPageSource, Pages
 
 hidden_guild = config_ids["commands_server_id"]
@@ -49,6 +49,19 @@ class CoolDownModified:
             return None  # remove cooldown
         return Cooldown(self.rate, self.per)
 
+def remove_decimal(x: float | int) -> int | float:
+    """5 -> 5, 5.0 -> 5, 5.1 -> 5.1"""
+    return int(x) if isinstance(x, float) and x.is_integer() else x
+
+def get_sides(api_battles: dict, attacker_id: int = None, defender_id: int = None) -> tuple[str, str]:
+    attacker_id = attacker_id or api_battles["attackerId"]
+    defender_id = defender_id or api_battles["defenderId"]
+    if attacker_id != defender_id and api_battles["type"] != "MILITARY_UNIT_CUP_EVENT_BATTLE":
+        attacker = all_countries.get(attacker_id, "Attacker")
+        defender = all_countries.get(defender_id, "Defender")
+    else:
+        attacker, defender = "Attacker", "Defender"
+    return attacker, defender
 
 def server_validation(server: str) -> str:
     """server validation"""

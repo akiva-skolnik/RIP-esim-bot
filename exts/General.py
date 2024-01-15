@@ -718,36 +718,30 @@ class General(Cog):
 
         elif "/battle.html" in link:
             embed.description = None
-            api_battle = await utils.get_content(link.replace("battle", "apiBattles").replace("id", "battleId"))
-            minutes = api_battle['minutesRemaining'] + api_battle['hoursRemaining'] * 60
-            t = f"{minutes:02d}:{api_battle['secondsRemaining']:02d}"
-            attacker, defender = api_battle["attackerId"], api_battle["defenderId"]
-            if attacker != defender and api_battle["type"] != "MILITARY_UNIT_CUP_EVENT_BATTLE":
-                attacker = all_countries.get(attacker, "Attacker")
-                defender = all_countries.get(defender, "Defender")
-
-            else:
-                attacker, defender = "Attacker", "Defender"
+            api_battles = await utils.get_content(link.replace("battle", "apiBattles").replace("id", "battleId"))
+            minutes = api_battles['minutesRemaining'] + api_battles['hoursRemaining'] * 60
+            t = f"{minutes:02d}:{api_battles['secondsRemaining']:02d}"
+            attacker, defender = utils.get_sides(api_battles)
 
             if "&round=" in link:
                 round_id = link.split("&round=")[1].split("&")[0]
                 api = link.replace("battle", "apiFights").replace("id", "battleId").replace("round", "roundId")
             else:
-                if api_battle['defenderScore'] == 8 or api_battle['attackerScore'] == 8:
-                    round_id = api_battle['currentRound'] - 1
+                if api_battles['defenderScore'] == 8 or api_battles['attackerScore'] == 8:
+                    round_id = api_battles['currentRound'] - 1
                 else:
-                    round_id = api_battle['currentRound']
+                    round_id = api_battles['currentRound']
                 api = link.replace("battle", "apiFights").replace("id", "battleId") + f"&roundId={round_id}"
 
             my_dict, hit_time = await utils.save_dmg_time(api, attacker, defender)
             output_buffer = await utils.dmg_trend(hit_time, server, f'{link.split("=")[1].split("&")[0]}-{round_id}')
             hit_time.clear()
-            score = f"{api_battle['defenderScore']}:{api_battle['attackerScore']}"
+            score = f"{api_battles['defenderScore']}:{api_battles['attackerScore']}"
             embed = Embed(colour=0x3D85C6, url=link,
                           title=("" if "8" in score else f"T{t}, ") + f"**Score:** {score}")
             embed.add_field(name=utils.codes(defender) + " " + utils.shorten_country(defender),
                             value=f"{my_dict[defender]:,}")
-            embed.add_field(name=f'Battle type: {api_battle["type"]}',
+            embed.add_field(name=f'Battle type: {api_battles["type"]}',
                             value=await utils.bar(my_dict[defender], my_dict[attacker], defender, attacker))
             embed.add_field(name=utils.codes(attacker) + " " + utils.shorten_country(attacker),
                             value=f"{my_dict[attacker]:,}")
