@@ -48,6 +48,7 @@ async def activate_reminder() -> None:
                 remind_func(channel, inner_dict["when"], reminder_id, inner_dict["msg"]))
             await asyncio.sleep(1)
         else:
+            db_dict = await utils.find_one("collection", "remind")
             del db_dict[reminder_id]
             await utils.replace_one("collection", "remind", db_dict)
     await utils.replace_one("collection", "remind", db_dict)
@@ -64,6 +65,7 @@ async def activate_watch_and_ping() -> None:
                                    inner_dict['custom'], inner_dict["author_id"]))
             await asyncio.sleep(1.5)
         else:
+            db_dict = await utils.find_one("collection", "auctions") or {"auctions": []}
             db_dict["auctions"].remove(inner_dict)
             await utils.replace_one("collection", "auctions", db_dict)
         await asyncio.sleep(5)
@@ -77,6 +79,8 @@ async def activate_watch_and_ping() -> None:
                            inner_dict['role'], inner_dict['custom'], inner_dict["author_id"]))
             await asyncio.sleep(1.5)  # To avoid race condition and ratelimit
         else:
+            # It may have changed in the meantime
+            db_dict = await utils.find_one("collection", "watch") or {"watch": []}
             db_dict["watch"].remove(inner_dict)
             await utils.replace_one("collection", "watch", db_dict)
 
@@ -93,6 +97,7 @@ async def activate_watch_and_ping() -> None:
                 role=db_dict[key]["role"], author_id=db_dict[key]["author_id"]))
             await asyncio.sleep(10)
         else:
+            db_dict = await utils.find_one("collection", "ping")
             del db_dict[key]
             await utils.replace_one("collection", "ping", db_dict)
 
