@@ -14,7 +14,7 @@ from .utils import dmg_trend, draw_pil_table
 
 
 # TODO: Shorten this function / break it down into smaller functions
-async def dmg_func(self, interaction: Interaction, battle_link: Transform[dict, BattleLink], nick: str = "",
+async def dmg_func(bot, interaction: Interaction, battle_link: Transform[dict, BattleLink], nick: str = "",
                    country: Transform[str, Country] = "", mu_id: int = 0) -> None:
     """
     Displays wep used and dmg done (Per player, MU, country, or overall) in a given battle(s).
@@ -85,7 +85,7 @@ async def dmg_func(self, interaction: Interaction, battle_link: Transform[dict, 
         msg = await utils.custom_followup(interaction,
                                           "Progress status: 1%.\n(I will update you after every 10%)" if
                                           last_battle - battle_id > 10 else "I'm on it, Sir. Be patient.",
-                                          file=File(self.bot.typing_gif))
+                                          file=File(bot.typing_gif))
         empty_sides = {"Total": {'weps': [0, 0, 0, 0, 0, 0], 'dmg': 0}}
     else:
         msg = None
@@ -276,7 +276,7 @@ async def dmg_func(self, interaction: Interaction, battle_link: Transform[dict, 
                                           embed=await utils.convert_embed(interaction, deepcopy(embed)), view=view)
     else:
         embed.description = f'**Battle type: {api_battles["type"]}**'
-        output_buffer1 = await self.bot.loop.run_in_executor(None, draw_pil_table, table, header)
+        output_buffer1 = await bot.loop.run_in_executor(None, draw_pil_table, table, header)
         msg = await utils.custom_followup(interaction,
                                           embed=await utils.convert_embed(interaction, deepcopy(embed)),
                                           files=[File(fp=output_buffer1,

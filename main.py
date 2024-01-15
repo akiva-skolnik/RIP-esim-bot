@@ -137,7 +137,7 @@ async def update_from_source(interaction: Interaction) -> None:
     else:  # local
         await interaction.response.send_message("Reloading all extensions...")
     await load_extensions(reload=True)
-    importlib.reload(modules["Help"])
+    importlib.reload(modules["Utils"])
 
 
 async def main() -> None:
