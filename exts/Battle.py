@@ -1230,8 +1230,10 @@ class Battle(Cog):
             find_watch = await utils.find_one("collection", "watch") or {"watch": []}
             new_watch = {"channel_id": interaction.channel.id, "author_id": interaction.user.id, "link": link,
                          "t": t, "role": role, "custom": custom_msg}
-            if new_watch in find_watch["watch"]:
-                await utils.custom_followup(interaction, "I'm already watching this battle!", ephemeral=True)
+            if any(not x.get("removed") and x["link"] == link and x["channel_id"] == interaction.channel.id
+                   and x["t"] == t for x in find_watch["watch"]):
+                error_msg = "I'm already watching this battle! You can `/unwatch` it first if you wish."
+                await utils.custom_followup(interaction, error_msg, ephemeral=True)
             else:
                 find_watch["watch"].append(new_watch)
                 await utils.replace_one("collection", "watch", find_watch)
