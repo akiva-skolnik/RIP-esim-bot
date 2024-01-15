@@ -444,9 +444,9 @@ async def watch_func(bot, channel: TextChannel, link: str, t: float, role: str, 
         for _ in range(5):  # allow 5 delays from e-sim
             h, m, s = api_battles["hoursRemaining"], api_battles["minutesRemaining"], api_battles["secondsRemaining"]
             sleep_time = h * 3600 + m * 60 + s - t * 60
-            await sleep(max(0, sleep_time))
             if sleep_time < 30:
                 break  # If less than 30 seconds left, don't sleep again
+            await sleep(max(0, sleep_time))
 
             # check again, in case e-sim froze the battle / delayed it
             api_battles = await utils.get_content(
