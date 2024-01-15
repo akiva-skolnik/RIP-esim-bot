@@ -1661,7 +1661,7 @@ async def ping_func(channel: TextChannel, t: float, server: str, ping_id: str, c
 async def watch_func(bot, channel: TextChannel, link: str, t: float, role: str, custom: str,
                      author_id: int = 0) -> None:
     """watch func"""
-    for _ in range(20):
+    for _ in range(20):  # Max rounds: 15, plus option for some freeze/delay
         api_battles = await utils.get_content(link.replace("battle", "apiBattles").replace("id", "battleId"))
         if 8 in (api_battles['defenderScore'], api_battles['attackerScore']):
             find_watch = await utils.find_one("collection", "watch") or {"watch": []}

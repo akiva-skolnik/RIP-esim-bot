@@ -62,6 +62,7 @@ async def activate_watch_and_ping() -> None:
             bot.loop.create_task(
                 watch_auction_func(channel, inner_dict['link'], inner_dict['t'],
                                    inner_dict['custom'], inner_dict["author_id"]))
+            await asyncio.sleep(1.5)
         else:
             db_dict["auctions"].remove(inner_dict)
             await utils.replace_one("collection", "auctions", db_dict)
@@ -74,6 +75,7 @@ async def activate_watch_and_ping() -> None:
             bot.loop.create_task(
                 watch_func(bot, channel, inner_dict['link'], inner_dict['t'],
                            inner_dict['role'], inner_dict['custom'], inner_dict["author_id"]))
+            await asyncio.sleep(1.5)  # To avoid race condition and ratelimit
         else:
             db_dict["watch"].remove(inner_dict)
             await utils.replace_one("collection", "watch", db_dict)
