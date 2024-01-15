@@ -10,8 +10,8 @@ from discord.app_commands import (AppCommandError, CheckFailure, Command,
 from discord.ext.commands import Cog
 from pytz import timezone
 
-from Help import utils
-from Help.constants import config_ids, date_format
+from Utils import utils
+from Utils.constants import config_ids, date_format
 
 
 class Listener(Cog):

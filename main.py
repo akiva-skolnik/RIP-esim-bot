@@ -18,8 +18,8 @@ from bot.bot import bot, load_extensions
 from exts.Battle import (motivate_func, ping_func, watch_auction_func,
                          watch_func)
 from exts.General import remind_func
-from Help import utils
-from Help.constants import all_servers, config_ids, date_format
+from Utils import utils
+from Utils.constants import all_servers, config_ids, date_format
 
 matplotlib.use('Agg')
 

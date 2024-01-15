@@ -16,12 +16,12 @@ from matplotlib import pyplot as plt
 from matplotlib.ticker import FixedLocator
 from pytz import timezone
 
-from Help import utils
-from Help.constants import (all_countries, all_countries_by_name,
-                            all_parameters, all_products, api_url, config_ids,
-                            date_format)
-from Help.transformers import Country, Product, ProfileLink, Server
-from Help.utils import CoolDownModified, draw_pil_table, split_list
+from Utils import utils
+from Utils.constants import (all_countries, all_countries_by_name,
+                             all_parameters, all_products, api_url, config_ids,
+                             date_format)
+from Utils.transformers import Country, Product, ProfileLink, Server
+from Utils.utils import CoolDownModified, draw_pil_table, split_list
 
 options = ["iron", "grain", "oil", "stone", "wood", "diamonds"]
 product_gids = {"primera": 6602346, "secura": 1142213909, "suna": 1317638633, "alpha": 1073258602,

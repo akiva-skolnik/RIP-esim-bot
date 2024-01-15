@@ -5,12 +5,12 @@ from contextlib import redirect_stdout
 from datetime import date
 from io import BytesIO, StringIO
 
-from discord import File, HTTPException, Interaction, User
+from discord import File, Interaction, User
 from discord.app_commands import command, guilds
 from discord.ext.commands import Cog
 
-from Help import utils
-from Help.constants import all_servers, config_ids
+from Utils import utils
+from Utils.constants import all_servers, config_ids
 
 
 class Admin(Cog):

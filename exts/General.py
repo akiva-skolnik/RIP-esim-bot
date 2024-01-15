@@ -12,11 +12,11 @@ from pytz import timezone
 from sympy import sympify
 from wolframalpha import Client
 
-from Help import utils
-from Help.constants import (all_countries, all_products, all_servers, api_url,
-                            config_ids, date_format, gids)
-from Help.transformers import Country, Server
-from Help.utils import CoolDownModified, camel_case_merge
+from Utils import utils
+from Utils.constants import (all_countries, all_products, all_servers, api_url,
+                             config_ids, date_format, gids)
+from Utils.transformers import Country, Server
+from Utils.utils import CoolDownModified, camel_case_merge
 
 
 class General(Cog):

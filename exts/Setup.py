@@ -3,9 +3,9 @@ from discord import Interaction
 from discord.app_commands import Range, Transform, checks, command, describe
 from discord.ext.commands import Cog
 
-from Help import utils
-from Help.constants import all_servers
-from Help.transformers import Server
+from Utils import utils
+from Utils.constants import all_servers
+from Utils.transformers import Server
 
 
 class Setup(Cog):

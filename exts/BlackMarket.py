@@ -7,9 +7,9 @@ from discord import Embed, Interaction, User
 from discord.app_commands import Range, Transform, checks, command, describe
 from discord.ext.commands import GroupCog
 
-from Help import utils
-from Help.constants import all_products, all_servers
-from Help.transformers import Product, ProfileLink, Server, Slots
+from Utils import utils
+from Utils.constants import all_products, all_servers
+from Utils.transformers import Product, ProfileLink, Server, Slots
 
 
 class BlackMarket(GroupCog, name="black-market"):

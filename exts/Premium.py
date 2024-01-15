@@ -9,8 +9,8 @@ from discord.app_commands import Transform, check, command, describe
 from discord.ext.commands import Cog
 from lxml.html import fromstring
 
-from Help import utils
-from Help.transformers import Ids, Server
+from Utils import utils
+from Utils.transformers import Ids, Server
 
 
 class Premium(Cog):

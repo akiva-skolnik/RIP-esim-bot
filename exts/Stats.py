@@ -13,10 +13,10 @@ from discord import Attachment, File, Interaction
 from discord.app_commands import Transform, check, checks, command, describe
 from discord.ext.commands import Cog
 
-from Help import utils
-from Help.constants import all_countries, all_countries_by_name, api_url
-from Help.transformers import BattleTypes, Ids, Server
-from Help.utils import CoolDownModified, dmg_calculator
+from Utils import utils
+from Utils.constants import all_countries, all_countries_by_name, api_url
+from Utils.transformers import BattleTypes, Ids, Server
+from Utils.utils import CoolDownModified, dmg_calculator
 
 
 class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": False}):
