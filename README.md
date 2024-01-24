@@ -30,7 +30,8 @@ also [invite it to your own server](https://discordapp.com/api/oauth2/authorize?
 
 **Image of Command List:**
 
-![Command List](https://i.imgur.com/FG4f4dE.png)
+![Command List](https://i.imgur.com/FG4f4dE.png)  
+
 (some commands may be outdated)
 
 ## Support the Project:
@@ -44,7 +45,6 @@ a donation:
 Your contributions will help ensure the bot's continued improvement and availability for the e-Sim community.
 
 **Note:**
-
 Some commands rely on one of my [external projects](https://github.com/akiva-skolnik/update_db) to be operational.
 
-**Thank you for your interest!**
+## Thank you for your interest!
