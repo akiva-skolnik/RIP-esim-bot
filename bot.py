@@ -231,7 +231,8 @@ async def update_time(server: str) -> None:
             # Calculate averages and update data
             date_format = "%d/%m/%Y"
             start_date = datetime.strptime(initial_date_info.get(server, ["", "18/05/2020"])[1], date_format)
-            start_of_month = max(start_date, datetime.strptime(f"01/{now.strftime('%m')}/{now.strftime('%Y')}", date_format))
+            start_of_month = max(start_date,
+                                 datetime.strptime(f"01/{now.strftime('%m')}/{now.strftime('%Y')}", date_format))
             today_date = datetime.strptime(now.strftime(date_format), date_format)
             elapsed_since_start = (today_date - start_date).total_seconds() / 60
             elapsed_since_month_start = (today_date - start_of_month + timedelta(days=1)).total_seconds() / 60
@@ -406,7 +407,8 @@ async def update_prices(server: str) -> None:
                          monetary_market_link])
 
                     # Calculate the average price of the top 1% of total offers
-                    stock_left = int(total_stock_per_product[product_key] * 0.01 - n) + 1  # +1 to avoid division by 0 for <100 offers
+                    stock_left = int(total_stock_per_product[
+                                         product_key] * 0.01 - n) + 1  # +1 to avoid division by 0 for <100 offers
                     if stock_left > 0:
                         stock = min(stock_left, offer["stock"])  # stock left to reach 1% of total stock
                         avg_price += stock * offer["price"]
@@ -464,17 +466,17 @@ loop = asyncio.get_event_loop()
 async def start_time_buff() -> None:
     """start time and buff"""
     for server in servers:
-        loop.create_task(update_time(server))
-        loop.create_task(update_buffs(server))
+        await loop.create_task(update_time(server))
+        await loop.create_task(update_buffs(server))
         await asyncio.sleep(int(120 / len(servers)))
 
 
 async def start_mm_price() -> None:
     """start mm and price"""
-    loop.create_task(update_monetary_market())
+    await loop.create_task(update_monetary_market())
     await asyncio.sleep(30)
     for server in servers:
-        loop.create_task(update_prices(server))
+        await loop.create_task(update_prices(server))
         await asyncio.sleep(int(900 / len(servers)))
 
 
