@@ -45,6 +45,6 @@ a donation:
 Your contributions will help ensure the bot's continued improvement and availability for the e-Sim community.
 
 **Note:**
-Some commands rely on one of my [external projects](https://github.com/akiva-skolnik/update_db) to be operational.
+Some commands rely on one of my [other projects](https://github.com/akiva-skolnik/RIP-esim-data-collector) to be operational.
 
 ## Thank you for your interest!
