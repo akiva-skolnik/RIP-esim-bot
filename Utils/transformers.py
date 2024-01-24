@@ -6,9 +6,8 @@ from discord import Interaction
 from discord.app_commands import (CheckFailure, Choice, Transformer,
                                   TransformerError)
 
-from bot.bot import bot
 from Utils import utils
-
+from bot.bot import bot
 from .constants import (all_countries, all_countries_by_name, all_products,
                         all_servers)
 
@@ -27,8 +26,10 @@ def get_id(link: str, parameter: str = "id") -> int:
     """get id"""
     return int(link.split(parameter + "=")[1].split("&")[0])
 
-class Server(Transformer): # noqa
+
+class Server(Transformer):  # noqa
     """Server"""
+
     async def transform(self, interaction: Interaction, server: str) -> str:
         return server
 
@@ -39,6 +40,7 @@ class Server(Transformer): # noqa
 
 class Country(Transformer):
     """Country"""
+
     async def transform(self, interaction: Interaction, country: str) -> str:
         if country.lower() in all_countries_by_name:
             return all_countries[all_countries_by_name[country.lower()]]
@@ -46,11 +48,13 @@ class Country(Transformer):
 
     async def autocomplete(self, interaction: Interaction, value: str, /) -> list:
         return [Choice(name=k, value=k) for k in sorted(
-            all_countries.values(), key=lambda x: SequenceMatcher(None, x.lower(), value.lower()).ratio(), reverse=True)][:10]
+            all_countries.values(), key=lambda x: SequenceMatcher(None, x.lower(), value.lower()).ratio(),
+            reverse=True)][:10]
 
 
 class BattleTypes(Transformer):  # noqa
     """BattleTypes"""
+
     async def transform(self, interaction: Interaction, battles_types: str) -> list:
         correct_battle_types = ['ATTACK', 'CIVIL_WAR', 'COUNTRY_TOURNAMENT', 'CUP_EVENT_BATTLE', 'LEAGUE',
                                 'MILITARY_UNIT_CUP_EVENT_BATTLE', 'PRACTICE_BATTLE', 'RESISTANCE', 'DUEL_TOURNAMENT',
@@ -80,8 +84,10 @@ class BattleTypes(Transformer):  # noqa
                     [f"`{i}`" for i in correct_battle_types]))
         return battle_types or ['ATTACK', 'RESISTANCE']
 
+
 class Ids(Transformer):  # noqa
     """Ids"""
+
     async def transform(self, interaction: Interaction, ids: str) -> list:
         try:
             fixed_ids = ids.replace("_", "-").replace("\n", " ").replace(",", " ")
@@ -92,7 +98,8 @@ class Ids(Transformer):  # noqa
                 if ids.startswith("https://docs.google.com/spreadsheets/d/"):
                     ids = ids.split("/edit")[0] + "/export?format=csv"
                 async with bot.session.get(ids, ssl=True) as respond:
-                    ids = sorted({i.replace("\r", "").replace(",", "") for i in (await respond.text()).splitlines() if i})
+                    ids = sorted(
+                        {i.replace("\r", "").replace(",", "") for i in (await respond.text()).splitlines() if i})
             elif "-" in fixed_ids:
                 ids_list = ids.split("-")
                 ids = range(int(ids_list[0]), int(ids_list[-1]) + 1)
@@ -111,6 +118,7 @@ class Ids(Transformer):  # noqa
 
 class AuctionLink(Transformer):  # noqa
     """AuctionLink"""
+
     async def transform(self, interaction: Interaction, link: str) -> dict:
         if link.startswith("http") and "auction" in link:
             link = fix_link(link)
@@ -122,6 +130,7 @@ class AuctionLink(Transformer):  # noqa
 
 class ProfileLink(Transformer):  # noqa
     """ProfileLink"""
+
     async def transform(self, interaction: Interaction, link: str) -> dict:
         result = {"base": "profile"}
         link = link.replace("_", "-")
@@ -150,14 +159,17 @@ class ProfileLink(Transformer):  # noqa
         result["nick_or_id"] = nick
         return result
 
+
 class TournamentLink(Transformer):  # noqa
     """TournamentLink"""
+
     async def transform(self, interaction: Interaction, tournament_link: str) -> str:
         link = tournament_link.split("#")[0].replace("http://", "https://")
         if any(x in link for x in ("tournamentEvent.html?id=", "teamTournament.html?id=",
                                    "countryTournament.html?id=")):
             return link
         raise TransformerError(tournament_link, self.type, self)
+
 
 class BattleLink(Transformer):  # noqa
     async def transform(self, interaction: Interaction, link: str) -> dict:
@@ -191,6 +203,7 @@ class BattleLink(Transformer):  # noqa
 
 class Product(Transformer):  # noqa
     """Product"""
+
     def __init__(self, products_list: list = all_products):
         self.products = products_list
 
@@ -204,6 +217,7 @@ class Product(Transformer):  # noqa
 
 class Slots(Transformer):  # noqa
     """Slots"""
+
     async def transform(self, interaction: Interaction, slot: str) -> str:
         return slot.title()
 

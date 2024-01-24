@@ -15,6 +15,7 @@ from Utils.constants import all_servers, config_ids
 
 class Admin(Cog):
     """Admin Commands"""
+
     def __init__(self, bot) -> None:
         self.bot = bot
 

@@ -154,6 +154,7 @@ def normal_pdf(x, mean, std) -> float:
     #         del db_dict[db_key]
     #         await utils.replace_one("collection", interaction.command.name, db_dict)
 
+
 async def cup_func(bot, interaction: Interaction, db_key: str, server: str, battle_ids: iter) -> None:
     """cup func"""
     try:
@@ -433,6 +434,7 @@ async def watch_should_break(link: str, api_battles: dict) -> bool:
     await utils.replace_one("collection", "watch", find_watch)
     return should_break
 
+
 async def watch_func(bot, channel: TextChannel, link: str, t: float, role: str, custom: str,
                      author_id: int = 0) -> None:
     """watch func"""
@@ -457,7 +459,7 @@ async def watch_func(bot, channel: TextChannel, link: str, t: float, role: str, 
             "id", "battleId") + f"&roundId={api_battles['currentRound']}"
         my_dict, hit_time = await utils.save_dmg_time(api_fights_link, attacker, defender)
         output_buffer = await utils.dmg_trend(hit_time, link.split("//")[1].split(".e-sim.org")[0],
-                                        f'{link.split("=")[1].split("&")[0]}-{api_battles["currentRound"]}')
+                                              f'{link.split("=")[1].split("&")[0]}-{api_battles["currentRound"]}')
         hit_time.clear()
         msg = f"{role} {custom}"
         embed = Embed(colour=0x3D85C6,

@@ -12,6 +12,7 @@ from re import findall, finditer
 from traceback import format_exception
 from typing import List, Optional, Union
 
+from PIL import Image, ImageDraw, ImageFont
 from aiohttp import ClientSession, ClientTimeout
 from discord import ButtonStyle, Embed, File, Interaction, Message, ui
 from discord.app_commands import CheckFailure
@@ -22,12 +23,10 @@ from lxml.html import fromstring
 from matplotlib import pyplot as plt
 from matplotlib.dates import DateFormatter
 from matplotlib.ticker import FixedLocator
-from PIL import Image, ImageDraw, ImageFont
 from pytz import timezone
 from tabulate import tabulate
 
 from bot.bot import bot
-
 from .constants import (all_countries, all_parameters, all_servers, api_url,
                         config_ids, countries_per_id, countries_per_server,
                         date_format, flags_codes)
@@ -49,9 +48,11 @@ class CoolDownModified:
             return None  # remove cooldown
         return Cooldown(self.rate, self.per)
 
+
 def remove_decimal(x: float | int) -> int | float:
     """5 -> 5, 5.0 -> 5, 5.1 -> 5.1"""
     return int(x) if isinstance(x, float) and x.is_integer() else x
+
 
 def get_sides(api_battles: dict, attacker_id: int = None, defender_id: int = None) -> tuple[str, str]:
     attacker_id = attacker_id or api_battles["attackerId"]
@@ -62,6 +63,7 @@ def get_sides(api_battles: dict, attacker_id: int = None, defender_id: int = Non
     else:
         attacker, defender = "Attacker", "Defender"
     return attacker, defender
+
 
 def server_validation(server: str) -> str:
     """server validation"""

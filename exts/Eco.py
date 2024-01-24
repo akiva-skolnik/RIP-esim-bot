@@ -256,7 +256,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             msg = await utils.update_percent(index, length, msg)
             try:
                 func = utils.get_locked_content if server == "primera" else utils.get_content
-                tree = await func(f"{base_url}monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1")
+                tree = await func(
+                    f"{base_url}monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1")
                 ratio = float(tree.xpath("//*[@class='ratio']//b/text()")[0])
             except Exception:
                 ratio = 0
@@ -375,7 +376,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         for item, row in db_dict.items():
             if item != "Product":
                 results.append([f"**{item.replace('Defense_System', 'DS')}**: {utils.codes(row[0][2])} {row[0][2]}",
-                               f"{row[0][0]}g", f"{row[0][1]:,}"])
+                                f"{row[0][0]}g", f"{row[0][1]:,}"])
         embed.set_footer(text=db_dict["Product"][0][-1])
         await utils.send_long_embed(interaction, embed, headers, results)
 
@@ -418,7 +419,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 embed.set_footer(text=db_dict["Product"][0][-1])
                 if results:
                     embed.add_field(name="**Link**", value="\n".join(
-                            [f"{utils.codes(row[2])} [{row[2]}]({row[3]}) ([MM]({row[4]}))" for row in results]))
+                        [f"{utils.codes(row[2])} [{row[2]}]({row[3]}) ([MM]({row[4]}))" for row in results]))
                     embed.add_field(name="**Price**", value="\n".join([f"{row[0]}g" for row in results]))
                     embed.add_field(name="**Stock**", value="\n".join([f"{row[1]:,}" for row in results]))
                     best_price = results[0][0]
@@ -483,10 +484,10 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 await utils.replace_one("price", server, db_dict)
 
                 embed.add_field(name="**Link**", value="\n".join([
-                    f"{utils.codes(DICT['country'])} [{DICT['country']}]({base_url}productMarket.html?"
-                    f"resource={item}&countryId={country_id}&quality={quality}) "
-                    f"([MM]({base_url}monetaryMarket.html?buyerCurrencyId={country_id}))"
-                    for country_id, DICT in final.items()][:5]))
+                                                                     f"{utils.codes(DICT['country'])} [{DICT['country']}]({base_url}productMarket.html?"
+                                                                     f"resource={item}&countryId={country_id}&quality={quality}) "
+                                                                     f"([MM]({base_url}monetaryMarket.html?buyerCurrencyId={country_id}))"
+                                                                     for country_id, DICT in final.items()][:5]))
                 embed.add_field(name="**Price**", value="\n".join([f"{DICT['price']}g" for DICT in final.values()][:5]))
                 embed.add_field(name="**Stock**", value="\n".join([str(DICT["stock"]) for DICT in final.values()][:5]))
                 best_price = list(final.values())[0]['price']
@@ -554,7 +555,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             output_buffer = await self.bot.loop.run_in_executor(None, x, db_dict)
             file = File(fp=output_buffer, filename=f"{interaction.id}.png")
             embed.set_thumbnail(url=f"attachment://{interaction.id}.png")
-            await utils.custom_followup(interaction, message, file=file, embed=await utils.convert_embed(interaction, embed))
+            await utils.custom_followup(interaction, message, file=file,
+                                        embed=await utils.convert_embed(interaction, embed))
         else:
             await utils.custom_followup(interaction, message, embed=await utils.convert_embed(interaction, embed))
 

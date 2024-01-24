@@ -168,7 +168,7 @@ class General(Cog):
 
         is_online = tree.xpath('//*[@id="loginBar"]//span[2]/@class')[0] == "online"
         embed = Embed(colour=0x3D85C6, url=link, description=title, title=("\U0001f7e2" if is_online else "\U0001f534")
-                      + f" {api['login']}, {utils.codes(api['citizenship'])} {api['citizenship']}")
+                                                                          + f" {api['login']}, {utils.codes(api['citizenship'])} {api['citizenship']}")
 
         birthday = (tree.xpath('//*[@class="profile-row" and span = "Birthday"]/span/text()') or [1])[0]
         debts = sum(float(x) for x in tree.xpath('//*[@class="profile-data red"]//li/text()')[::6])
@@ -220,7 +220,8 @@ class General(Cog):
         eqs = []
         for eq_type, parameters, values, eq_link in utils.get_eqs(tree):
             eqs.append(
-                f"**[{eq_type}]({base_url}{eq_link}):** " + ", ".join(f"{val} {p}" for val, p in zip(values, parameters)))
+                f"**[{eq_type}]({base_url}{eq_link}):** " + ", ".join(
+                    f"{val} {p}" for val, p in zip(values, parameters)))
             for val, p in zip(values, parameters):
                 if p not in stats:
                     stats[p] = 0
@@ -230,7 +231,7 @@ class General(Cog):
         embed.add_field(name="**Equipments**", value="\n".join(eqs) or "- no eqs found -")
 
         embed.add_field(name="Links", value="\n".join(
-                            [f"[{k}]({v})" for k, v in get_user_links(base_url, link, api, company).items() if v]))
+            [f"[{k}]({v})" for k, v in get_user_links(base_url, link, api, company).items() if v]))
         avatar_url = tree.xpath('//*[@class="bigAvatar epidemic"]/@src')[0].strip()
         files = []
         if "http" in avatar_url:
@@ -270,7 +271,8 @@ class General(Cog):
                 continue
             row = [f"#{index} {utils.codes(cs) if not country else ''}"
                    f" [{current_nick[:17]}]({base_url}profile.html?id={citizen_id})",
-                   f"**{int(total_minutes):,}** ({total_avg}h per day)", f"**{int(month_minutes):,}** ({month_avg}h per day)"]
+                   f"**{int(total_minutes):,}** ({total_avg}h per day)",
+                   f"**{int(month_minutes):,}** ({month_avg}h per day)"]
             if row not in result:
                 result.append(row)
             if len(result) == 100:
@@ -288,7 +290,8 @@ class General(Cog):
 
     @checks.dynamic_cooldown(CoolDownModified(5))
     @command()
-    @describe(when="Example: 2022/02/28 20:06:30 (defaults: date=today, year=this year, seconds=0, all poland time zone)")
+    @describe(
+        when="Example: 2022/02/28 20:06:30 (defaults: date=today, year=this year, seconds=0, all poland time zone)")
     @guild_only()
     async def remind(self, interaction: Interaction, when: str, msg: str) -> None:
         """Remind a specific message in the given time."""
@@ -353,8 +356,10 @@ class General(Cog):
                     await utils.replace_one("collection", "remind", find_remind)
                     await utils.custom_followup(interaction, f"{reminder_id[0]} removed", ephemeral=True)
             elif len(reminder_id) > 1:
-                await utils.custom_followup(interaction, "Type `/remove reminder_id: ID` with one of those ID's: " + ', '.join(
-                    reminder_id) + f"\nExample: `/remove reminder_id: {reminder_id[0]}`", ephemeral=True)
+                await utils.custom_followup(interaction,
+                                            "Type `/remove reminder_id: ID` with one of those ID's: " + ', '.join(
+                                                reminder_id) + f"\nExample: `/remove reminder_id: {reminder_id[0]}`",
+                                            ephemeral=True)
             else:
                 await utils.custom_followup(
                     interaction, "There is nothing to remove. For adding reminders, use `/remind`", ephemeral=True)

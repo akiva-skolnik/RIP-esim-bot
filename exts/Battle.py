@@ -354,7 +354,7 @@ class Battle(Cog):
                         else:
                             prob = math.comb(n, k) * math.pow(p, k) * math.pow(1 - p, n - k)
                         x.append(prob * 100)
-                        y.append(k+1)  # Shift the data to avoid log(0)
+                        y.append(k + 1)  # Shift the data to avoid log(0)
                         max_k = max(max_k, k)
                         total_chances += prob
                         if total_chances > 0.99:
@@ -401,11 +401,11 @@ class Battle(Cog):
                     ax.set_xscale('log')
 
                     means = [round(x) for x in mean_values if x > 20]
-                    ticks = sorted(set(list(range(1, min(10, max_k+1))) + means))
+                    ticks = sorted(set(list(range(1, min(10, max_k + 1))) + means))
 
                     ax.set_xticks(ticks)
                     # Shift back the data to the original
-                    tick_labels = [str(tick-1) for tick in ticks]
+                    tick_labels = [str(tick - 1) for tick in ticks]
                     ax.set_xticklabels(tick_labels)
                     return utils.plt_to_bytes(fig)
 
@@ -711,7 +711,7 @@ class Battle(Cog):
                                  "img/specialItems/" in x]
                 buffs = ', '.join([x.split("_")[0].replace("Vacations", "Vac").replace("Resistance", "Sewer").replace(
                     "Pain Dealer", "PD ").replace("Bonus Damage", "") + ("% Bonus" if "Bonus Damage" in x.split(
-                        "_")[0] else "") for x in buffs_debuffs if "Positive" in x.split("_")[1:]]).title()
+                    "_")[0] else "") for x in buffs_debuffs if "Positive" in x.split("_")[1:]]).title()
                 debuffs = ', '.join([x.split("_")[0].lower().replace("Vacation", "Vac").replace(
                     "Resistance", "Sewer") for x in buffs_debuffs if "Negative" in x.split("_")[1:]]).title()
                 if check_battle and api_battles['type'] != "ATTACK":
@@ -765,7 +765,7 @@ class Battle(Cog):
                     db_row = find_buffs[row[0]]
                     index = None
                     if (datetime.strptime(now, date_format) -
-                            datetime.strptime(db_row[5], date_format)).total_seconds() < 86400:
+                        datetime.strptime(db_row[5], date_format)).total_seconds() < 86400:
                         index = -2
                     if not db_row[5]:
                         index = -1

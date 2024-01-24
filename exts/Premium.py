@@ -265,7 +265,8 @@ class Premium(Cog):
     # @command()
     # @check(utils.is_premium_level_1)
     # @describe(fund_raising_link="if you have a working link, pls provide it (faster result), otherwise I will do my best.")
-    async def bb(self, interaction: Interaction, server: Transform[str, Server], fund_raising_link: Optional[str]) -> None:
+    async def bb(self, interaction: Interaction, server: Transform[str, Server],
+                 fund_raising_link: Optional[str]) -> None:
         """Displays baby boom (fund-raising) stats for a given server."""
         if fund_raising_link and "fundRaising" not in fund_raising_link:
             await utils.custom_followup(interaction, "This is not a fundRaising link.", ephemeral=True)
@@ -469,7 +470,8 @@ class Premium(Cog):
                 if not 1 <= m <= 12 or y < 2011:
                     raise ValueError
         except ValueError:
-            await utils.custom_followup(interaction, f"Wrong month format {month}. It should be like 12-2012", ephemeral=True)
+            await utils.custom_followup(interaction, f"Wrong month format {month}. It should be like 12-2012",
+                                        ephemeral=True)
             return
         await interaction.response.defer()
         countries = utils.get_countries(server, index=0)

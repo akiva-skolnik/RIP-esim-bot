@@ -248,7 +248,8 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
               fast_server="used for medkits estimation")
     #         extra_premium_info="True (premium) will give more data, but it will take much longer")
     # @check(utils.is_premium_level_1)
-    async def dmg_stats(self, interaction: Interaction, server: Transform[str, Server], battle_ids: Transform[list, Ids],
+    async def dmg_stats(self, interaction: Interaction, server: Transform[str, Server],
+                        battle_ids: Transform[list, Ids],
                         included_countries: Optional[str], battles_types: Optional[Transform[list, BattleTypes]],
                         fast_server: bool = None) -> None:
         """Displays a lot of data about the given battles"""
@@ -267,7 +268,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                 except KeyError:
                     await utils.custom_followup(
                         interaction,
-                        "Couldn't find country, make sure your countries are separated by a comma (,)",  ephemeral=True)
+                        "Couldn't find country, make sure your countries are separated by a comma (,)", ephemeral=True)
                     return
 
         await interaction.response.defer()

@@ -41,7 +41,8 @@ class Setup(Cog):
                 del d[user_id]
         elif user_id not in d:
             if nick != "-":
-                nick = (await utils.get_content(f'https://{server}.e-sim.org/apiCitizenByName.html?name={nick}'))["login"]
+                nick = (await utils.get_content(f'https://{server}.e-sim.org/apiCitizenByName.html?name={nick}'))[
+                    "login"]
             d[user_id] = {server: nick}
             await utils.custom_followup(interaction, f"`{nick}` is now your default nick at `{server}`", ephemeral=True)
         else:
@@ -77,7 +78,8 @@ class Setup(Cog):
         if str(interaction.user.id) in self.bot.phone_users:
             self.bot.phone_users.remove(str(interaction.user.id))
             await utils.custom_followup(
-                interaction, "Embeds will be sent to you now at computer format! To change it invoke the command again.",
+                interaction,
+                "Embeds will be sent to you now at computer format! To change it invoke the command again.",
                 ephemeral=True)
 
         else:

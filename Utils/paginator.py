@@ -28,6 +28,7 @@ class NumberedPageModal(discord.ui.Modal, title='Go to page'):
 
 class Pages(discord.ui.View):
     """Pages"""
+
     def __init__(
             self,
             source: menus.PageSource,
@@ -223,13 +224,13 @@ class FieldPageSource(menus.ListPageSource):
     """A page source that requires (field_name, field_value) tuple items."""
 
     def __init__(
-        self,
-        entries: list,
-        *,
-        per_page: int = 12,
-        inline: bool = False,
-        clear_description: bool = True,
-        embed: discord.Embed = discord.Embed(colour=discord.Colour.blurple())
+            self,
+            entries: list,
+            *,
+            per_page: int = 12,
+            inline: bool = False,
+            clear_description: bool = True,
+            embed: discord.Embed = discord.Embed(colour=discord.Colour.blurple())
     ) -> None:
         super().__init__(entries, per_page=per_page)
         self.embed: discord.Embed = embed

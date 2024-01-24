@@ -38,6 +38,7 @@ def find_one(collection: str, _id: str) -> dict:
 
 class MyTree(app_commands.CommandTree):
     """Lock new server"""
+
     async def interaction_check(self, interaction: Interaction) -> bool:
         """Lock new server"""
         if not any("arcadia" in str(v) for v in interaction.data.values()):
@@ -68,10 +69,11 @@ class MyTree(app_commands.CommandTree):
 
 class MyClient(Bot):
     """Custom Client"""
+
     def __init__(self) -> None:
         super().__init__(command_prefix=when_mentioned, case_insensitive=True,
                          activity=Game("type /"), allowed_mentions=AllowedMentions(
-                          replied_user=False), intents=Intents.default(), tree_cls=MyTree)
+                replied_user=False), intents=Intents.default(), tree_cls=MyTree)
         self.root = root
         self.typing_gif = os.path.join(self.root, "files/typing.gif")
         config_path = os.path.join(self.root, "config.json")

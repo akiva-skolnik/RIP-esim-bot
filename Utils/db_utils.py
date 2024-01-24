@@ -6,13 +6,12 @@ from asyncmy.cursors import logger as asyncmy_logger
 from discord import Interaction
 
 from bot.bot import bot
-
 from .utils import custom_delay, get_content
 
 asyncmy_logger.setLevel("ERROR")  # I INSERT IGNORE, so I don't care about duplicate key warnings
 
 api_battles_columns = ('battle_id', 'currentRound', 'lastVerifiedRound', 'attackerScore', 'regionId',
-                       'defenderScore',  'frozen', 'type', 'defenderId', 'attackerId', 'totalSecondsRemaining')
+                       'defenderScore', 'frozen', 'type', 'defenderId', 'attackerId', 'totalSecondsRemaining')
 api_fights_columns = ('battle_id', 'round_id', 'damage', 'weapon', 'berserk', 'defenderSide', 'citizenship',
                       'citizenId', 'time', 'militaryUnit')
 

@@ -14,12 +14,12 @@ from discord.app_commands import guilds
 from discord.utils import setup_logging
 from pytz import timezone
 
+from Utils import utils
+from Utils.constants import all_servers, config_ids, date_format
 from bot.bot import bot, load_extensions
 from exts.Battle import (motivate_func, ping_func, watch_auction_func,
                          watch_func)
 from exts.General import remind_func
-from Utils import utils
-from Utils.constants import all_servers, config_ids, date_format
 
 matplotlib.use('Agg')
 
