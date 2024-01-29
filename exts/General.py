@@ -16,7 +16,7 @@ from Utils import utils
 from Utils.constants import (all_countries, all_products, all_servers, api_url,
                              config_ids, date_format, gids)
 from Utils.transformers import Country, Server
-from Utils.utils import CoolDownModified, camel_case_merge
+from Utils.utils import CoolDownModified
 
 
 class General(Cog):
@@ -88,7 +88,6 @@ class General(Cog):
     async def events(self, interaction: Interaction, servers: str = "") -> None:
         """Shows the upcoming events for the given servers"""
 
-        await interaction.response.defer()
         if not servers or servers.lower() == "all":
             servers = " ".join(all_servers)
         embed = Embed(colour=0x3D85C6, title="Events")
@@ -152,7 +151,6 @@ class General(Cog):
     async def profile(self, interaction: Interaction, server: Transform[str, Server], nick: str) -> None:
         """Displays data about a player"""
 
-        await interaction.response.defer()
         base_url = f"https://{server}.e-sim.org/"
         api = await utils.get_content(f'{base_url}apiCitizenByName.html?name={nick.lower()}')
 
@@ -175,14 +173,7 @@ class General(Cog):
         assets = sum(float(x.strip()) for x in tree.xpath(
             '//*[@class="profile-data" and (strong = "Assets")]//ul//li/text()') if "." in x)
 
-        buffs_debuffs = [camel_case_merge(x.split("/specialItems/")[-1].split(".png")[0]).replace("Elixir", "") for x in
-                         tree.xpath('//*[@class="profile-row" and (strong="Debuffs" or strong="Buffs")]//img/@src') if
-                         "img/specialItems/" in x]
-        buffs = ', '.join([x.split("_")[0].replace("Vacations", "Vac").replace("Resistance", "Sewer").replace(
-            "Pain Dealer", "PD ").replace("Bonus Damage", "") + ("% Bonus" if "Bonus Damage" in x.split("_")[0] else "")
-                           for x in buffs_debuffs if "Positive" in x.split("_")[1:]]).title()
-        debuffs = ', '.join([x.split("_")[0].lower().replace("Vacation", "Vac").replace(
-            "Resistance", "Sewer") for x in buffs_debuffs if "Negative" in x.split("_")[1:]]).title()
+        buffs, debuffs = utils.get_buffs_debuffs(tree)
         avg_per_day = 0
 
         if server in gids:
@@ -246,7 +237,6 @@ class General(Cog):
     async def time_online(self, interaction: Interaction, server: Transform[str, Server], nick: str = "",
                           country: Transform[str, Country] = "", military_unit_id: int = 0) -> None:
         """Displays online players stats per server and country / nick / military unit."""
-        await interaction.response.defer()
         base_url = f"https://{server}.e-sim.org/"
         if military_unit_id:
             members = await utils.get_content(
@@ -315,7 +305,6 @@ class General(Cog):
         if seconds >= 1000000:
             await utils.custom_followup(interaction, "That's too far away", ephemeral=True)
             return
-        await interaction.response.defer()
         random_id = randint(1000, 9999)
         await utils.custom_followup(interaction,
                                     f'The reminder is set to `{when}` Poland time (`{seconds}` seconds from now).'
@@ -405,8 +394,7 @@ class General(Cog):
     @command()
     async def link(self, interaction: Interaction, link: str) -> None:
         """Get info about a link"""
-        await interaction.response.defer()
-        get_url = link.replace("http://", "https://")
+        get_url = link.replace("http://", "https://")  # noqa WPS221
         server = get_url.split("https://")[-1].split(".e-sim.org/")[0]
         if not link.startswith(api_url):
             get_url = api_url + link.replace("https://", "https:/")

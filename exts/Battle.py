@@ -25,7 +25,7 @@ from Utils.constants import (all_countries, all_countries_by_name, all_servers,
 from Utils.dmg_func import dmg_func
 from Utils.transformers import (AuctionLink, BattleLink, Country, Server,
                                 TournamentLink)
-from Utils.utils import (CoolDownModified, bar, camel_case_merge,
+from Utils.utils import (CoolDownModified, bar,
                          dmg_calculator, draw_pil_table, not_support)
 from Utils.watch_utils import (cup_func, motivate_func, normal_pdf, ping_func,
                                watch_auction_func, watch_func)
@@ -45,8 +45,8 @@ class Battle(Cog):
         for server, data in gids.items():
             description += f"[**{server}**](https://docs.google.com/spreadsheets/d/{data[0]}/edit#gid={data[2]})\n"
         embed.description = description
-        return await interaction.response.send_message("You can also use `/buff <server> <country or MU id>`",
-                                                       embed=await utils.convert_embed(interaction, embed))
+        await utils.custom_followup(interaction, "You can also use `/buffs`",
+                                    embed=await utils.convert_embed(interaction, embed))
 
     @checks.dynamic_cooldown(CoolDownModified(5))
     @command()
@@ -55,10 +55,8 @@ class Battle(Cog):
         """Displays buffed players per server and country or military unit."""
 
         if server not in gids:
-            return await interaction.response.send_message("You can not use this server in this command",
-                                                           ephemeral=True)
-
-        await interaction.response.defer()
+            await utils.custom_followup(interaction, "You can not use this server in this command", ephemeral=True)
+            return
         if military_unit_id:
             members = await utils.get_content(
                 f'https://{server}.e-sim.org/apiMilitaryUnitMembers.html?id={military_unit_id}')
@@ -147,7 +145,7 @@ class Battle(Cog):
     async def cup_plus(self, interaction: Interaction, tournament_link: Transform[str, TournamentLink],
                        nick: str = "") -> None:
         """Displays the top 10 players in a cup tournament (faster for premium)"""
-        await interaction.response.send_message("Ok")
+        await utils.custom_followup(interaction, "Ok")
         link = tournament_link
         server = link.split("https://", 1)[1].split(".e-sim.org", 1)[0]
         await utils.default_nick(interaction, server, nick)
@@ -184,15 +182,17 @@ class Battle(Cog):
                   first_battle_id: int, last_battle_id: int, nick: str = "") -> None:
         """Displays the top 10 players in a cup tournament."""
         if last_battle_id - first_battle_id > 1000:
-            return await interaction.response.send_message(
-                f"You are asking me to check {last_battle_id - first_battle_id} battles.\n"
-                "I have a reason to believe that you should recheck your request.",
-                ephemeral=True)
+            await utils.custom_followup(interaction,
+                                        f"You are asking me to check {last_battle_id - first_battle_id} battles.\n"
+                                        "I have a reason to believe that you should recheck your request.",
+                                        ephemeral=True)
+            return
         if last_battle_id - first_battle_id < 1:
-            return await interaction.response.send_message(
-                "You can find the first and last id on the `news` -> `military events` page.",
-                ephemeral=True)
-        await interaction.response.send_message("Ok")
+            await utils.custom_followup(interaction,
+                                        "You can find the first and last id on the `news` -> `military events` page.",
+                                        ephemeral=True)
+            return
+        await utils.custom_followup(interaction, "Ok")
         await utils.default_nick(interaction, server, nick)
         find_cup = await utils.find_one("collection", interaction.command.name)
         db_key = f"{server} {first_battle_id} {last_battle_id}"
@@ -256,10 +256,8 @@ class Battle(Cog):
     async def drops(self, interaction: Interaction, battle_link: Transform[dict, BattleLink], bonus: int = 0,
                     nick: str = "") -> None:
         """Displays the expected amount of drops in a given battle."""
-
         server, battle_id = battle_link["server"], battle_link["id"]
         link = f"https://{server}.e-sim.org/battle.html?id={battle_id}"
-        await interaction.response.defer()
         nick = await utils.default_nick(interaction, server, nick)
 
         tops_per_player = defaultdict(lambda: {'hits': 0, 'tops': [0, 0, 0]})  # Top 1, 3, 10 (respectively).
@@ -310,6 +308,7 @@ class Battle(Cog):
         embed.add_field(name="**Item : Drops**",
                         value="\n".join([f"**{k} :** {v[0]:,}" for k, v in drops_per_q.items()]))
         embed.add_field(name="**Hits For Next**", value="\n".join([f"{int(v[1]):,}" for v in drops_per_q.values()]))
+        given_user_id = None
         if nick:
             try:
                 api_citizen = f"https://{server}.e-sim.org/apiCitizenByName.html?name={nick.lower()}"
@@ -376,6 +375,7 @@ class Battle(Cog):
                     if nick and len(x) > 1:
                         await self.bot.loop.run_in_executor(None, lambda: ax.plot(y, x, marker='.', label=quality))
 
+        csv_writer = output = None
         if not nick:
             qualities = sorted(qualities, reverse=True)
             header = [[f"{x} Prediction Range", f"{x} chance"] for x in qualities]
@@ -437,8 +437,9 @@ class Battle(Cog):
     @check(not_support)
     async def motivate(self, interaction: Interaction, server: Transform[str, Server]) -> None:
         """Checks every ~10 minutes if there is a new citizen to motivate in the given server."""
+        await utils.custom_followup(interaction, "Ok")
         base_url = f'https://{server}.e-sim.org/'
-        await interaction.response.send_message("Ok")
+
         try:
             tree = await utils.get_content(f'{base_url}newCitizenStatistics.html')
             names = tree.xpath("//tr//td[1]/a/text()")
@@ -489,6 +490,7 @@ class Battle(Cog):
     @describe(servers="Default to all servers")
     async def got(self, interaction: Interaction, servers: str = "") -> None:
         """Stops motivate program."""
+        await utils.custom_followup(interaction, "Ok")
         if not servers or servers.lower() == "all":
             servers = " ".join(all_servers)
         db_dict = await utils.find_one("collection", "motivate")
@@ -510,13 +512,13 @@ class Battle(Cog):
                     del db_dict[server]
 
         if changed_servers:
-            await utils.custom_followup(
-                interaction, "Program `motivate` have been stopped for the following servers in this channel:\n" +
-                             ", ".join(changed_servers))
+            await interaction.edit_original_response(
+                content="Program `motivate` have been stopped for the following servers in this channel:\n" +
+                        ", ".join(changed_servers))
             await utils.replace_one("collection", "motivate", db_dict)
 
         else:
-            await utils.custom_followup(interaction, "I didn't had to change anything.")
+            await interaction.edit_original_response(content="I didn't had to change anything.")
 
     @command(name="motivate-scanner")
     @check(utils.is_premium_level_1)
@@ -530,7 +532,7 @@ class Battle(Cog):
         embed = Embed(colour=0x3D85C6, title="Motivates", url=f'{base_url}newCitizenStatistics.html')
         embed.set_footer(text="\U0001f7e2, \U0001f534 = Already Sent / Available")
         results = []
-        view = None
+        view = index = None
         for index in range(200):
             tree = await utils.get_locked_content(f'{base_url}profile.html?id={citizen_id}', index == 0)
             birthday = int(tree.xpath(
@@ -584,7 +586,6 @@ class Battle(Cog):
     async def nexts(self, interaction: Interaction, server: Transform[str, Server],
                     country: Transform[str, Country] = "") -> None:
         """Displays the upcoming battles."""
-        await interaction.response.defer()
         base_url = f'https://{server}.e-sim.org/'
         battles = await utils.get_battles(base_url, all_countries_by_name.get(country.lower(), 0))
 
@@ -639,11 +640,11 @@ class Battle(Cog):
         """
 
         if extra_premium_info and not await utils.is_premium_level_1(interaction, False):
-            await utils.custom_followup(
-                interaction,
-                "`extra_premium_info` is a premium parameter! If you wish to use it, "
-                "along with many other premium commands, please visit https://www.buymeacoffee.com/RipEsim"
-                "\n\nOtherwise, try again, but this time with `extra_premium_info=False`", ephemeral=True)
+            await utils.custom_followup(interaction,
+                                        "`extra_premium_info` is a premium parameter! If you wish to use it, "
+                                        "along with many other premium commands, please visit https://www.buymeacoffee.com/RipEsim"
+                                        "\n\nOtherwise, try again, but this time with `extra_premium_info=False`",
+                                        ephemeral=True)
             return
 
         check_battle = False
@@ -656,8 +657,6 @@ class Battle(Cog):
             await utils.custom_followup(interaction, "You must provide server or battle link", ephemeral=True)
             return
 
-        await interaction.response.defer()
-
         members = []
         country = all_countries_by_name.get(country.lower(), 0)
 
@@ -669,7 +668,7 @@ class Battle(Cog):
         base_url = f"https://{server}.e-sim.org/"
         api_map = await utils.get_content(f"{base_url}apiMap.html")
         occupant_id = {i['regionId']: i['occupantId'] for i in api_map}
-
+        api_battles = None
         if check_battle:
             api_battles = await utils.get_content(link.replace("battle", "apiBattles").replace("id", "battleId"))
             try:
@@ -705,15 +704,7 @@ class Battle(Cog):
                     dmg = tree.xpath('//*[@class="profile-row" and span = "Damage"]/span/text()')[0]
                 except IndexError:
                     continue
-                buffs_debuffs = [camel_case_merge(x.split("/specialItems/")[-1].split(".png")[0]).replace("Elixir", "")
-                                 for x in tree.xpath(
-                        '//*[@class="profile-row" and (strong="Debuffs" or strong="Buffs")]//img/@src') if
-                                 "img/specialItems/" in x]
-                buffs = ', '.join([x.split("_")[0].replace("Vacations", "Vac").replace("Resistance", "Sewer").replace(
-                    "Pain Dealer", "PD ").replace("Bonus Damage", "") + ("% Bonus" if "Bonus Damage" in x.split(
-                    "_")[0] else "") for x in buffs_debuffs if "Positive" in x.split("_")[1:]]).title()
-                debuffs = ', '.join([x.split("_")[0].lower().replace("Vacation", "Vac").replace(
-                    "Resistance", "Sewer") for x in buffs_debuffs if "Negative" in x.split("_")[1:]]).title()
+                buffs, debuffs = utils.get_buffs_debuffs(tree)
                 if check_battle and api_battles['type'] != "ATTACK":
                     header = "Nick", "Citizenship", "lvl", "Total DMG", "Buffs", "Debuffs"
                     row = [name, all_countries[citizenship], level, dmg, buffs, debuffs]
@@ -786,10 +777,9 @@ class Battle(Cog):
         """Informs the user about each round that comes to an end."""
 
         ping_id = randint(1000, 9999)
-        await utils.custom_followup(
-            interaction, f"I will write here at the last {t} minutes of every battle in "
-                         f"{server if not country else country}.\n"
-                         f"If you want to stop it, type `/stop ping_id: {ping_id}`")
+        await utils.custom_followup(interaction,
+                                    f"I will write here at the last {t} minutes of every battle in {server if not country else country}.\n"
+                                    f"If you want to stop it, type `/stop ping_id: {ping_id}`")
         ping_id = f"{interaction.channel.id} {ping_id}"
         try:
             role = role.mention
@@ -807,6 +797,7 @@ class Battle(Cog):
     async def stop(self, interaction: Interaction, ping_id: int) -> None:
         """Stopping `ping` program for a given id.
         If you meant to stop `motivate` program - use `got`"""
+        await utils.custom_followup(interaction, "Ok", ephemeral=True)
         find_ping = await utils.find_one("collection", "ping")
         if ping_id == 0:
             ping_ids = [x.split()[1] for x in find_ping if str(interaction.channel.id) == x.split()[0]]
@@ -818,16 +809,14 @@ class Battle(Cog):
         elif f"{interaction.channel.id} {ping_id}" in find_ping:
             del find_ping[f"{interaction.channel.id} {ping_id}"]
             await utils.replace_one("collection", "ping", find_ping)
-            await utils.custom_followup(interaction, f"Program `ping` for ID {ping_id} have been stopped.")
+            await interaction.edit_original_response(content=f"Program `ping` for ID {ping_id} have been stopped.")
         else:
-            await utils.custom_followup(interaction, f"Id {ping_id} was not found in this channel", ephemeral=True)
+            await interaction.edit_original_response(content=f"Id {ping_id} was not found in this channel")
 
     @command()
     @check(utils.is_premium_level_1)
     async def spectators(self, interaction: Interaction, battle_link: Transform[dict, BattleLink]) -> None:
         """Displays spectators count in a battle (plus some extra info)."""
-
-        await interaction.response.defer()
         server, battle_id = battle_link["server"], battle_link["id"]
         link = f"https://{server}.e-sim.org/battle.html?id={battle_id}"
         tree = await utils.get_locked_content(link)
@@ -888,11 +877,11 @@ class Battle(Cog):
                 if sides and score:  # there can't be one without the other
                     row += f", **Sides:** {sides} ({score})"
                 data.append(row)
-        await interaction.response.send_message('\n'.join(["**Watch List:**"] + data + [
+        await utils.custom_followup(interaction, '\n'.join(["**Watch List:**"] + data + [
             "\nIf you want to remove any, write `/unwatch link: <link>` or `/unwatch link: ALL`",
             f"Example: `/unwatch link: {data[0].split()[0]}`"]) if data else
-                                                "Currently, I'm not watching any battle. "
-                                                "Type `/watch` if you want to watch one.")
+        "Currently, I'm not watching any battle. "
+        "Type `/watch` if you want to watch one.")
 
     @checks.dynamic_cooldown(CoolDownModified(10))
     @command()
@@ -905,7 +894,6 @@ class Battle(Cog):
     async def watch(self, interaction: Interaction, link: str, t: float = 5.0,
                     role: Role = None, custom_msg: str = "") -> None:
         """Watching a given battle (or auction) and pinging at a specific time."""
-
         try:
             role = role.mention
         except Exception:

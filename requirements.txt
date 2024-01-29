@@ -1,4 +1,4 @@
-discord.py[speed]>=2.0.0
+discord.py[speed]>=2.0.0  # this includes aiohttp
 git+https://github.com/Rapptz/discord-ext-menus
 sympy
 tabulate

@@ -14,7 +14,8 @@ from .constants import (all_countries, all_countries_by_name, all_products,
 
 def fix_link(link: str) -> str:
     """fix link"""
-    return link.split("#")[0].replace("http://", "https://").split("&actionStatus=")[0].replace("*", "")
+    return link.split("#")[0].replace("http://", "https://").split(  # noqa WPS221
+        "&actionStatus=")[0].replace("*", "")
 
 
 def get_server(link: str) -> str:
@@ -27,7 +28,19 @@ def get_id(link: str, parameter: str = "id") -> int:
     return int(link.split(parameter + "=")[1].split("&")[0])
 
 
-class Server(Transformer):  # noqa
+class Period(Transformer):
+    """Period"""
+
+    async def transform(self, interaction: Interaction, period: str) -> str:
+        lookup_split = period.split()
+        if not any(x in period.lower() for x in ("hour", "day", "month", "year")) or \
+                len(lookup_split) > 2 or (len(lookup_split) == 2 and not lookup_split[0].isdigit()):
+            error_msg = f"`period` can be `X hours/days/months/years`, example: 1 month (not {period})"
+            raise CheckFailure(error_msg)
+        return period.replace("s", "")  # remove trailing s
+
+
+class Server(Transformer):
     """Server"""
 
     async def transform(self, interaction: Interaction, server: str) -> str:
@@ -52,7 +65,7 @@ class Country(Transformer):
             reverse=True)][:10]
 
 
-class BattleTypes(Transformer):  # noqa
+class BattleTypes(Transformer):
     """BattleTypes"""
 
     async def transform(self, interaction: Interaction, battles_types: str) -> list:
@@ -85,7 +98,7 @@ class BattleTypes(Transformer):  # noqa
         return battle_types or ['ATTACK', 'RESISTANCE']
 
 
-class Ids(Transformer):  # noqa
+class Ids(Transformer):
     """Ids"""
 
     async def transform(self, interaction: Interaction, ids: str) -> list:
@@ -116,7 +129,7 @@ class Ids(Transformer):  # noqa
             raise TransformerError(ids, self.type, self) from exc
 
 
-class AuctionLink(Transformer):  # noqa
+class AuctionLink(Transformer):
     """AuctionLink"""
 
     async def transform(self, interaction: Interaction, link: str) -> dict:
@@ -128,7 +141,7 @@ class AuctionLink(Transformer):  # noqa
         raise TransformerError(link, self.type, self)
 
 
-class ProfileLink(Transformer):  # noqa
+class ProfileLink(Transformer):
     """ProfileLink"""
 
     async def transform(self, interaction: Interaction, link: str) -> dict:
@@ -160,18 +173,18 @@ class ProfileLink(Transformer):  # noqa
         return result
 
 
-class TournamentLink(Transformer):  # noqa
+class TournamentLink(Transformer):
     """TournamentLink"""
 
     async def transform(self, interaction: Interaction, tournament_link: str) -> str:
-        link = tournament_link.split("#")[0].replace("http://", "https://")
+        link = tournament_link.split("#")[0].replace("http://", "https://")  # noqa WPS221
         if any(x in link for x in ("tournamentEvent.html?id=", "teamTournament.html?id=",
                                    "countryTournament.html?id=")):
             return link
         raise TransformerError(tournament_link, self.type, self)
 
 
-class BattleLink(Transformer):  # noqa
+class BattleLink(Transformer):
     async def transform(self, interaction: Interaction, link: str) -> dict:
         round_id = 0
         last_battle = 0
@@ -201,7 +214,7 @@ class BattleLink(Transformer):  # noqa
             raise TransformerError(link, self.type, self) from exc
 
 
-class Product(Transformer):  # noqa
+class Product(Transformer):
     """Product"""
 
     def __init__(self, products_list: list = all_products):
@@ -215,7 +228,7 @@ class Product(Transformer):  # noqa
         return [Choice(name=x, value=x.upper()) for x in all_products]
 
 
-class Slots(Transformer):  # noqa
+class Slots(Transformer):
     """Slots"""
 
     async def transform(self, interaction: Interaction, slot: str) -> str:

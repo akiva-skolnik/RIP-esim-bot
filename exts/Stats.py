@@ -25,6 +25,19 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
     def __init__(self, bot) -> None:
         self.bot = bot
 
+    @staticmethod
+    async def __get_achievements_link_and_last_page(regular_achievement_type: str, premium_achievement_type: str,
+                                                    is_premium: bool, server: str) -> tuple[str, int]:
+        """__get_achievements_link_and_last_page"""
+        achievements_url = f'https://{server}.e-sim.org/achievement.html?type='
+        link = f'{achievements_url}{premium_achievement_type}' if is_premium \
+            else f'{achievements_url}{regular_achievement_type}'
+        last_page = await utils.last_page(link)
+        if last_page == 1:
+            link = f'{achievements_url}{premium_achievement_type}'
+            last_page = await utils.last_page(link)
+        return link, last_page
+
     @checks.dynamic_cooldown(CoolDownModified(60))
     @command()
     @describe(at_least_10_medals="Scan all active players with at least 10 medals, instead of 100 (premium)")
@@ -39,14 +52,9 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                              "\n\nOtherwise, try again, but this time with `at_least_10_medals=False`",
                 ephemeral=True)
             return
-        await interaction.response.defer()
         base_url = f'https://{server}.e-sim.org/'
-        link = f'{base_url}achievement.html?type=BH_COLLECTOR_I' if at_least_10_medals \
-            else f'{base_url}achievement.html?type=BH_COLLECTOR_II'
-        last_page = await utils.last_page(link)
-        if last_page == 1:
-            link = f'{base_url}achievement.html?type=BH_COLLECTOR_I'
-            last_page = await utils.last_page(link)
+        link, last_page = await self.__get_achievements_link_and_last_page(
+            "BH_COLLECTOR_II", "BH_COLLECTOR_I", at_least_10_medals, server)
 
         msg = await utils.custom_followup(interaction, "Progress status: 1%.\n(I will update you after every 10%)",
                                           file=File(self.bot.typing_gif))
@@ -72,16 +80,23 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
             if break_main:
                 break
 
+        headers = ["#", "Nick", "Citizenship", "BHs"]
+        await self.__send_csv_file_and_preview(interaction, output, headers, server, link, -1)
+
+    @staticmethod
+    async def __send_csv_file_and_preview(interaction: Interaction, output: StringIO, headers: list,
+                                          server: str, link: str, sort_by: int) -> None:
+        """__send_csv_file_and_preview"""
         output.seek(0)
-        sorted_list = sorted(reader(output), key=lambda row: int(row[-1]), reverse=True)
+        sorted_list = sorted(reader(output), key=lambda row: int(row[sort_by]), reverse=True)
         output = StringIO()
         csv_writer = writer(output)
-        csv_writer.writerow(["#", "Nick", "Citizenship", "BHs"])
+        csv_writer.writerow(headers)
         csv_writer.writerows([[index + 1] + row for index, row in enumerate(sorted_list)])
         output.seek(0)
         await utils.custom_followup(interaction, f'All players listed here: <{link}>', files=[
             File(fp=await utils.csv_to_image(output), filename=f"Preview_{server}.png"),
-            File(fp=BytesIO(output.getvalue().encode()), filename=f"BHs_{server}.csv")], mention_author=True)
+            File(fp=BytesIO(output.getvalue().encode()), filename=f"{server}.csv")], mention_author=True)
 
     @checks.dynamic_cooldown(CoolDownModified(10))
     @command()
@@ -111,7 +126,6 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
             ids = []
         else:
             ids = [x.strip() for x in ids.split(",")]
-        await interaction.response.defer()
         if ids_in_file:
             ids.extend([i.decode("utf-8").split(",")[0] for i in (await ids_in_file.read()).splitlines() if i])
         key = your_input_is
@@ -271,7 +285,6 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                         "Couldn't find country, make sure your countries are separated by a comma (,)", ephemeral=True)
                     return
 
-        await interaction.response.defer()
         msg = await utils.custom_followup(interaction,
                                           "Progress status: 1%.\n(I will update you after every 10%)\n"
                                           f"(I have to check about {len(battle_ids) * 2 * 11} e-sim pages"
@@ -507,7 +520,6 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                           battles: Transform[list, Ids]) -> None:
         """Shows drops distribution per player in the given battles."""
 
-        await interaction.response.defer()
         msg = await utils.custom_followup(interaction,
                                           "Progress status: 1%.\n(I will update you after every 10%)" if len(
                                               battles) > 10 else "I'm on it, Sir. Be patient.",
@@ -553,7 +565,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                         for nick, link, item in zip(nicks, links, items):
                             key = item.replace("Equipment parameter ", "")
                             if key not in my_dict[(nick, link)]:
-                                my_dict[(nick, link)][key] = 0
+                                my_dict[(nick, link)][key] = 0  # noqa E226
                             my_dict[(nick, link)][key] += 1
             except Exception as error:
                 await utils.send_error(interaction, error, current_id)
@@ -607,16 +619,11 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                              "\n\nOtherwise, try again, but this time with `scan_more_players=False`", ephemeral=True)
             return
 
-        await interaction.response.defer()
         base_url = f'https://{server}.e-sim.org/'
         output = StringIO()
         csv_writer = writer(output)
-        link = f'{base_url}achievement.html?type=EQUIPPED_V' if scan_more_players \
-            else f'{base_url}achievement.html?type=LEGENDARY_EQUIPMENT'
-        last_page = await utils.last_page(link)
-        if last_page == 1:
-            link = f'{base_url}achievement.html?type=EQUIPPED_V'
-            last_page = await utils.last_page(link)
+        link, last_page = await self.__get_achievements_link_and_last_page(
+            "LEGENDARY_EQUIPMENT", "EQUIPPED_V", scan_more_players, server)
         msg = await utils.custom_followup(interaction, "Progress status: 1%.\n(I will update you after every 10%)",
                                           file=File(self.bot.typing_gif))
         count = 0
@@ -633,28 +640,17 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                                      dmg["avoid"], dmg["clutch"], api['eqIncreaseEcoSkill']])
                 await utils.custom_delay(interaction)
 
-        output.seek(0)
-        sorted_list = sorted(reader(output), key=lambda row: int(row[-3]), reverse=True)
-        output = StringIO()
-        csv_writer = writer(output)
-        csv_writer.writerow(
-            ["#", "Nick", "Citizenship", "Crit", "Miss", "Avoid", "Max", "Dmg", "Per limit", "Per berserk", "Eco"])
-        csv_writer.writerows([[index + 1] + row for index, row in enumerate(sorted_list)])
-        output.seek(0)
-        await utils.custom_followup(interaction, f'All players listed here: <{link}>', files=[
-            File(fp=await utils.csv_to_image(output), filename=f"Preview_sets_{server}.png"),
-            File(fp=BytesIO(output.getvalue().encode()), filename=f"Sets_{server}.csv")], mention_author=True)
+        headers = ["#", "Nick", "Citizenship", "Crit", "Miss", "Avoid", "Max", "Dmg", "Per limit", "Per berserk", "Eco"]
+        await self.__send_csv_file_and_preview(interaction, output, headers, server, link, -3)
 
     @checks.dynamic_cooldown(CoolDownModified(5))
     @command()
     @describe(custom_api="API containing simple json (single dictionary or single list)")
     async def table(self, interaction: Interaction, server: Transform[str, Server], custom_api: str = "") -> None:
         """Converts simple json to csv table."""
-
         if custom_api and "http" not in custom_api:
             await utils.custom_followup(interaction, f"{custom_api} is not a valid link", ephemeral=True)
             return
-        await interaction.response.defer()
         if ".e-sim.org/battle.html?id=" in custom_api:
             if "round" in custom_api:
                 custom_api = custom_api.replace("battle", "apiFights").replace("id", "battleId").replace("round",
@@ -667,14 +663,15 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
         base_url = f"https://{server}.e-sim.org/"
         links = ["apiRegions", "apiMap", "apiRanks", "apiCountries", "apiOnlinePlayers"]
         for link in links if not custom_api else [custom_api]:
-            api = await utils.get_content((base_url + link + ".html") if not custom_api else custom_api,
-                                          return_type="json", throw=True)
+            api: list[str | dict] | dict = await utils.get_content(
+                (base_url + link + ".html") if not custom_api else custom_api, return_type="json", throw=True)
             if link == "apiOnlinePlayers":
                 api = [loads(row) for row in api]
             if not api:
                 await utils.custom_followup(interaction, "Nothing found.")
                 return
-            api = api if isinstance(api, list) else [api]
+            if not isinstance(api, list):
+                api = [api]
             lists_headers = [k for k, v in api[0].items() if isinstance(v, list)]
             headers = [k for k, v in api[0].items() if not isinstance(v, list)]
             headers = await update_missing_keys(link, headers)
@@ -685,7 +682,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                 csv_writer.writerow([row.get(header, "") for header in headers])
 
                 for header in lists_headers:
-                    value = row.get(header, "")
+                    value = row.get(header)
                     if not value:
                         continue
                     if not isinstance(value[0], dict):

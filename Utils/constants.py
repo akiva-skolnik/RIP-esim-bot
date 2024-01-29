@@ -202,7 +202,7 @@ gids = {
     "arcadia": ["1Tx-3WqitqY0gqDZbohT0eXYQTxhWEBSVnM-OtzcJwD0", 1876322398, 845606470]
 }
 
-api_url = "http://23.95.130.52:5000/"
+api_url = "https://23.95.130.52:5000/"
 date_format = "%d-%m-%Y %H:%M:%S"
 
 all_servers = ['primera', 'secura', 'suna', 'alpha', 'luxia', 'nika', 'vega', 'arcadia']

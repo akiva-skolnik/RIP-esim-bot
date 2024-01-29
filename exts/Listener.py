@@ -26,10 +26,7 @@ class Listener(Cog):
         """Commands Counter"""
         if "name" not in interaction.data or not command:
             return
-        data = interaction.data["name"] + " " + " ".join(
-            f"**{x.get('name')}**: {x.get('value')}" for x in interaction.data.get('options', []))
-
-        msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)}] : {data}"
+        msg = self.__get_error_msg(interaction)
 
         my_cogs = sorted([cog for cog in self.bot.cogs if cog != "Listener"] + ["BlackMarket"])
         channel_name = f"{str(command.name).lower().split()[-1].replace('+', '-plus')}"
@@ -53,13 +50,18 @@ class Listener(Cog):
 
         await utils.replace_one("collection", "commands_count", commands_count)
 
+    @staticmethod
+    def __get_error_msg(interaction: Interaction):
+        """Get error message"""
+        data = interaction.data["name"] + " " + " ".join(
+            f"**{x.get('name')}**: {x.get('value')}" for x in interaction.data.get('options', []))
+        return f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)}] : {data}"
+
     @Cog.listener()
     async def on_app_command_error(self, interaction: Interaction, error: AppCommandError):
         """on app command error"""
         error = getattr(error, 'original', error)
-        data = interaction.data["name"] + " " + " ".join(
-            f"**{x.get('name')}**: {x.get('value')}" for x in interaction.data.get('options', []))
-        msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)}] : {data}"
+        msg = self.__get_error_msg(interaction)
 
         error_channel = self.bot.get_channel(config_ids["error_channel_id"])
         error_msg = f"{msg}\n```{''.join(format_exception(type(error), error, error.__traceback__))}```"

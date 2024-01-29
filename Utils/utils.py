@@ -11,6 +11,7 @@ from os import path
 from re import findall, finditer
 from traceback import format_exception
 from typing import List, Optional, Union
+from xml.etree import ElementTree
 
 from PIL import Image, ImageDraw, ImageFont
 from aiohttp import ClientSession, ClientTimeout
@@ -463,7 +464,8 @@ async def get_content(link: str, return_type: str = "", method: str = "get", ses
             return_type = "json"
         else:
             return_type = "html"
-    server = link.split("#")[0].replace("http://", "https://").split("https://")[1].split(".e-sim.org")[0]
+    server = link.split("#")[0].replace("http://", "https://").split(  # noqa WPS221
+        "https://")[1].split(".e-sim.org")[0]
     if not session:
         session = bot.session
     for _ in range(5):
@@ -531,7 +533,7 @@ async def get_session(server: str) -> ClientSession:
 
 async def get_locked_content(link: str, test_login: bool = False, method: str = "get"):
     """get locked content"""
-    link = link.split("#")[0].replace("http://", "https://")
+    link = link.split("#")[0].replace("http://", "https://")  # noqa WPS221
     server = link.split("https://", 1)[1].split(".e-sim.org", 1)[0]
     nick = bot.config.get(server, bot.config['nick'])
     password = bot.config.get(server + "_password", bot.config['password'])
@@ -957,8 +959,8 @@ def camel_case(s: str) -> str:
 
 async def custom_followup(interaction: Interaction, content: str = None, **kwargs) -> Message:
     """custom_followup"""
-    if not interaction.response.is_done():
-        msg = await interaction.response.send_message(content, **kwargs)
+    if not interaction.response.is_done():  # type: ignore
+        msg = await interaction.response.send_message(content, **kwargs)  # type: ignore
     else:
         if "mention_author" in kwargs:
             del kwargs["mention_author"]
@@ -1035,3 +1037,16 @@ async def replace_one(collection: str, _id: str, data: dict) -> None:
 async def remove_old_donors():
     bot.premium_users = {k: v for k, v in bot.premium_users.items() if "level" in v}
     await replace_one("collection", "donors", bot.premium_users)
+
+
+def get_buffs_debuffs(tree: ElementTree) -> (str, str):
+    buffs_debuffs = [camel_case_merge(x.split("/specialItems/")[-1].split(".png")[0]).replace("Elixir", "")
+                     for x in tree.xpath(
+            '//*[@class="profile-row" and (strong="Debuffs" or strong="Buffs")]//img/@src') if "img/specialItems/" in x]
+    buffs = ', '.join([x.split("_")[0].replace("Vacations", "Vac").replace(
+        "Resistance", "Sewer").replace("Pain Dealer", "PD ").replace(
+        "Bonus Damage", "") + ("% Bonus" if "Bonus Damage" in x.split("_")[0] else "")
+                       for x in buffs_debuffs if "Positive" in x.split("_")[1:]]).title()
+    debuffs = ', '.join([x.split("_")[0].lower().replace("Vacation", "Vac").replace(
+        "Resistance", "Sewer") for x in buffs_debuffs if "Negative" in x.split("_")[1:]]).title()
+    return buffs, debuffs

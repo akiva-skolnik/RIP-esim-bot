@@ -133,9 +133,9 @@ async def update_from_source(interaction: Interaction) -> None:
     if not bot.config.get("test_mode"):
         process = subprocess.Popen(["git", "pull"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=bot.root)
         output = process.communicate()[0]
-        await interaction.response.send_message(output.decode("utf-8") or "Error")
+        await utils.custom_followup(interaction, output.decode("utf-8") or "Error")
     else:  # local
-        await interaction.response.send_message("Reloading all extensions...")
+        await utils.custom_followup(interaction, "Reloading all extensions...")
     await load_extensions(reload=True)
     importlib.reload(modules["Utils"])
 

@@ -31,12 +31,10 @@ async def dmg_func(bot, interaction: Interaction, battle_link: Transform[dict, B
         await utils.custom_followup(
             interaction, "It's too much, sorry. You can buy premium and remove this limit.", ephemeral=True)
         return
-
-    await interaction.response.defer()
     server = utils.server_validation(server or "")
     base_url = f"https://{server}.e-sim.org/"
     api_battles = await utils.get_content(f'{base_url}apiBattles.html?battleId={battle_id}')
-    key = None
+    key = mu_name = mu_api = header = citizen = None
     if country:
         nick = country
         key_id = all_countries_by_name[country.lower()]
@@ -109,26 +107,13 @@ async def dmg_func(bot, interaction: Interaction, battle_link: Transform[dict, B
                 for hit in reversed(
                         await utils.get_content(
                             f'{base_url}apiFights.html?battleId={battle_id}&roundId={round_i}')):
-                    wep = 5 if hit['berserk'] else 1
                     side_string = defender if hit['defenderSide'] else attacker
-                    if not range_of_battles:
-                        my_dict[side_string]['weps'][hit['weapon']] += wep
-                        my_dict[side_string]['dmg'] += hit['damage']
-                    my_dict['Total']['weps'][hit['weapon']] += wep
-                    my_dict['Total']['dmg'] += hit['damage']
-                    if key in hit:
-                        my_dict[hit[key]]['weps'][hit['weapon']] += wep
-                        my_dict[hit[key]]['dmg'] += hit['damage']
-
-                    hit_time[side_string]["time"].append(utils.get_time(hit["time"]))
-                    if hit_time[side_string]["dmg"]:
-                        hit_time[side_string]["dmg"].append(hit_time[side_string]["dmg"][-1] + hit['damage'])
-                    else:
-                        hit_time[side_string]["dmg"].append(hit['damage'])
+                    update_hit_dmg(hit, my_dict, range_of_battles, key, side_string)
+                    update_hit_time(hit, hit_time, side_string)
 
                     if key == 'citizenId':
                         side = defender_details if hit['defenderSide'] else attacker_details
-                        side[hit['citizenId']]['weps'][hit['weapon']] += wep
+                        side[hit['citizenId']]['weps'][hit['weapon']] += 5 if hit['berserk'] else 1
                         side[hit['citizenId']]['dmg'] += hit['damage']
 
                 for side in (attacker_details, defender_details):
@@ -155,25 +140,14 @@ async def dmg_func(bot, interaction: Interaction, battle_link: Transform[dict, B
             api_fights = await utils.get_content(
                 f'{base_url}apiFights.html?battleId={battle_id}&roundId={round_id}')
             for hit in reversed(api_fights):
-                wep = 5 if hit['berserk'] else 1
-                side = defender if hit['defenderSide'] else attacker
-                if not range_of_battles:
-                    my_dict[side]['weps'][hit['weapon']] += wep
-                    my_dict[side]['dmg'] += hit['damage']
-                my_dict['Total']['weps'][hit['weapon']] += wep
-                my_dict['Total']['dmg'] += hit['damage']
-                if key not in hit:
-                    continue
-                my_dict[hit[key]]['dmg'] += hit['damage']
-                my_dict[hit[key]]['weps'][hit['weapon']] += wep
+                side_string = defender if hit['defenderSide'] else attacker
+                update_hit_dmg(hit, my_dict, range_of_battles, key, side_string)
+                if key in hit:
+                    # TODO: I am not sure what this is doing
+                    if (not range_of_battles) and (not key_id or hit[key] == key_id):
+                        name = nick if key_id else side_string
+                        update_hit_time(hit, hit_time, name)
 
-                if (not range_of_battles) and (hit[key] == key_id or not key_id):
-                    name = nick if key_id else side
-                    hit_time[name]["time"].append(utils.get_time(hit["time"]))
-                    if hit_time[name]["dmg"]:
-                        hit_time[name]["dmg"].append(hit_time[name]["dmg"][-1] + hit['damage'])
-                    else:
-                        hit_time[name]["dmg"].append(hit['damage'])
             if not hit and not range_of_battles:
                 await utils.custom_followup(
                     interaction,
@@ -299,3 +273,23 @@ async def dmg_func(bot, interaction: Interaction, battle_link: Transform[dict, B
                 await utils.custom_delay(interaction)
             embed.set_field_at(index, name=field.name[:-5] + "**", value="\n".join(values))
     await msg.edit(embed=await utils.convert_embed(interaction, embed), view=view)
+
+
+def update_hit_dmg(hit: dict, my_dict: dict, range_of_battles: bool, key: str, side_string: str) -> None:
+    wep = 5 if hit['berserk'] else 1
+    if not range_of_battles:
+        my_dict[side_string]['weps'][hit['weapon']] += wep
+        my_dict[side_string]['dmg'] += hit['damage']
+    my_dict['Total']['weps'][hit['weapon']] += wep
+    my_dict['Total']['dmg'] += hit['damage']
+    if key in hit:
+        my_dict[hit[key]]['weps'][hit['weapon']] += wep
+        my_dict[hit[key]]['dmg'] += hit['damage']
+
+
+def update_hit_time(hit: dict, hit_time: dict, side_string: str) -> None:
+    hit_time[side_string]["time"].append(utils.get_time(hit["time"]))
+    if hit_time[side_string]["dmg"]:
+        hit_time[side_string]["dmg"].append(hit_time[side_string]["dmg"][-1] + hit['damage'])
+    else:
+        hit_time[side_string]["dmg"].append(hit['damage'])

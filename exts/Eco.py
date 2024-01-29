@@ -101,7 +101,6 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
     async def job(self, interaction: Interaction, server: Transform[str, Server], skill: float) -> None:
         """Job finder."""
 
-        await interaction.response.defer()
         base_url = f"https://{server}.e-sim.org/"
         skill = int(skill)
         data = {}
@@ -166,7 +165,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         Good Luck :)
         """
 
-        await interaction.response.send_message(hint)
+        await utils.custom_followup(interaction, hint)
 
     # TODO: auto find region and hour
     @checks.dynamic_cooldown(CoolDownModified(5))
@@ -186,7 +185,6 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                                         ephemeral=True)
             return
 
-        await interaction.response.defer()
         base_url = f"https://{server}.e-sim.org/"
         regions = sorted(await utils.get_content(f'{base_url}apiRegions.html'), key=lambda x: x["id"])
 
@@ -243,7 +241,6 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                              "If you want it to work, DM the author (@34444#8649) with org password (for premium)",
                 ephemeral=True)
             return
-        await interaction.response.defer()
         base_url = f"https://{server}.e-sim.org/"
         mm_dict = {}
         msg = await utils.custom_followup(interaction, "Progress status: 1%.\n(I will update you after every 10%)",
@@ -302,7 +299,6 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 interaction, "As far as I know, there is no regions penalty in this server", ephemeral=True)
             return
 
-        await interaction.response.defer()
         country_name, country = country, all_countries_by_name.get(country.lower())
 
         data = []
@@ -366,7 +362,6 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
     @command()
     async def price_list(self, interaction: Interaction, server: Transform[str, Server]) -> None:
         """Displays a list of the cheapest prices in the given server"""
-        await interaction.response.defer()
         db_dict = await utils.find_one("price", server)
         embed = Embed(colour=0x3D85C6, title=server,
                       description=f"[All products]({self._get_product_sheet_link(server)}),"
@@ -393,7 +388,6 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                              "along with many other premium commands, please visit https://www.buymeacoffee.com/RipEsim"
                              "\n\nOtherwise, try again, but this time with `real_time=False`")
             return
-        await interaction.response.defer()
         if not quality:
             quality = 5
         base_url = f'https://{server}.e-sim.org/'
@@ -435,6 +429,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                     if await utils.is_premium_level_1(interaction, False):
                         real_time = True
 
+        embed = None
         if real_time:
             currency_names = {v: k for k, v in utils.get_countries(server, index=2).items()}
             final = {}
@@ -565,8 +560,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
     @describe(link="profile, military unit or stock company link")
     async def productivity(self, interaction: Interaction, link: str) -> None:
         """Companies productivity results (per player / MU / SC)."""
-        await interaction.response.defer()
-        link = link.split("#")[0].replace("http://", "https://")
+        link = link.split("#")[0].replace("http://", "https://")  # noqa WPS221
         server = link.split("https://", 1)[1].split(".e-sim.org", 1)[0]
         base_url = f"https://{server}.e-sim.org/"
         used = defaultdict(lambda: [0] * 10)
@@ -707,9 +701,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
     @check(utils.is_premium_level_1)
     async def sc_profit(self, interaction: Interaction, server: Transform[str, Server], stock_company_id: int) -> None:
         """Displays the profit of each shareholder in a given stock company."""
-
         base_url = f'https://{server}.e-sim.org/'
-        await interaction.response.defer()
         balance = defaultdict(
             lambda: {"profit": 0, "dividends": 0, "shares sold": 0, "shares purchased": 0, "owned shares": 0})
         link = f'{base_url}stockCompanyLogs.html' \
@@ -781,7 +773,6 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
     async def mm(self, interaction: Interaction,
                  server: Transform[str, Server], country: Transform[str, Country] = "") -> None:
         """Shows monetary market stats per server/country."""
-        await interaction.response.defer()
         country_id = all_countries_by_name.get(country.lower(), 0)
         link = f"https://{server}.e-sim.org/monetaryMarket.html?buyerCurrencyId={country_id}"
         get_url = api_url + link.replace("https://", "https:/")
@@ -851,10 +842,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         embed = Embed(colour=0x3D85C6)
         files = []
         fig, ax = plt.subplots()
-        func = interaction.response.send_message
         if "/profile.html?id=" in parameter:
-            await interaction.response.defer()
-            func = interaction.followup.send
             server_nick = await ProfileLink().transform(interaction, parameter)
             server = server_nick['server']
             base_link = "apiCitizenByName.html?name=" if isinstance(server_nick["nick_or_id"],
@@ -959,7 +947,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 embed.set_footer(text="Try also /upgrade <Profile Link>")
 
         if not total:
-            return await func("There is nothing to upgrade")
+            await utils.custom_followup(interaction, "There is nothing to upgrade")
+            return
 
         ax.yaxis.set_major_locator(FixedLocator(ax.get_yticks()))
         ax.set_yticklabels([f'{x * 100:.0f}%' for x in ax.get_yticks()])
@@ -968,7 +957,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         output_buffer = utils.plt_to_bytes(fig)
         files.append(File(fp=output_buffer, filename=f"{interaction.id}.png"))
         embed.set_thumbnail(url=f"attachment://{interaction.id}.png")
-        await func(files=files, embed=await utils.convert_embed(interaction, embed))
+        await utils.custom_followup(interaction, files=files, embed=await utils.convert_embed(interaction, embed))
 
 
 async def calc_upgrades(bot, parameter: str, value: float, total: dict, ax, slot="") -> (list, list, int):

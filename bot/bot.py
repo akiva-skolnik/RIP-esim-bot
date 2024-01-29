@@ -41,6 +41,9 @@ class MyTree(app_commands.CommandTree):
 
     async def interaction_check(self, interaction: Interaction) -> bool:
         """Lock new server"""
+        # This is done at the beginning of every interaction.
+        await interaction.response.defer()  # type: ignore
+
         if not any("arcadia" in str(v) for v in interaction.data.values()):
             return True
 
@@ -58,10 +61,10 @@ class MyTree(app_commands.CommandTree):
             # await replace_one("collection", "donors", bot.premium_users)
             return True
         try:
-            await interaction.response.send_message(
-                "arcadia server is for premium users only. You can use one command per day for free."
-                "\nGet premium at <https://www.buymeacoffee.com/RipEsim> :coffee:"
-                "\nSupport: https://discord.com/invite/q96wSd6")
+            await utils.custom_followup(interaction,
+                                        "arcadia server is for premium users only. You can use one command per day for free."
+                                        "\nGet premium at <https://www.buymeacoffee.com/RipEsim> :coffee:"
+                                        "\nSupport: https://discord.com/invite/q96wSd6")
         except HTTPException:
             pass
         return False
@@ -73,7 +76,7 @@ class MyClient(Bot):
     def __init__(self) -> None:
         super().__init__(command_prefix=when_mentioned, case_insensitive=True,
                          activity=Game("type /"), allowed_mentions=AllowedMentions(
-                replied_user=False), intents=Intents.default(), tree_cls=MyTree)
+                replied_user=False), intents=Intents.default())  # , tree_cls=MyTree)
         self.root = root
         self.typing_gif = os.path.join(self.root, "files/typing.gif")
         config_path = os.path.join(self.root, "config.json")

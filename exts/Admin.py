@@ -58,7 +58,7 @@ class Admin(Cog):
                                           )''')
 
                     await cursor.execute(f"CREATE INDEX battle_id_index ON {server}.apiFights (battle_id)")
-        await interaction.response.send_message("done")
+        await utils.custom_followup(interaction, "done")
 
     @command()
     @guilds(utils.hidden_guild)
@@ -66,7 +66,7 @@ class Admin(Cog):
         await self.bot.session.close()
         for server, session in self.bot.locked_sessions.items():
             await session.close()
-        await interaction.response.send_message("done")
+        await utils.custom_followup(interaction, "done")
         await self.bot.close()
 
     @command()
@@ -76,7 +76,6 @@ class Admin(Cog):
         """Executes a given code"""
         if interaction.user.id != config_ids.get("OWNER_ID"):
             return
-        await interaction.response.defer()
 
         env = {
             'bot': self.bot,
@@ -151,7 +150,6 @@ class Admin(Cog):
     @guilds(utils.hidden_guild)
     async def sync(self, interaction: Interaction, this_guild: bool = True) -> None:
         """Sync Commands"""
-        await interaction.response.defer()
         if this_guild:
             synced = await self.bot.tree.sync(guild=interaction.guild)
         else:

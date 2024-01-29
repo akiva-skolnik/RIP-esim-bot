@@ -28,7 +28,6 @@ class BlackMarket(GroupCog, name="black-market"):
                    item_quality: Range[int, 0, 7] = 5, product: Transform[str, Product] = "",
                    equipment: Transform[str, Slots] = "") -> None:
         """Display a list of offers for specific products or equipment per server."""
-
         data = await utils.find_one("collection", __name__)
         if not product and not equipment:
             by_servers = {}
@@ -192,7 +191,6 @@ class BlackMarket(GroupCog, name="black-market"):
     async def list_per_user(self, interaction: Interaction, server: Optional[Transform[str, Server]],
                             user: Optional[User]) -> None:
         """Displays a list of items for a given user in the black market."""
-
         user = user or interaction.user
         data = await utils.find_one("collection", __name__)
         rates = (await utils.find_one("collection", "rates")).get(str(user.id))

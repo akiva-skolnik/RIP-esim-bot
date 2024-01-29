@@ -10,7 +10,7 @@ from discord.ext.commands import Cog
 from lxml.html import fromstring
 
 from Utils import utils
-from Utils.transformers import Ids, Server
+from Utils.transformers import Ids, Server, Period
 
 
 class Premium(Cog):
@@ -25,23 +25,14 @@ class Premium(Cog):
     @describe(include_comments="true is slower and false gives more data",
               period="should be similar to e-sim format (<x> hours/days/months/years)")
     async def articles(self, interaction: Interaction, server: Transform[str, Server], include_comments: Optional[bool],
-                       period: str) -> None:
+                       period: Period) -> None:
         """Displays articles stats."""
-        lookup_split = period.split()
-        if not any(x in period.lower() for x in ("hour", "day", "month", "year")) or \
-                len(lookup_split) > 2 or (len(lookup_split) == 2 and not lookup_split[0].isdigit()):
-            await utils.custom_followup(
-                interaction, f"`period` can be `<x> hours/days/months/years`, example: 1 month (not {period})",
-                ephemeral=True)
-            return
-        period = period.replace("s", "")  # remove trailing s
         my_dict = {"articles": 0, "replies (by author)": 0, "votes": 0, "replies (to author)": 0}
         if not include_comments:
             del my_dict["replies (by author)"], my_dict["replies (to author)"]
         authors_per_month = defaultdict(lambda: my_dict.copy())
         preview_articles = 0
         deleted = 0
-        await interaction.response.defer()
         msg = await utils.custom_followup(interaction,
                                           "I'm on it, Sir. Be patient. (I have no idea how long it will take, "
                                           "but i will update this msg every 50 articles)",
@@ -193,8 +184,6 @@ class Premium(Cog):
     async def auctions(self, interaction: Interaction, server: Transform[str, Server],
                        auctions_ids: Transform[list, Ids]) -> None:
         """Displays data about range of auctions."""
-
-        await interaction.response.defer()
         msg = await utils.custom_followup(interaction,
                                           "Progress status: 1%.\n(I will update you after every 10%)" if len(
                                               auctions_ids) > 10 else "I'm on it, Sir. Be patient.",
@@ -271,7 +260,6 @@ class Premium(Cog):
         if fund_raising_link and "fundRaising" not in fund_raising_link:
             await utils.custom_followup(interaction, "This is not a fundRaising link.", ephemeral=True)
             return
-        await interaction.response.defer()
         servers = {"primera": {"day": 3401, "funds": 440},
                    "secura": {"day": 3046, "funds": 369},
                    "suna": {"day": 3197, "funds": 508},
@@ -307,7 +295,7 @@ class Premium(Cog):
             base_url = f"https://{server}.e-sim.org/"
             tree = await utils.get_locked_content(f"{base_url}fundRaising.html?id={fund_raising_link}")
         else:
-            fund_raising_link = fund_raising_link.split("#")[0].replace("http://", "https://")
+            fund_raising_link = fund_raising_link.split("#")[0].replace("http://", "https://")  # noqa WPS221
             server = fund_raising_link.split("https://", 1)[1].split(".e-sim.org", 1)[0]
             base_url = f"https://{server}.e-sim.org/"
             tree = await utils.get_locked_content(fund_raising_link)
@@ -384,8 +372,6 @@ class Premium(Cog):
     @check(utils.is_premium_level_1)
     async def citizens(self, interaction: Interaction, server: Transform[str, Server]) -> None:
         """Displays result from the citizens api for the top 1000 citizens by total dmg."""
-
-        await interaction.response.defer()
         msg = await utils.custom_followup(interaction, "Progress status: 1%.\n(I will update you after every 10%)",
                                           file=File(self.bot.typing_gif))
         output = StringIO()
@@ -424,17 +410,16 @@ class Premium(Cog):
     @describe(month="Example: 12-2012, default to the last one")
     async def congress(self, interaction: Interaction, server: Transform[str, Server], month: Optional[str]) -> None:
         """Displays result from congress elections."""
-
         try:
             if month:
                 m, y = (int(x) for x in month.split("-"))
                 if not 1 <= m <= 12 or y < 2011:
                     raise ValueError
         except ValueError:
-            return await interaction.response.send_message(f"Wrong month format {month}. It should be like 12-2012",
-                                                           ephemeral=True)
+            await utils.custom_followup(interaction, f"Wrong month format {month}. It should be like 12-2012",
+                                        ephemeral=True)
+            return
         countries = utils.get_countries(server, index=0)
-        await interaction.response.defer()
         msg = await utils.custom_followup(interaction, "Progress status: 1%.\n(I will update you after every 10%)",
                                           file=File(self.bot.typing_gif))
         output = StringIO()
@@ -473,7 +458,6 @@ class Premium(Cog):
             await utils.custom_followup(interaction, f"Wrong month format {month}. It should be like 12-2012",
                                         ephemeral=True)
             return
-        await interaction.response.defer()
         countries = utils.get_countries(server, index=0)
         msg = await utils.custom_followup(interaction, "Progress status: 1%.\n(I will update you after every 10%)",
                                           file=File(self.bot.typing_gif))
@@ -505,8 +489,6 @@ class Premium(Cog):
     @check(utils.is_premium_level_1)
     async def medals(self, interaction: Interaction, server: Transform[str, Server]) -> None:
         """Checks how many friends and medals each player has in a given server (from the top 1000)"""
-
-        await interaction.response.defer()
         msg = await utils.custom_followup(interaction, "Progress status: 1%.\n(I will update you after every 10%)",
                                           file=File(self.bot.typing_gif))
         output = StringIO()
@@ -562,7 +544,6 @@ class Premium(Cog):
     async def org_logs(self, interaction: Interaction, server: Transform[str, Server],
                        first_day: int, last_day: int, org: str) -> None:
         """Analyzing org logs."""
-
         headers = {"DONATE": ["Type", "Date", "Donor", "", "Amount", "Type", "", "Receiver"],
                    "MONETARY_MARKET": ["Type", "Date", "Buyer", "", "Total amount", "CC bought", "", "Total paid",
                                        "Paid with", "", "Seller", "", "Ratio"],
@@ -578,7 +559,6 @@ class Premium(Cog):
         if not org.lower().endswith(" org"):
             org += " org"
         org = (await utils.get_content(f'{base_url}apiCitizenByName.html?name={org.lower()}'))["login"]
-        await interaction.response.defer()
         output = StringIO()
         csv_writer = writer(output)
         link = f"{base_url}orgTransactions.html?citizenName={org}&dayFrom={first_day}&dayTo={last_day}"
@@ -732,8 +712,6 @@ class Premium(Cog):
     async def stock_company(self, interaction: Interaction, server: Transform[str, Server],
                             stock_companies: Transform[list, Ids]) -> None:
         """Displays stats of the given stock companies."""
-
-        await interaction.response.defer()
         base_url = f"https://{server}.e-sim.org/"
         all_cc = set()
         all_products = set()
@@ -862,18 +840,8 @@ class Premium(Cog):
     @describe(include_comments="true is slower and false gives more data",
               period="should be similar to e-sim format (<x> hours/days/months/years)")
     async def shouts(self, interaction: Interaction, server: Transform[str, Server],
-                     include_comments: Optional[bool], period: str) -> None:
+                     include_comments: Optional[bool], period: Period) -> None:
         """Displays shouts stats."""
-
-        lookup_split = period.split()
-        if not any(x in period.lower() for x in ("hour", "day", "month", "year")) or \
-                len(lookup_split) > 2 or (len(lookup_split) == 2 and not lookup_split[0].isdigit()):
-            await utils.custom_followup(
-                interaction, f"`period` can be `<x> hours/days/months/years`, example: 1 month (not {period})",
-                ephemeral=True)
-            return
-        period = period.replace("s", "")  # remove trailing s
-        await interaction.response.defer()
         msg = await utils.custom_followup(interaction,
                                           "I'm on it, Sir. Be patient. (I have no idea how long it will take, "
                                           "but i will update this msg every 10 shouts pages)",

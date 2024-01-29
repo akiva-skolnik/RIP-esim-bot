@@ -1,8 +1,5 @@
 """paginator.py"""
 # Source: https://github.com/Rapptz/RoboDanny/blob/rewrite/cogs/utils/paginator.py
-
-from __future__ import annotations
-
 from typing import Any, Dict, Optional
 
 import discord
@@ -215,7 +212,6 @@ class Pages(discord.ui.View):
     @discord.ui.button(label='Delete', style=discord.ButtonStyle.red)
     async def stop_pages(self, interaction: discord.Interaction, button: discord.ui.Button):
         """stops the pagination session."""
-        await interaction.response.defer()
         await interaction.delete_original_response()
         self.stop()
 
