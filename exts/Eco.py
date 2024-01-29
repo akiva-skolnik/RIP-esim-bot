@@ -406,6 +406,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                     if market_is_not_empty:
                         real_time = True
 
+            embed = None
             if not real_time:
                 embed = Embed(colour=0x3D85C6, title=f"{product_name}, {server}",
                               description=f"[All products]({self._get_product_sheet_link(server)}),"
@@ -429,7 +430,6 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                     if await utils.is_premium_level_1(interaction, False):
                         real_time = True
 
-        embed = None
         if real_time:
             currency_names = {v: k for k, v in utils.get_countries(server, index=2).items()}
             final = {}
@@ -478,11 +478,11 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 db_dict[product_name] = results
                 await utils.replace_one("price", server, db_dict)
 
-                embed.add_field(name="**Link**", value="\n".join([
-                                                                     f"{utils.codes(DICT['country'])} [{DICT['country']}]({base_url}productMarket.html?"
-                                                                     f"resource={item}&countryId={country_id}&quality={quality}) "
-                                                                     f"([MM]({base_url}monetaryMarket.html?buyerCurrencyId={country_id}))"
-                                                                     for country_id, DICT in final.items()][:5]))
+                embed.add_field(name="**Link**", value="\n".join(
+                    [f"{utils.codes(DICT['country'])} [{DICT['country']}]({base_url}productMarket.html?"
+                     f"resource={item}&countryId={country_id}&quality={quality}) "
+                     f"([MM]({base_url}monetaryMarket.html?buyerCurrencyId={country_id}))"
+                     for country_id, DICT in final.items()][:5]))
                 embed.add_field(name="**Price**", value="\n".join([f"{DICT['price']}g" for DICT in final.values()][:5]))
                 embed.add_field(name="**Stock**", value="\n".join([str(DICT["stock"]) for DICT in final.values()][:5]))
                 best_price = list(final.values())[0]['price']
