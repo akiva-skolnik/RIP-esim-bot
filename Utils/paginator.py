@@ -212,7 +212,8 @@ class Pages(discord.ui.View):
     @discord.ui.button(label='Delete', style=discord.ButtonStyle.red)
     async def stop_pages(self, interaction: discord.Interaction, button: discord.ui.Button):
         """stops the pagination session."""
-        await interaction.delete_original_response()
+        # await interaction.delete_original_response()
+        await self.message.delete()
         self.stop()
 
 
@@ -226,17 +227,25 @@ class FieldPageSource(menus.ListPageSource):
             per_page: int = 12,
             inline: bool = False,
             clear_description: bool = True,
+            titles: list = None,
             embed: discord.Embed = discord.Embed(colour=discord.Colour.blurple())
     ) -> None:
         super().__init__(entries, per_page=per_page)
         self.embed: discord.Embed = embed
         self.clear_description: bool = clear_description
         self.inline: bool = inline
+        self.titles: list = titles
 
     async def format_page(self, menu: Pages, page: list) -> discord.Embed:
         self.embed.clear_fields()
+        self.embed.title = self.titles[menu.current_page] if self.titles else None
         if self.clear_description:
             self.embed.description = None
+
+        # page can be a list of tuples or a list of lists (of tuples)
+        # in the latter case, each inner list is a page
+        if isinstance(page[0], list):
+            page = page[menu.current_page]
 
         for key, value in page:
             self.embed.add_field(name=key, value=value, inline=self.inline)

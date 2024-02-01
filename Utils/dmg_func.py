@@ -233,7 +233,7 @@ async def dmg_func(bot, interaction: Interaction, battle_link: Transform[dict, B
 
     files = [File(fp=BytesIO(output.getvalue().encode()), filename="dmg.csv"),
              File(fp=output_buffer, filename=f"{interaction.id}.png")]
-    view = utils.WaitForNext() if "Id" in embed_name else MISSING
+    view = utils.Transform() if "Id" in embed_name else MISSING
     if len(table) == 1 and not range_of_battles:
         if key != 'citizenship':
             citizenship = all_countries[

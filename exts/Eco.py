@@ -136,6 +136,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
 
     @command()
     async def npc_help(self, interaction: Interaction):
+        """Shows some info about NPC."""
         hint = """**General info about NPC:**
 (might be outdated)
 
@@ -770,8 +771,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
 
     @checks.dynamic_cooldown(CoolDownModified(5))
     @command()
-    async def mm(self, interaction: Interaction,
-                 server: Transform[str, Server], country: Transform[str, Country] = "") -> None:
+    async def monetary_market(self, interaction: Interaction,
+                              server: Transform[str, Server], country: Transform[str, Country] = "") -> None:
         """Shows monetary market stats per server/country."""
         country_id = all_countries_by_name.get(country.lower(), 0)
         link = f"https://{server}.e-sim.org/monetaryMarket.html?buyerCurrencyId={country_id}"

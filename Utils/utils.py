@@ -719,7 +719,7 @@ class StopNext(ui.View):
         self.stop()
 
 
-class WaitForNext(ui.View):
+class Transform(ui.View):
     """Wait for next button"""
 
     def __init__(self) -> None:
@@ -834,11 +834,10 @@ async def send_long_embed(interaction: Interaction, embed: Embed, headers: list,
     result = list(zip(*result))
     pages = max(sum(len(str(x[index])) for x in result) for index in range(3)) // 950 + 1
     chunks = await split_list(result, pages)
-    chunks = [(headers[i], "\n".join([str(x[i]) for x in c])) for c in chunks for i in range(3)]
+    chunks = [(headers[i], "\n".join(str(x[i]) for x in chunk)) for chunk in chunks for i in range(3)]
     source = FieldPageSource(chunks, inline=True, per_page=3, clear_description=False, embed=embed)
     pages = Pages(source, interaction=interaction, embed=embed)
     await pages.start(files=files)
-    return
 
 
 async def csv_to_image(output: StringIO, columns: int = 10):
