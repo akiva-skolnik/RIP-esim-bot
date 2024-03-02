@@ -472,8 +472,8 @@ class Battle(Cog):
                 embed.add_field(name="Motivate", value="\n".join(result[1]))
                 embed.add_field(name="Registered", value="\n".join(result[2]))
                 await interaction.edit_original_response(embed=await utils.convert_embed(interaction, embed))
-        except Exception:
-            print(datetime.now().astimezone(timezone('Europe/Berlin')))
+        except Exception as error:
+            await utils.send_error(interaction, error)
             traceback.print_exc()
         db_dict = await utils.find_one("collection", "motivate")
         if server not in db_dict:

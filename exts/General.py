@@ -99,8 +99,8 @@ class General(Cog):
             now = datetime.now().astimezone(timezone('Europe/Berlin')).replace(tzinfo=None)
             try:
                 tree = await utils.get_locked_content(f'{base_url}tournamentEvents.html')
-            except Exception as e:
-                print("EVENTS ERROR:", server, e)
+            except Exception as error:
+                await utils.send_error(interaction, error)
                 embed.add_field(name=server, value="Error", inline=False)
                 continue
             events = []
@@ -128,13 +128,13 @@ class General(Cog):
                     except Exception:
                         try:
                             start_time[i] = datetime.strptime(start_time[i], "%d-%m-%Y %H:%M:%S")
-                        except Exception:
-                            print("EVENTS ERROR1:", server, start_time[i])
+                        except Exception as error:
+                            await utils.send_error(interaction, error)
                 try:
                     if start_time[i] > now:
                         indexes.append(i)
-                except Exception:
-                    print("EVENTS ERROR2:", server, start_time[i])
+                except Exception as error:
+                    await utils.send_error(interaction, error)
 
             if indexes:
                 indexes.sort(reverse=True)
