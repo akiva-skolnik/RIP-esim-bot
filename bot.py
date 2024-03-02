@@ -29,6 +29,7 @@ servers = {
 
 # TODO: split into smaller functions.
 async def update_buffs(server: str) -> None:
+    print("start update_buffs", server)
     """update buffs db"""
     base_url = f'https://{server}.e-sim.org/'
     BUFF_SIZES = {"mili": 15, "mini": 30, "standard": 60,
@@ -183,6 +184,7 @@ async def update_buffs(server: str) -> None:
 
 
 async def update_time(server: str) -> None:
+    print("start update_time", server)
     """Asynchronously updates the online time statistics of players in the e-sim game."""
     # Constants for indexes in the player data array
     NICK, CITIZENSHIP, TOTAL_MINUTES, TOTAL_AVG, MONTH_MINUTES, MONTH_AVG = range(6)
@@ -273,6 +275,7 @@ async def update_time(server: str) -> None:
 
 
 async def update_monetary_market():
+    print("start update_monetary_market")
     while True:
         mm_per_server = {server: {} for server in servers}
         loop_start_time = time.time()
@@ -296,8 +299,8 @@ async def update_monetary_market():
                             break
                     if not monetary_market_ration and ratios:
                         monetary_market_ration = float(ratios[-1])
-                except:
-                    pass
+                except Exception as e:
+                    print("ERROR update_monetary_market", e)
                 mm_per_server[server][str(country_id)] = min(1.4, monetary_market_ration)
                 await asyncio.sleep(0.35)
 
@@ -345,6 +348,7 @@ async def update_monetary_market():
 
 
 async def update_prices(server: str) -> None:
+    print("start update_prices", server)
     """Continuously updates the product prices database from the e-sim game for a given server."""
     base_url = f'https://{server}.e-sim.org/'
     is_first_update = True
@@ -456,21 +460,15 @@ async def update_prices(server: str) -> None:
 
 loop = asyncio.new_event_loop()
 
-async def start_time_buff() -> None:
-    """start time and buff"""
-    for server in servers:
-        loop.create_task(update_time(server))
-        loop.create_task(update_buffs(server))
-        await asyncio.sleep(120 / len(servers))
+async def delay(coro, seconds):
+    await asyncio.sleep(seconds)
+    await coro
 
-async def start_mm_price() -> None:
-    """start mm and price"""
-    loop.create_task(update_monetary_market())
-    await asyncio.sleep(30)
-    for server in servers:
-        loop.create_task(update_prices(server))
-        await asyncio.sleep(900 / len(servers))
+loop.create_task(update_monetary_market())
 
-loop.create_task(start_time_buff())
-loop.create_task(start_mm_price())
+for i, server in enumerate(servers):
+    loop.create_task(delay(update_prices(server), 10 + i * 900 / len(servers)))
+    loop.create_task(delay(update_time(server), 20 + i * 120 / len(servers)))
+    loop.create_task(delay(update_buffs(server), 30 + i * 120 / len(servers)))
+
 loop.run_forever()

@@ -37,11 +37,14 @@ all_parameters: dict = {
     "elixir": "Elixir time increased"
 }
 
-session = ClientSession(
-    headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:60.0) Gecko/20100101 Firefox/60.0"})
-locked_session = ClientSession(
-    headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:60.0) Gecko/20100101 Firefox/60.0"})
-
+sessions = {}
+async def get_session(locked: bool) -> ClientSession:
+    """create session"""
+    key = "locked" if locked else "regular"
+    if key not in sessions:
+        sessions[key] = ClientSession(headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:60.0) Gecko/20100101 Firefox/60.0"})
+    return sessions[key]
 
 def get_creds():
     """get creds callback"""
@@ -79,7 +82,8 @@ def get_countries(server: str, country: int = 0, index: int = -1) -> Union[str, 
     return per_id
 
 
-async def get_content(link: str, return_type: str = "", data: dict = None, session=session):
+async def get_content(link: str, return_type: str = "", data: dict = None, session=None):
+    session = session or await get_session(locked=False)
     if not return_type:
         if "api" in link:
             return_type = "json"
@@ -88,9 +92,8 @@ async def get_content(link: str, return_type: str = "", data: dict = None, sessi
     b = None
     for _ in range(10):
         try:
-            async with (
-                    session.get(link, ssl=False) if data is None else session.post(link, data=data,
-                                                                                   ssl=False)) as respond:
+            async with (session.get(link, ssl=False) if data is None else
+                        session.post(link, data=data, ssl=False)) as respond:
                 if "google.com" in str(respond.url) or respond.status == 403:
                     await asyncio.sleep(randint(3, 10))
                     continue
@@ -119,11 +122,12 @@ async def get_content(link: str, return_type: str = "", data: dict = None, sessi
 
 async def get_locked_content(link: str, test_login: bool = False):
     """get locked content"""
-    link = link.split("#")[0].replace("http://", "https://")
+    link = link.split("#")[0].replace("http://", "https://")  # noqa
     server = link.split("https://", 1)[1].split(".e-sim.org", 1)[0]
     base_url = f"https://{server}.e-sim.org/"
     not_logged_in = False
     tree = None
+    locked_session = await get_session(locked=True)
     try:
         if not test_login:
             tree = await get_content(link, session=locked_session)
