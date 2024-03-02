@@ -4,7 +4,6 @@ import heapq
 import json
 import time
 import traceback
-import warnings
 from collections import defaultdict
 from datetime import datetime, timedelta
 from random import randint
@@ -13,8 +12,6 @@ import pytz
 
 import utils
 from constants import countries_per_id, countries_per_server
-
-warnings.filterwarnings("ignore")
 
 TIMEZONE = 'Europe/Berlin'
 DATETIME_FORMAT = "%d-%m-%Y %H:%M:%S"
@@ -457,26 +454,22 @@ async def update_prices(server: str) -> None:
 
         await asyncio.sleep(max(1000 - time.time() + loop_start_time, 1))
 
-
-loop = asyncio.get_event_loop()
-
+loop = asyncio.new_event_loop()
 
 async def start_time_buff() -> None:
     """start time and buff"""
     for server in servers:
-        await loop.create_task(update_time(server))
-        await loop.create_task(update_buffs(server))
-        await asyncio.sleep(int(120 / len(servers)))
-
+        loop.create_task(update_time(server))
+        loop.create_task(update_buffs(server))
+        await asyncio.sleep(120 / len(servers))
 
 async def start_mm_price() -> None:
     """start mm and price"""
-    await loop.create_task(update_monetary_market())
+    loop.create_task(update_monetary_market())
     await asyncio.sleep(30)
     for server in servers:
-        await loop.create_task(update_prices(server))
-        await asyncio.sleep(int(900 / len(servers)))
-
+        loop.create_task(update_prices(server))
+        await asyncio.sleep(900 / len(servers))
 
 loop.create_task(start_time_buff())
 loop.create_task(start_mm_price())
