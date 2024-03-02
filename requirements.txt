@@ -2,4 +2,4 @@ python-dotenv
 pytz
 lxml
 aiohttp
-gspread_asyncio
+gspread-asyncio

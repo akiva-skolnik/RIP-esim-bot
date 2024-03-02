@@ -218,7 +218,8 @@ def extract_player_details(player_profile_link: str, tree: fromstring) -> dict:
                 '//*[@class="profile-row" and (strong="Debuffs" or strong="Buffs")]//img/@src') if
             "img/specialItems/" in x]
         buffs = [x.split("_")[0].lower() for x in buffs_debuffs if "positive" in x.split("_")[1:]]
-        buffed = any(a in buffs for a in ('steroids', 'tank', 'bunker', 'sewer'))
+        buffed = any(a in buffs for a in ('steroids', 'tank', 'bunker', 'sewer')) or any(
+            "elixir" in x for x in buffs)
     except Exception as e:
         print(f"Error extracting player details for {player_profile_link}: {e}")
         return {}
