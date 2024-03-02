@@ -310,7 +310,7 @@ class General(Cog):
                                     f'The reminder is set to `{when}` Poland time (`{seconds}` seconds from now).'
                                     f'\nIf you want to remove it, type `/remove reminder_id: {random_id}`')
         random_id = f"{interaction.channel.id} {random_id}"
-        msg = interaction.user.mention + msg
+        msg = interaction.user.mention + " " + msg
         find_remind = await utils.find_one("collection", "remind")
         find_remind[random_id] = {"when": when, "msg": msg}
         await utils.replace_one("collection", "remind", find_remind)
@@ -778,7 +778,8 @@ async def remind_func(channel: TextChannel, when: str, reminder_id: str, msg: st
     find_remind = await utils.find_one("collection", "remind")
     if reminder_id not in find_remind:
         return
-    await channel.send("Your reminder is ready: " + msg)
+    if seconds > 10:
+        await channel.send("Your reminder is ready: " + msg)
     del find_remind[reminder_id]
     await utils.replace_one("collection", "remind", find_remind)
 
