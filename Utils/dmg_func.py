@@ -83,7 +83,7 @@ async def dmg_func(bot, interaction: Interaction, battle_link: Transform[dict, B
         msg = await utils.custom_followup(interaction,
                                           "Progress status: 1%.\n(I will update you after every 10%)" if
                                           last_battle - battle_id > 10 else "I'm on it, Sir. Be patient.",
-                                          file=File(bot.typing_gif))
+                                          file=File(bot.typing_gif_path))
         empty_sides = {"Total": {'weps': [0, 0, 0, 0, 0, 0], 'dmg': 0}}
     else:
         msg = None

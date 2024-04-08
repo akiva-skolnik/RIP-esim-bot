@@ -57,7 +57,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
             "BH_COLLECTOR_II", "BH_COLLECTOR_I", at_least_10_medals, server)
 
         msg = await utils.custom_followup(interaction, "Progress status: 1%.\n(I will update you after every 10%)",
-                                          file=File(self.bot.typing_gif))
+                                          file=File(self.bot.typing_gif_path))
         count = 0
         output = StringIO()
         csv_writer = writer(output)
@@ -172,7 +172,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
             csv_writer.writerow(header)
         msg = await utils.custom_followup(
             interaction, "Progress status: 1%.\n(I will update you after every 10%)" if len(ids) > 10 else
-            "I'm on it, Sir. Be patient.", file=File(self.bot.typing_gif))
+            "I'm on it, Sir. Be patient.", file=File(self.bot.typing_gif_path))
         errors = []
         index = 0
         for index, current_id in enumerate(ids):
@@ -290,7 +290,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                                           f"(I have to check about {len(battle_ids) * 2 * 11} e-sim pages"
                                           f" (battles, rounds etc.), so be patient)" if len(
                                               battle_ids) > 10 else "I'm on it, Sir. Be patient.",
-                                          file=File(self.bot.typing_gif))
+                                          file=File(self.bot.typing_gif_path))
         # TODO: finish this
         # def get_where_dmg_stats(exact_sides: list[tuple[str]], any_side: list[str]) -> str:
         #     reversed_sides: list[tuple] = [tuple(reversed(side)) for side in exact_sides]
@@ -523,7 +523,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
         msg = await utils.custom_followup(interaction,
                                           "Progress status: 1%.\n(I will update you after every 10%)" if len(
                                               battles) > 10 else "I'm on it, Sir. Be patient.",
-                                          file=File(self.bot.typing_gif))
+                                          file=File(self.bot.typing_gif_path))
 
         base_url = f'https://{server}.e-sim.org/'
         lucky = False
@@ -625,7 +625,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
         link, last_page = await self.__get_achievements_link_and_last_page(
             "LEGENDARY_EQUIPMENT", "EQUIPPED_V", scan_more_players, server)
         msg = await utils.custom_followup(interaction, "Progress status: 1%.\n(I will update you after every 10%)",
-                                          file=File(self.bot.typing_gif))
+                                          file=File(self.bot.typing_gif_path))
         count = 0
         for page in range(1, last_page):
             tree = await utils.get_content(f'{link}&page={page}')
