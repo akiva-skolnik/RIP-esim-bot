@@ -3,10 +3,10 @@ from datetime import datetime
 import asyncmy
 import pandas as pd
 from asyncmy.cursors import logger as asyncmy_logger
-from discord import Interaction
+from discord import Interaction, File
 
 from bot.bot import bot
-from .utils import custom_delay, get_content
+from .utils import custom_delay, get_content, custom_followup, update_percent
 
 asyncmy_logger.setLevel("ERROR")  # I INSERT IGNORE, so I don't care about duplicate key warnings
 
@@ -108,6 +108,15 @@ async def insert_into_api_fights(server: str, battle_id: int, round_id: int) -> 
 
 async def cache_api_fights(interaction: Interaction, server: str, api_battles_df: pd.DataFrame) -> None:
     """Verify all fights are in db, if not, insert them"""
+    total_rounds_to_be_scanned = (api_battles_df["currentRound"].sum() -
+                                  api_battles_df["lastVerifiedRound"].sum() -
+                                  len(api_battles_df))
+    msg = await custom_followup(interaction,
+                                "Progress status: 1%.\n(I will update you after every 10%)\n"
+                                if total_rounds_to_be_scanned > 10 else "Alright, Sir. Just a moment.",
+                                file=File(bot.typing_gif_path))
+
+    scanned_rounds = 0
     for i, api_battles in api_battles_df.iterrows():
         battle_is_over = 8 in (api_battles['defenderScore'], api_battles['attackerScore'])
         if battle_is_over:
@@ -119,8 +128,10 @@ async def cache_api_fights(interaction: Interaction, server: str, api_battles_df
             # Using int because battle_id is np.int64
             await insert_into_api_fights(server, int(api_battles["battle_id"]), round_id)
             await custom_delay(interaction)
+            scanned_rounds += 1
 
         await update_last_verified_round(server, api_battles)
+        msg = await update_percent(scanned_rounds, total_rounds_to_be_scanned, msg)
 
 
 async def update_last_verified_round(server: str, api_battles: pd.Series) -> None:
@@ -153,6 +164,7 @@ async def update_last_verified_round(server: str, api_battles: pd.Series) -> Non
 
 async def select_many_api_fights(server: str, battle_ids: iter, columns: tuple = None,
                                  custom_condition: str = None) -> pd.DataFrame:
+    """Select all fight records in the given battles (can be a lot)"""
     columns = columns or api_fights_columns
     start_id, end_id = min(battle_ids), max(battle_ids)
     excluded_ids = ",".join(str(i) for i in range(start_id, end_id + 1) if i not in battle_ids)
@@ -166,10 +178,12 @@ async def select_many_api_fights(server: str, battle_ids: iter, columns: tuple =
     return pd.DataFrame(api_fights, columns=list(columns))
 
 
-async def get_api_fights_sum(server: str, battle_ids: iter) -> pd.DataFrame:
+async def get_api_fights_sum(server: str, battle_ids: iter, group_by: str = "citizenId") -> pd.DataFrame:
+    """Get the sum of damage, hits, and quality for each citizen in the given battles.
+    Returns a DataFrame with columns: citizenId, damage, Q0, Q1, Q2, Q3, Q4, Q5, hits"""
     start_id, end_id = min(battle_ids), max(battle_ids)
     excluded_ids = ",".join(str(i) for i in range(start_id, end_id + 1) if i not in battle_ids)
-    query = ("SELECT citizenId, SUM(damage) AS damage, "
+    query = (f"SELECT {group_by}, SUM(damage) AS damage, "
              "SUM(IF(weapon = 0, IF(berserk, 5, 1), 0)) AS Q0, "
              "SUM(IF(weapon = 1, IF(berserk, 5, 1), 0)) AS Q1, "
              "SUM(IF(weapon = 2, IF(berserk, 5, 1), 0)) AS Q2, "
@@ -178,14 +192,14 @@ async def get_api_fights_sum(server: str, battle_ids: iter) -> pd.DataFrame:
              "SUM(IF(weapon = 5, IF(berserk, 5, 1), 0)) AS Q5, "
              "SUM(IF(berserk, 5, 1)) AS hits "
              f"FROM {server}.apiFights "
-             f"WHERE (battle_id BETWEEN {start_id} AND {end_id}) AND citizenId <> 0 " +
+             f"WHERE (battle_id BETWEEN {start_id} AND {end_id}) AND {group_by} <> 0 " +
              (f"AND battle_id NOT IN ({excluded_ids}) " if excluded_ids else "") +
-             "GROUP BY citizenId "
+             f"GROUP BY {group_by} "
              "ORDER BY damage DESC "  # TODO: parameter
              )
 
     api_fights = await execute_query(bot.pool, query, fetch=True)
-    columns = ["citizenId", "damage", "Q0", "Q1", "Q2", "Q3", "Q4", "Q5", "hits"]
+    columns = [group_by, "damage", "Q0", "Q1", "Q2", "Q3", "Q4", "Q5", "hits"]
     return pd.DataFrame(api_fights, columns=columns, index=[x[0] for x in api_fights])
 
 
