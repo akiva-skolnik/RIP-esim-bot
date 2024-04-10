@@ -11,6 +11,7 @@ import pandas as pd
 from discord import Embed, File, Interaction, TextChannel
 from matplotlib import pyplot as plt
 from matplotlib.dates import DateFormatter
+from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import FixedLocator
 from pytz import timezone
 
@@ -291,7 +292,7 @@ def generate_cup_plot(df: pd.DataFrame, names: dict) -> Optional[BytesIO]:
     else:
         # remove ax1 and expand ax0
         fig.delaxes(ax1)
-        ax0.change_geometry(1, 1, 1)  # TODO: find alternative to change_geometry, which is deprecated
+        ax0.set_subplotspec(GridSpec(1, 1)[0])
 
     fig.suptitle('Total Damage vs Time')
     ax0.set_ylabel('Total Damage')

@@ -145,7 +145,6 @@ class Battle(Cog):
     async def cup_plus(self, interaction: Interaction, tournament_link: Transform[str, TournamentLink],
                        nick: str = "") -> None:
         """Displays the top 10 players in a cup tournament (faster for premium)"""
-        await utils.custom_followup(interaction, "Ok")
         link = tournament_link
         server = link.split("https://", 1)[1].split(".e-sim.org", 1)[0]
         await utils.default_nick(interaction, server, nick)
@@ -192,7 +191,6 @@ class Battle(Cog):
                                         "You can find the first and last id on the `news` -> `military events` page.",
                                         ephemeral=True)
             return
-        await utils.custom_followup(interaction, "Ok")
         await utils.default_nick(interaction, server, nick)
         find_cup = await utils.find_one("collection", interaction.command.name)
         db_key = f"{server} {first_battle_id} {last_battle_id}"
