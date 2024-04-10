@@ -884,18 +884,21 @@ def get_countries(server: str, country: int = 0, index: int = -1) -> Union[dict,
     return per_id
 
 
-def get_time(string: str, floor_to_10: bool = False) -> datetime:
+def get_time(string: str or datetime, floor_to_10: bool = False) -> datetime:
     """get time"""
-    try:
+    if isinstance(string, datetime):
+        dt = string
+    else:
         try:
-            dt = datetime.strptime(string.strip(), '%d-%m-%Y %H:%M:%S:%f')
+            try:
+                dt = datetime.strptime(string.strip(), '%d-%m-%Y %H:%M:%S:%f')
+            except ValueError:
+                dt = datetime.strptime(string.strip(), '%Y-%m-%d %H:%M:%S:%f')
         except ValueError:
-            dt = datetime.strptime(string.strip(), '%Y-%m-%d %H:%M:%S:%f')
-    except ValueError:
-        try:
-            dt = datetime.strptime(string.strip(), '%Y-%m-%d %H:%M:%S')
-        except ValueError:
-            dt = datetime.strptime(string.strip(), '%Y-%m-%d %H:%M:%S.%f')
+            try:
+                dt = datetime.strptime(string.strip(), '%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                dt = datetime.strptime(string.strip(), '%Y-%m-%d %H:%M:%S.%f')
     if floor_to_10:
         dt = dt - timedelta(minutes=dt.minute % 10, seconds=dt.second, microseconds=dt.microsecond)
     return dt

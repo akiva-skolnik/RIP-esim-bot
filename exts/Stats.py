@@ -1,6 +1,5 @@
 """Stats.py"""
 import os
-import statistics
 from collections import defaultdict
 from csv import reader, writer
 from datetime import date, timedelta
@@ -9,11 +8,13 @@ from json import loads
 from time import time
 from typing import Literal, Optional
 
+import numpy as np
+import pandas as pd
 from discord import Attachment, File, Interaction
 from discord.app_commands import Transform, check, checks, command, describe
 from discord.ext.commands import Cog
 
-from Utils import utils
+from Utils import utils, db_utils
 from Utils.constants import all_countries, all_countries_by_name, api_url
 from Utils.transformers import BattleTypes, Ids, Server
 from Utils.utils import CoolDownModified, dmg_calculator
@@ -267,251 +268,262 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                         included_countries: Optional[str], battles_types: Optional[Transform[list, BattleTypes]],
                         fast_server: bool = None) -> None:
         """Displays a lot of data about the given battles"""
+        # Calculated stats:
+        # - For each player: dmg, medkits used, Clutches, BHs, Q0-Q5 weps, Best dmg in 1 battle, Best dmg in 1 round, Best hit
+        # - For each date, country, MU, side and battle: total dmg, Q0-Q5 weps
+        # - For each country: battles won, battles lost
+        # - For each player and day: restores used, average per day, median, max
 
         if not await utils.is_premium_level_1(interaction, False) and len(battle_ids) > 500:
             await utils.custom_followup(
                 interaction, "It's too much.. sorry. You can buy premium and remove this limit.", ephemeral=True)
             return
-        sides = []
-        if included_countries:
-            included_countries = [country.split(",") for country in included_countries.lower().split("vs")]
-        if included_countries and included_countries[0][0]:
-            for country in included_countries:
-                try:
-                    sides.append([all_countries_by_name[x.strip().lower()] for x in country if x.strip()])
-                except KeyError:
-                    await utils.custom_followup(
-                        interaction,
-                        "Couldn't find country, make sure your countries are separated by a comma (,)", ephemeral=True)
-                    return
 
-        msg = await utils.custom_followup(interaction,
-                                          "Progress status: 1%.\n(I will update you after every 10%)\n"
-                                          f"(I have to check about {len(battle_ids) * 2 * 11} e-sim pages"
-                                          f" (battles, rounds etc.), so be patient)" if len(
-                                              battle_ids) > 10 else "I'm on it, Sir. Be patient.",
-                                          file=File(self.bot.typing_gif_path))
-        # TODO: finish this
-        # def get_where_dmg_stats(exact_sides: list[tuple[str]], any_side: list[str]) -> str:
-        #     reversed_sides: list[tuple] = [tuple(reversed(side)) for side in exact_sides]
-        #     str_exact_sides = f"{','.join(map(str, exact_sides))},{','.join(map(str, reversed_sides))}"
-        #     exact_side_condition = f"(defenderId, attackerId) IN ({str_exact_sides}) "
-        #     any_side_condition = f"defenderId IN {','.join(any_side)} OR attackerId IN {','.join(any_side)} "
-        #     if exact_sides:
-        #         if any_side:
-        #             where = f"{exact_side_condition} OR {any_side_condition}"
-        #         else:
-        #             where = exact_side_condition
-        #     else:
-        #         if any_side:
-        #             where = any_side_condition
-        #         else:
-        #             where = ""
-        #     return where
-        #
-        # if 0:  # TODO: rewrite this function
-        #     await db_utils.cache_api_battles(interaction, server, battle_ids)
-        #     # (defenderId, attacker_id) IN ((sides[0], sides[1]), (sides[1], sides[0]))
-        #     exact_sides = []  # list of tuples
-        #     any_side = []  # list of ids (ints)
-        #     for battles_to_include in (included_countries or "").split(","):
-        #         if "vs" in battles_to_include:
-        #             # append tuple of the 2 sides around "vs":
-        #             exact_sides.append(tuple(all_countries_by_name[country.strip().lower()] for country in
-        #                                      battles_to_include.split("vs")))
-        #         else:
-        #             any_side.append(all_countries_by_name[battles_to_include.strip().lower()])
-        #
-        #     api_battles_df = await db_utils.select_many_api_battles(server, battle_ids, custom_condition=where)
+        base_url = f'https://{server}.e-sim.org/'
 
-        my_dict = defaultdict(lambda: {'weps': [0, 0, 0, 0, 0, 0], 'dmg': 0, 'limits': 0, 'medkits': 0,
-                                       'last_hit': "2010-01-01 00:00:00:000", 'records': [0, 0, 0],
-                                       'restores': {}})
-        other_dict = defaultdict(lambda: defaultdict(lambda: {'weps': [0, 0, 0, 0, 0, 0], 'dmg': 0}))
-        countries_dict = defaultdict(lambda: {'won': 0, 'lost': 0})
+        def get_where_dmg_stats() -> str:
+            exact_sides = []  # list of tuples
+            any_side = []  # list of ids (ints)
+            for battles_to_include in (included_countries or "").split(","):
+                if "vs" in battles_to_include:
+                    # append tuple of the 2 sides around "vs":
+                    exact_sides.append(tuple(all_countries_by_name[country.strip().lower()] for country in
+                                             battles_to_include.split("vs")))
+                elif battles_to_include:
+                    any_side.append(all_countries_by_name[battles_to_include.strip().lower()])
+
+            # (defenderId, attacker_id) IN ((sides[0], sides[1]), (sides[1], sides[0]))
+            reversed_sides: list[tuple] = [tuple(reversed(side)) for side in exact_sides]
+            str_exact_sides = f"{','.join(map(str, exact_sides))},{','.join(map(str, reversed_sides))}"
+            exact_side_condition = f"((defenderId, attackerId) IN ({str_exact_sides}))"
+            any_side_condition = f"(defenderId IN {','.join(any_side)} OR attackerId IN {','.join(any_side)})"
+            if exact_sides and any_side:
+                where = f"({exact_side_condition} OR {any_side_condition})"
+            elif exact_sides:
+                where = exact_side_condition
+            elif any_side:
+                where = any_side_condition
+            else:
+                where = "TRUE"
+
+            if battles_types:
+                where += f" AND (type IN {battles_types})"
+            return where
+
+        await db_utils.cache_api_battles(interaction, server, battle_ids)
+        where = get_where_dmg_stats()
+        api_battles_df = await db_utils.select_many_api_battles(server, battle_ids, custom_condition=where)
+        restore_battles_types = ('COUNTRY_TOURNAMENT', 'CUP_EVENT_BATTLE',
+                                 'MILITARY_UNIT_CUP_EVENT_BATTLE', 'TEAM_TOURNAMENT')
+        api_battles_df["is_restore_battle"] = api_battles_df["type"].isin(restore_battles_types)
+        await db_utils.cache_api_fights(interaction, server, api_battles_df)
+        api_fights_df = await db_utils.select_many_api_fights(server, battle_ids)
+
+        side_dmg = api_fights_df.groupby(['battle_id', 'round_id', 'defenderSide'])['damage'].sum().unstack().fillna(
+            0).rename_axis(None, axis=1)
+
+        # Group by the specified columns and sum the damage for each player
+        player_damage_per_round = api_fights_df.groupby(['citizenId', 'battle_id', 'round_id', 'defenderSide'])[
+            'damage'].sum()
+
+        # Calculate how many times the player was the best damage dealer in a round for each side
+        bhs_count = player_damage_per_round.groupby(['battle_id', 'round_id', 'defenderSide']).idxmax().apply(
+            lambda x: x[0]).value_counts().fillna(0)
+
+        # Calculate how many times the round would have been lost without the player.
+        #  (side_dmg > other_side_dmg AND (side_dmg - player_dmg_in_that_round) < other_side_dmg ?)
+        unstacked_player = player_damage_per_round.unstack().fillna(0).rename_axis(None, axis=1)
+        clutches_defender = (side_dmg[0] > side_dmg[1]) & (((side_dmg[0] - unstacked_player[0]) - side_dmg[1]) < 0)
+        clutches_attacker = (side_dmg[1] > side_dmg[0]) & (((side_dmg[1] - unstacked_player[1]) - side_dmg[0]) < 0)
+        # TODO: remove events?
+        # Sum per citizen (clutches is a series with index (battle_id, round_id, citizenId) and value True/False)
+        clutches_count = clutches_defender.groupby('citizenId').sum() + clutches_attacker.groupby('citizenId').sum()
+
+        def get_sum_df(df: pd.DataFrame, column: str):
+            """Returns df with the following columns:
+            index, `column`, 'damage', 'Q0 weps', 'Q1 weps', 'Q2 weps', 'Q3 weps', 'Q4 weps', 'Q5 weps'
+            """
+            if 'hits' not in df.columns:
+                df['hits'] = df['berserk'].apply(lambda x: 5 if x else 1)
+
+            weps_count = df.groupby([column, 'weapon'])['hits'].sum().unstack(fill_value=0)
+            result_df = df.groupby(column)['damage'].sum().to_frame().sort_values('damage', ascending=False)
+            for wep_q in range(6):
+                if wep_q in weps_count.columns:
+                    result_df[f'Q{wep_q} weps'] = weps_count[wep_q]
+            return result_df
+
+        player_sum_df = get_sum_df(api_fights_df, 'citizenId')
+
+        best_damage_battle = api_fights_df.groupby(['citizenId', 'battle_id'])['damage'].sum().groupby(
+            'citizenId').max()
+        best_damage_round = api_fights_df.groupby(['citizenId', 'battle_id', 'round_id'])['damage'].sum().groupby(
+            'citizenId').max()
+        best_single_hit = api_fights_df.groupby('citizenId')['damage'].max().groupby('citizenId').max()
+
+        player_stats = pd.DataFrame({
+            'Clutches': clutches_count,
+            'BHs': bhs_count,
+            'Damage record in single battle': best_damage_battle,
+            'Damage record in single round': best_damage_round,
+            'Single hit record': best_single_hit
+        }).join(player_sum_df).sort_values(by='damage', ascending=False)
+
+        battle_stats = api_fights_df.merge(api_battles_df, on='battle_id', how='left')
+        battle_stats['date'] = battle_stats['time'].dt.date
+
+        date_df = get_sum_df(battle_stats, 'date')
+        country_df = get_sum_df(battle_stats, 'citizenship')
+        mu_df = get_sum_df(battle_stats, 'militaryUnit')
+        defender_df = get_sum_df(battle_stats, 'defenderId')
+        attacker_df = get_sum_df(battle_stats, 'attackerId')
+        side_df = defender_df.add(attacker_df, fill_value=0)
+        side_df.index.name = 'Side'
+
+        battle_df = get_sum_df(battle_stats, 'battle_id')
+        battle_df['defenderId'] = api_battles_df.set_index('battle_id').loc[battle_df.index]['defenderId'].values
+        battle_df['attackerId'] = api_battles_df.set_index('battle_id').loc[battle_df.index]['attackerId'].values
+        # reorder cols, so that defenderId and attackerId are next to battle_id
+        cols = battle_df.columns.tolist()
+        battle_df = battle_df[cols[:1] + cols[-2:] + cols[1:-2]]
+        battle_df.index = battle_df.index.map(lambda x: f"{base_url}battleStatistics.html?id={x}")
+        battle_df.index.name = 'Battle Link'
+
+
+        # get number of battles won and lost by each country
+        # (country in defenderId and defenderScore == 8) or (country in attackerId and attackerScore == 8)
+        # TODO: skip events?
+        scores_df = api_battles_df[['defenderId', 'attackerId', 'defenderScore', 'attackerScore']]
+        country_ids = pd.concat([scores_df['attackerId'], scores_df['defenderId']]).unique()
+        countries_df = pd.DataFrame(index=country_ids, columns=['won', 'lost'], data=0)
+        countries_df.index.name = 'Country'
+        for idx, row in scores_df.iterrows():
+            if row['attackerScore'] == 8:
+                countries_df.at[row['attackerId'], 'won'] += 1
+                countries_df.at[row['defenderId'], 'lost'] += 1
+            elif row['defenderScore'] == 8:
+                countries_df.at[row['defenderId'], 'won'] += 1
+                countries_df.at[row['attackerId'], 'lost'] += 1
+
+        # Each player has 32 daily limit. With each limit he can hit 1 berserk, or 5 non berserks. He has 40% chance to not lose a limit while hitting.
+        # Every 10 minutes (or every day in some servers), the player get 2 limits, up to 32. This is called a restore.
+        # In restore_battle, the player gets extra 22 limits per round, but only if he dealt 30 hits before that round.
+        # If the player used all his limits plus some more, it means he opened a medkit, which gives him 20 limits.
+        #
+        # The goal is to calculate total medkits used per player, and total restores the player participated in every day
+        #   (i.e. number of times per day that he hit at least 1 hit in 10 minutes windows [00:00-00:10, 00:10-00:20, ...])
+        # TODO: rewrite this
+        player_dict = defaultdict(lambda: {'limits': 0, 'medkits': 0,
+                                           'last_hit': pd.Timestamp("2000-01-01"),
+                                           'restores': {}})
+        battles = api_battles_df[['battle_id', 'type', 'is_restore_battle']]
         days = []
-        base_url = f"https://{server}.e-sim.org/"
-        first = battle_ids[0]
-        index = battle_id = 0
-        restore_battles_type = (
-            'COUNTRY_TOURNAMENT', 'CUP_EVENT_BATTLE', 'MILITARY_UNIT_CUP_EVENT_BATTLE', 'TEAM_TOURNAMENT')
-        for index, battle_id in enumerate(battle_ids):
-            msg = await utils.update_percent(index, len(battle_ids), msg)
-            api_battles = await utils.get_content(f'{base_url}apiBattles.html?battleId={battle_id}')
-            is_restore_battle = api_battles["type"] in restore_battles_type
-            defender_id, attacker_id = api_battles['defenderId'], api_battles['attackerId']
-            if len(sides) > 1:
-                # (defender_id IN (sides[0]) AND attacker_id IN (sides[1])) or
-                # (defender_id IN (sides[1]) AND attacker_id IN (sides[0]))
-                condition = (any(side == defender_id for side in sides[0]) and any(
-                    side == attacker_id for side in sides[1])) or \
-                            (any(side == defender_id for side in sides[1]) and any(
-                                side == attacker_id for side in sides[0]))
-            elif len(sides) == 1:
-                condition = any(side in (attacker_id, defender_id) for side in sides[0])
-            else:
-                condition = True
-            if not condition or (battles_types and api_battles['type'] not in battles_types):
-                continue
+        seconds_in_10_minutes = 10 * 60
+        health_limits = limits_per_restore = 2
+        full_limits = 15 + 15 + health_limits
+        medkit_limits = 10 + 10
+        avoid = 0.4
+        hits_per_limit = 5
+        threshold = -10
+        slow_servers = ("primera", "secura", "suna")
+        for battle_id, battle_type, is_restore_battle in battles.itertuples(index=False, name=None):
+            # Extract relevant data for the current battle
+            battle_data = api_fights_df[api_fights_df['battle_id'] == battle_id]
+            for hit in battle_data.itertuples(index=False):
+                key = hit.citizenId
+                user = player_dict[key]
+                seconds_from_last = (utils.get_time(hit.time, floor_to_10=True) -
+                                     utils.get_time(user['last_hit'], floor_to_10=True)).total_seconds()
 
-            attacker, defender = utils.get_sides(api_battles)
+                day_month_year = hit.time.strftime("%d-%m-%Y")
+                if user['last_hit'].strftime("%d-%m-%Y") != day_month_year:  # day change
+                    user['limits'] = full_limits
+                    if day_month_year not in days:
+                        days.append(day_month_year)
+                if seconds_from_last > 0:
+                    if day_month_year not in user['restores']:
+                        user['restores'][day_month_year] = 0
+                    user['restores'][day_month_year] += 1
+                    # fast server has limits restore, but sometimes also slow servers have it.
+                    if fast_server or (fast_server is None and server not in slow_servers):
+                        user['limits'] = min(user['limits'] + np.floor(seconds_from_last / seconds_in_10_minutes)
+                                             * limits_per_restore + health_limits, full_limits)
+                if is_restore_battle and user.get("has_restore"):
+                    user['limits'] = medkit_limits + health_limits
+                    user["has_restore"] = False
+                user['limits'] -= hit.hits / (1 - avoid) / hits_per_limit
+                if user['limits'] < threshold:
+                    user['medkits'] += 1
+                    user['limits'] += medkit_limits
+                user['last_hit'] = hit.time
 
-            if api_battles["type"] in ('ATTACK', 'RESISTANCE'):
-                if api_battles["attackerScore"] == 8:
-                    countries_dict[attacker]['won'] += 1
-                    countries_dict[defender]['lost'] += 1
-                elif api_battles["defenderScore"] == 8:
-                    countries_dict[defender]['won'] += 1
-                    countries_dict[attacker]['lost'] += 1
-            dmg_in_battle = defaultdict(lambda: {'dmg': 0, "hits": 0})
-            await utils.custom_delay(interaction)
-            if api_battles['defenderScore'] == 8 or api_battles['attackerScore'] == 8:
-                last = api_battles['currentRound']
-            else:
-                last = api_battles['currentRound'] + 1
-            for round_id in range(1, last):
-                sides_dmg = {'defender': 0, 'attacker': 0}
-                attacker_dmg = defaultdict(lambda: {'dmg': 0, "Clutches": 0})
-                defender_dmg = defaultdict(lambda: {'dmg': 0, "Clutches": 0})
-                dmg_in_round = defaultdict(int)
-                for hit in reversed(await utils.get_content(
-                        f'{base_url}apiFights.html?battleId={battle_id}&roundId={round_id}')):
-                    key = hit['citizenId']
-                    user = my_dict[key]
-                    wep = 5 if hit['berserk'] else 1
+            # Calculate for each player if he participated in a restore battle with at least 30 hits
+            restores = battle_data.groupby('citizenId').apply(
+                lambda x: is_restore_battle & (x['hits'].sum() >= 30), include_groups=False).reset_index(
+                name='has_restore')
 
-                    # TODO: consider hospitals
-                    seconds_from_last = (utils.get_time(hit["time"], True) -
-                                         utils.get_time(user['last_hit'], True)).total_seconds()
-                    full_limits = 15 + 15 + 2
-                    day = hit['time'].split()[0]
-                    if user['last_hit'].split()[0] != day:  # day change
-                        user['limits'] = full_limits
-                        if day not in days:
-                            days.append(day)
-                    if seconds_from_last > 0:
-                        if day not in user['restores']:
-                            user['restores'][day] = 0
-                        user['restores'][day] += 1
-                        # fast server has limits restore
-                        if fast_server or (fast_server is None and server not in ("primera", "secura", "suna")):
-                            user['limits'] = min(user['limits'] + int(seconds_from_last // 600) * 2 + 2, full_limits)
-                    if is_restore_battle and user.get("has_restore"):
-                        user['limits'] = 10 + 10 + 2
-                        user["has_restore"] = False
-                    user['limits'] -= wep * 0.6 / 5
-                    if user['limits'] < -10:
-                        user['medkits'] += 1
-                        user['limits'] += 10 + 10
-                    user['last_hit'] = hit['time']
+            # Update player_dict with restores
+            for row in restores.itertuples(index=False):
+                player_dict[row.citizenId]['has_restore'] = row.has_restore
 
-                    user['dmg'] += hit['damage']
-                    user['weps'][hit['weapon']] += wep
-                    keys = [("Date", hit['time'][:10]),
-                            ("MU ID", hit['militaryUnit']) if 'militaryUnit' in hit else tuple(),
-                            ("Side", defender if hit['defenderSide'] else attacker),
-                            ("Country", all_countries[hit['citizenship']]),
-                            ("Battle-Defender-Attacker",
-                             f"[url]battleStatistics.html?id={battle_id}[/url]*{defender}*{attacker}")]
-                    for key1 in keys:
-                        if key1:
-                            other_dict[key1[0]][key1[1]]['dmg'] += hit['damage']
-                            other_dict[key1[0]][key1[1]]['weps'][hit['weapon']] += wep
-                    dmg_in_battle[key]["dmg"] += hit['damage']
-                    dmg_in_battle[key]["hits"] += wep
-                    user['records'][2] = max(user['records'][2], hit['damage'])
-                    if api_battles["type"] == "DUEL_TOURNAMENT":
-                        continue
-                    side = 'defender' if hit['defenderSide'] else 'attacker'
-                    (defender_dmg if hit['defenderSide'] else attacker_dmg)[key]['dmg'] += hit['damage']
-                    sides_dmg[side] += hit['damage']
-                    dmg_in_round[key] += hit['damage']
+        # Write the data to csv
 
-                if api_battles["type"] == "DUEL_TOURNAMENT":
-                    continue
-                if sides_dmg['attacker'] > sides_dmg['defender']:
-                    for key, value in attacker_dmg.items():
-                        if sides_dmg['attacker'] - value['dmg'] < sides_dmg['defender']:
-                            value['Clutches'] += 1
-                else:
-                    for key, value in defender_dmg.items():
-                        if sides_dmg['defender'] - value['dmg'] < sides_dmg['attacker']:
-                            value['Clutches'] += 1
+        player_stats_buffer = StringIO()
+        player_stats = player_stats.reset_index().rename(columns={'index': 'citizenId'})
+        player_stats = player_stats.merge(pd.DataFrame(player_dict).T, left_on='citizenId', right_index=True,
+                                          how='left')
+        columns_to_drop = ['limits', 'last_hit', 'restores', 'has_restore']
+        player_stats.rename(columns={'medkits': 'Medkits used (rough estimation)'}).drop(
+            columns=columns_to_drop).to_csv(player_stats_buffer, index=False, lineterminator='\n')
 
-                for d in (attacker_dmg, defender_dmg):
-                    for key, value in d.items():
-                        if value['Clutches']:
-                            if 'Clutches' not in my_dict[key]:
-                                my_dict[key]['Clutches'] = 0
-                            my_dict[key]['Clutches'] += value['Clutches']
+        battle_stats_buffer = StringIO()
 
-                    if d:
-                        bh = max(d.items(), key=lambda x: x[1]["dmg"])[0]
-                        if 'bhs' not in my_dict[bh]:
-                            my_dict[bh]['bhs'] = 0
-                        my_dict[bh]['bhs'] += 1
+        # Convert country ids to country names
+        countries_columns = ('citizenship', 'Side', 'Country', 'defenderId', 'attackerId')
+        for df in (country_df, side_df, defender_df, attacker_df):
+            if df.index.name in countries_columns:
+                df.index = df.index.map(all_countries)
+            for col in df.columns:
+                if col in countries_columns:
+                    df[col] = df[col].map(all_countries)
 
-                for k, v in dmg_in_round.items():
-                    my_dict[k]['records'][1] = max(my_dict[k]['records'][1], v)
-                await utils.custom_delay(interaction)
-            for k, v in dmg_in_battle.items():
-                my_dict[k]['records'][0] = max(my_dict[k]['records'][0], v["dmg"])
-                if is_restore_battle and v["hits"] >= 30:
-                    my_dict[k]["has_restore"] = True
+        date_df.to_csv(battle_stats_buffer, lineterminator='\n')
+        battle_stats_buffer.write("\n\n")
+        country_df.to_csv(battle_stats_buffer, mode='a', lineterminator='\n')
+        battle_stats_buffer.write("\n\n")
+        mu_df.to_csv(battle_stats_buffer, mode='a', lineterminator='\n')
+        battle_stats_buffer.write("\n\n")
+        side_df.to_csv(battle_stats_buffer, mode='a', lineterminator='\n')
+        battle_stats_buffer.write("\n\n")
+        battle_df.to_csv(battle_stats_buffer, mode='a', lineterminator='\n')
+        battle_stats_buffer.write("\n\n")
 
-        output = StringIO()
-        csv_writer = writer(output)
-        csv_writer.writerow(
-            ["Citizen id", "Dmg", "medkits used (rough estimation)", "Clutches", "BHs", "Q0 wep", "Q1", "Q2", "Q3",
-             "Q4", "Q5 wep", "Best dmg in 1 battle", "Best dmg in 1 round", "Best hit"])
-        for k, v in sorted(my_dict.items(), key=lambda x: x[1]["dmg"], reverse=True):
-            csv_writer.writerow([k, v["dmg"], v["medkits"], v.get("Clutches", ""), v.get("bhs", "")] +
-                                [x or "" for x in v["weps"]] + v["records"])
+        countries_df["won %"] = round(countries_df["won"] / (countries_df["won"] + countries_df["lost"]) * 100, 2)
+        countries_df["lost %"] = round(countries_df["lost"] / (countries_df["won"] + countries_df["lost"]) * 100, 2)
+        countries_df.sort_values("won", ascending=False).to_csv(battle_stats_buffer, mode='a', lineterminator='\n')
 
-        output1 = StringIO()
-        csv_writer = writer(output1)
-        other_dict["Country-Battles won-Battles lost"].update(countries_dict)
-        for header, v in other_dict.items():
-            if header == "Country-Battles won-Battles lost":
-                sorting_key = "won"
-                csv_headers = ["#", *(header.split("-")[:-1]), header.split("-")[-1]]
-            else:
-                sorting_key = "dmg"
-                csv_headers = ["#", *(header.split("-")), "DMG", "Q0", "Q1", "Q2", "Q3", "Q4", "Q5"]
-            csv_writer.writerow(csv_headers)
-            for num, [k, v] in enumerate(sorted(v.items(), key=lambda kv: kv[1][sorting_key], reverse=True)):
-                if header == "Country-Battles won-Battles lost":
-                    row = [str(num + 1), k,
-                           f"{v['won']}\\n({round(round(v['won'] / (v['won'] + v['lost']), 2) * 100)}%)",
-                           f"{v['lost']}\\n({round(round(v['lost'] / (v['won'] + v['lost']), 2) * 100)}%)"]
-                    csv_writer.writerow(row)
-                else:
-                    row = [str(num + 1), *str(k).split("*"), v["dmg"]] + [x or "" for x in v["weps"]]
-                    csv_writer.writerow(row)
-            if header != list(other_dict.keys())[-1]:
-                csv_writer.writerow([""])
-                csv_writer.writerow(["-"] * len(csv_headers))
-                csv_writer.writerow([""])
+        restores_per_day_buffer = StringIO()
+        restores_per_day = player_stats[['citizenId', 'restores']].set_index('citizenId')['restores'].apply(pd.Series)
+        restores_per_day["Average Per Day"] = restores_per_day.mean(axis=1)
+        restores_per_day["Median"] = restores_per_day.median(axis=1)
+        restores_per_day["Max"] = restores_per_day.max(axis=1)
+        restores_per_day.to_csv(restores_per_day_buffer, lineterminator='\n')
 
-        output2 = StringIO()
-        csv_writer = writer(output2)
-        csv_writer.writerow(["Restores used per user id and day", "Average Per Day", "Median", "Max"] + days)
-        for k, v in my_dict.items():
-            csv_writer.writerow(
-                [k, round(statistics.mean(v["restores"].values())), round(statistics.median(v["restores"].values())),
-                 max(v["restores"].values())] + [v["restores"].get(day, "") for day in days])
+        player_stats_buffer.seek(0)
+        battle_stats_buffer.seek(0)
+        restores_per_day_buffer.seek(0)
 
-        output.seek(0)
-        output1.seek(0)
-        output2.seek(0)
-
-        await utils.custom_followup(interaction, mention_author=index > 50, files=[
-            File(fp=await utils.csv_to_image(output), filename=f"Preview_{server}.png"),
-            File(fp=await utils.csv_to_image(output1), filename=f"Preview1_{server}.png"),
-            File(fp=await utils.csv_to_image(output2), filename=f"Preview2_{server}.png"),
-            File(fp=BytesIO(output.getvalue().encode()), filename=f"PlayersDmg_{first}_{battle_id}_{server}.csv"),
-            File(fp=BytesIO(output1.getvalue().encode()), filename=f"CountriesDmg_{first}_{battle_id}_{server}.csv"),
-            File(fp=BytesIO(output2.getvalue().encode()), filename=f"RestoresCount_{first}_{battle_id}_{server}.csv")])
+        battles_range = f"{battle_ids[0]}_{battle_ids[-1]}" if len(battle_ids) > 1 else battle_ids[0]
+        await utils.custom_followup(interaction, mention_author=len(battle_ids) > 50, files=[
+            File(fp=await utils.csv_to_image(player_stats_buffer), filename=f"Preview_{server}.png"),
+            File(fp=await utils.csv_to_image(battle_stats_buffer), filename=f"Preview1_{server}.png"),
+            File(fp=await utils.csv_to_image(restores_per_day_buffer), filename=f"Preview2_{server}.png"),
+            File(fp=BytesIO(player_stats_buffer.getvalue().encode()),
+                 filename=f"PlayersStats_{battles_range}_{server}.csv"),
+            File(fp=BytesIO(battle_stats_buffer.getvalue().encode()),
+                 filename=f"BattleStats_{battles_range}_{server}.csv"),
+            File(fp=BytesIO(restores_per_day_buffer.getvalue().encode()),
+                 filename=f"RestoresStats_{battles_range}_{server}.csv")])
 
     @command(name="drops-stats")
     @check(utils.is_premium_level_1)
@@ -663,7 +675,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
         base_url = f"https://{server}.e-sim.org/"
         links = ["apiRegions", "apiMap", "apiRanks", "apiCountries", "apiOnlinePlayers"]
         for link in links if not custom_api else [custom_api]:
-            api: list[str | dict] | dict = await utils.get_content(
+            api: list[str or dict] or dict = await utils.get_content(
                 (base_url + link + ".html") if not custom_api else custom_api, return_type="json", throw=True)
             if link == "apiOnlinePlayers":
                 api = [loads(row) for row in api]
