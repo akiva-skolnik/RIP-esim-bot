@@ -15,6 +15,7 @@ from constants import countries_per_id, countries_per_server
 
 TIMEZONE = 'Europe/Berlin'
 DATETIME_FORMAT = "%d-%m-%Y %H:%M:%S"
+MAX_ERROR_LENGTH = 10000
 
 PRODUCT_SHEET = "17y8qEU4aHQRTXKdnlM278z3SDzY16bmxMwrZ0RKWcEI"
 servers = {
@@ -42,7 +43,7 @@ async def update_buffs(server: str) -> None:
         loop_start_time = time.time()
         try:
             buffs_data = await utils.find_one("buffs", server) or {}
-            now = datetime.now().astimezone(pytz.timezone(TIMEZONE)).replace(tzinfo=None)
+            now = datetime.now().astimezone(pytz.timezone(TIMEZONE))
             now_s = now.strftime(DATETIME_FORMAT)
             last_update = buffs_data.get("Last update:", [now_s])[0]
             buffs_data.pop("Nick", None)
@@ -179,7 +180,7 @@ async def update_buffs(server: str) -> None:
             sorted_data.clear()
         except Exception as e:
             error_traceback = traceback.format_exc()
-            print(error_traceback if len(error_traceback) < 10000 else "buffs long error")
+            print(error_traceback if len(error_traceback) < MAX_ERROR_LENGTH else "buffs long error")
         await asyncio.sleep(max(300 - time.time() + loop_start_time, 1))
 
 
@@ -191,15 +192,16 @@ async def update_time(server: str) -> None:
 
     base_url = f'https://{server}.e-sim.org/'
     initial_date_info = {
-        "primera": ["Minutes online (since 10/12/20)", "09/12/2020", "10/12/2020"],
-        "luxia": ["Minutes online (since day 1)", "10/02/2022", "11/02/2022"],
-        "xena": ["Minutes online (since day 1)", "02/05/2024", "03/05/2024"],
-        "mega": ["Minutes online (since day 1)", "01/03/2024", "02/03/2024"],
+        "primera": ["Minutes online (since 10/12/20)", "10/12/2020"],
+        "luxia": ["Minutes online (since day 1)", "11/02/2022"],
+        "xena": ["Minutes online (since day 1)", "03/05/2024"],
+        "mega": ["Minutes online (since day 1)", "02/03/2024"],
     }
+    default_date_info = ["Minutes online (since 19/05/2020)", "19/05/2020"]
 
     # Define the headers for the data collection
     headers = ["Link", "Nick", "Citizenship",
-               initial_date_info.get(server, ["Minutes online (since 19/05/2020)"])[0],
+               initial_date_info.get(server, default_date_info)[0],
                "Avg. per day", "Minutes online (this month)", "Avg. per day"]
 
     is_first_update = True
@@ -209,10 +211,6 @@ async def update_time(server: str) -> None:
             now = datetime.now().astimezone(pytz.timezone(TIMEZONE))
             player_data = await utils.find_one("time_online", server)  # Retrieve current player time online data
             player_data.pop("_headers", None)  # Remove headers if they are in the data already
-            if player_data:
-                max_month_minutes = next(iter(player_data.values()))[MONTH_MINUTES]
-            else:
-                max_month_minutes = 0
 
             # Update player data from the API content
             for player_info in await utils.get_content(f"{base_url}apiOnlinePlayers.html"):
@@ -226,30 +224,40 @@ async def update_time(server: str) -> None:
                 player_stats[NICK] = player['login']
 
             # Calculate averages and update data
+            minutes_in_day = 24 * 60
+            seconds_in_day = minutes_in_day * 60
             date_format = "%d/%m/%Y"
-            start_date = datetime.strptime(initial_date_info.get(server, ["", "18/05/2020"])[1], date_format)
+            start_date = datetime.strptime(initial_date_info.get(server, default_date_info)[1], date_format)
             start_of_month = max(start_date,
                                  datetime.strptime(f"01/{now.strftime('%m')}/{now.strftime('%Y')}", date_format))
-            today_date = datetime.strptime(now.strftime(date_format), date_format)
-            elapsed_since_start = (today_date - start_date).total_seconds() / 60
-            elapsed_since_month_start = (today_date - start_of_month + timedelta(days=1)).total_seconds() / 60
+            now_naive = now.replace(tzinfo=None)
+            days_since_start = (now_naive - start_date).total_seconds() // seconds_in_day + 1
+            days_since_month_start = (now_naive - start_of_month).total_seconds() // seconds_in_day + 1
 
-            new_month = max_month_minutes > elapsed_since_month_start
+            if player_data:
+                days_online_top_player = next(iter(player_data.values()))[MONTH_MINUTES] // minutes_in_day + 1
+            else:
+                days_online_top_player = 0
+            is_new_month = days_online_top_player > days_since_month_start
 
             # Update averages for each player
+            seconds_len = 3
             for player_stats in player_data.values():
-                # [:-3] to remove the seconds from the string
-                if new_month:
+                if is_new_month:
                     player_stats[MONTH_MINUTES] = 1
                 player_stats[TOTAL_AVG] = str(timedelta(
-                    minutes=int((player_stats[TOTAL_MINUTES] / elapsed_since_start) * 24 * 60)))[:-3]
+                    minutes=player_stats[TOTAL_MINUTES] // days_since_start))[:-seconds_len]
                 player_stats[MONTH_AVG] = str(timedelta(
-                    minutes=int((player_stats[MONTH_MINUTES] / elapsed_since_month_start) * 24 * 60)))[:-3]
+                    minutes=player_stats[MONTH_MINUTES] // days_since_month_start))[:-seconds_len]
 
             # Sort and limit the data
-            player_data = dict(sorted(player_data.items(),
-                                      key=lambda item: (item[1][MONTH_MINUTES], item[1][TOTAL_MINUTES]),
-                                      reverse=True)[:3000 if len(player_data) < 3000 else 2900])
+            # (once we reach 3000 players, we will remove the bottom 100 players, this way we allow new players to be added to the list)
+            max_saved_players = 3000
+            min_saved_players = 2900
+            keep = max_saved_players if len(player_data) < max_saved_players else min_saved_players
+            player_data = dict(sorted(
+                player_data.items(), key=lambda item: (item[1][MONTH_MINUTES], item[1][TOTAL_MINUTES]),
+                reverse=True)[:keep])
 
             # Update the headers with the current time
             current_time = datetime.now().astimezone(pytz.timezone(TIMEZONE)).strftime(DATETIME_FORMAT)
@@ -269,7 +277,7 @@ async def update_time(server: str) -> None:
             player_data.clear()
         except Exception:
             error_traceback = traceback.format_exc()
-            print(error_traceback if len(error_traceback) < 10000 else "time online long error")
+            print(error_traceback if len(error_traceback) < MAX_ERROR_LENGTH else "time online long error")
 
         await asyncio.sleep(max(60 - time.time() + loop_start_time, 1))
 
@@ -341,7 +349,7 @@ async def update_monetary_market():
                 await utils.spreadsheets(PRODUCT_SHEET, "Monetary Market", f"A1:K{len(values) + 1}", values, True)
             except Exception:
                 error_traceback = traceback.format_exc()
-                print(error_traceback if len(error_traceback) < 10000 else "monetary_market long error")
+                print(error_traceback if len(error_traceback) < MAX_ERROR_LENGTH else "monetary_market long error")
 
         values.clear()
         await asyncio.sleep(max(3600 - time.time() + loop_start_time, 1))
@@ -352,7 +360,7 @@ async def update_prices(server: str) -> None:
     """Continuously updates the product prices database from the e-sim game for a given server."""
     base_url = f'https://{server}.e-sim.org/'
     is_first_update = True
-    raw_products = ["Iron", "Diamonds", "Grain", "Oil", "Stone", "Wood"]
+    raw_products = ("Iron", "Diamonds", "Grain", "Oil", "Stone", "Wood")
     while True:
         loop_start_time = time.time()
         try:
@@ -454,7 +462,7 @@ async def update_prices(server: str) -> None:
             new_values.clear()
         except Exception:
             error_traceback = traceback.format_exc()
-            print(error_traceback if len(error_traceback) < 10000 else "price long error")
+            print(error_traceback if len(error_traceback) < MAX_ERROR_LENGTH else "price long error")
 
         await asyncio.sleep(max(1000 - time.time() + loop_start_time, 1))
 
