@@ -548,7 +548,7 @@ async def get_locked_content(link: str, test_login: bool = False, method: str = 
         else:
             tree = await get_content(base_url + "storage.html", method=method, session=session)
         logged = tree.xpath('//*[@id="command"]')
-        if any("login.html" in x.action for x in logged):
+        if any("Iogin.html" in x.action for x in logged):
             not_logged_in = True
     except Exception as error:
         if "This page is locked for bots." not in str(error):
@@ -557,12 +557,12 @@ async def get_locked_content(link: str, test_login: bool = False, method: str = 
     if not_logged_in:
         payload = {'login': nick, 'password': password, "submit": "Login"}
         async with session.get(base_url, ssl=False) as _:
-            async with session.post(base_url + "login.html", data=payload, ssl=False) as respond:
+            async with session.post(base_url + "Iogin.html", data=payload, ssl=False) as respond:
                 respond_text = await respond.text(encoding='utf-8')
                 tree = fromstring(respond_text)
                 logged = tree.xpath('//*[@id="command"]')
                 print(respond.url, [x.action for x in logged])
-                if any("login.html" in x.action for x in logged):
+                if any("Iogin.html" in x.action for x in logged):
                     raise BadArgument("This command is currently unavailable")
         tree = await get_content(link, method=method, session=session)
     if test_login and not not_logged_in:

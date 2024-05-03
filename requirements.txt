@@ -7,5 +7,5 @@ Pillow
 wolframalpha
 matplotlib
 pytz
-pandas==1.5.3  # TODO: make it work for latest
+pandas
 asyncmy
