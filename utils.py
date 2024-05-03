@@ -38,6 +38,8 @@ all_parameters: dict = {
 }
 
 sessions = {}
+
+
 async def get_session(locked: bool) -> ClientSession:
     """create session"""
     key = "locked" if locked else "regular"
@@ -45,6 +47,7 @@ async def get_session(locked: bool) -> ClientSession:
         sessions[key] = ClientSession(headers={
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:60.0) Gecko/20100101 Firefox/60.0"})
     return sessions[key]
+
 
 def get_creds():
     """get creds callback"""
@@ -93,7 +96,7 @@ async def get_content(link: str, return_type: str = "", data: dict = None, sessi
     for _ in range(10):
         try:
             async with (session.get(link, ssl=False) if data is None else
-                        session.post(link, data=data, ssl=False)) as respond:
+            session.post(link, data=data, ssl=False)) as respond:
                 if "google.com" in str(respond.url) or respond.status == 403:
                     await asyncio.sleep(randint(3, 10))
                     continue

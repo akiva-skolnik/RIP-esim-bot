@@ -18,8 +18,8 @@ DATETIME_FORMAT = "%d-%m-%Y %H:%M:%S"
 
 PRODUCT_SHEET = "17y8qEU4aHQRTXKdnlM278z3SDzY16bmxMwrZ0RKWcEI"
 servers = {
+    "xena": "1SPEeGyYuyVFsF8JHpLO0ioaP0oG3i1X2UVVWYEKKVL0",
     "mega": "1C2u-KD1IoLzuTQ1olsWommqUvLYSWUimcxobmtpcCFY",
-    "arcadia": "1Tx-3WqitqY0gqDZbohT0eXYQTxhWEBSVnM-OtzcJwD0",
     "luxia": "1mx_JkHVnTVikNdTSxhvfFh4Pzuepp9ZGakCAtxnGxyY",
     "suna": "1imlsoLdaEb45NnJGmo5T7mQxsjzzTGbrkvqfcR8pMlE",
     "alpha": "1KqxbZ9LqS191wRf1VGLNl-aw6UId9kmUE0k7NfKQdI4",
@@ -193,7 +193,7 @@ async def update_time(server: str) -> None:
     initial_date_info = {
         "primera": ["Minutes online (since 10/12/20)", "09/12/2020", "10/12/2020"],
         "luxia": ["Minutes online (since day 1)", "10/02/2022", "11/02/2022"],
-        "arcadia": ["Minutes online (since 09/01/24)", "08/01/2024", "09/01/2024"],
+        "xena": ["Minutes online (since day 1)", "02/05/2024", "03/05/2024"],
         "mega": ["Minutes online (since day 1)", "01/03/2024", "02/03/2024"],
     }
 
@@ -386,7 +386,7 @@ async def update_prices(server: str) -> None:
 
             # Update the history
             now = datetime.now().astimezone(pytz.timezone(TIMEZONE))
-            if server not in ('arcadia', 'mega'):
+            if server not in ('xena', 'mega'):
                 this_month = "01-" + now.strftime("%m-%Y")
             else:
                 this_month = now.strftime("%d-%m-%Y")
@@ -458,11 +458,14 @@ async def update_prices(server: str) -> None:
 
         await asyncio.sleep(max(1000 - time.time() + loop_start_time, 1))
 
+
 loop = asyncio.new_event_loop()
+
 
 async def delay(coro, seconds):
     await asyncio.sleep(seconds)
     await coro
+
 
 loop.create_task(update_monetary_market())
 

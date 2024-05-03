@@ -1,7 +1,7 @@
 # RIP-esim Data Collector
 
 This project collects and processes data from the browser game [e-sim](https://alpha.e-sim.org), specifically for
-the [RIP-esim](https://github.com/akiva-skolnik/RIP-esim-bot) Discord bot.  
+the [RIP-esim](https://github.com/akiva-skolnik/RIP-esim-bot) Discord bot.
 
 It gathers information about buffed players, player online time, and market price history.
 
