@@ -97,14 +97,14 @@ class MyClient(Bot):
         self.premium_servers = (find_one("collection", "premium_guilds") or {"guilds": []})["guilds"]
         self.custom_delay_dict = find_one("collection", "delay")
         self.pool: asyncmy.Pool = None  # type: ignore
-        self.db_lock = asyncio.Lock()
 
     async def setup_hook(self) -> None:
         headers = {"User-Agent": self.config["headers"]}
         self.session = ClientSession(timeout=ClientTimeout(total=100), headers=headers)
         self.pool = await asyncmy.create_pool(host=self.config.get("db_host", "localhost"),
                                               user=self.config.get("db_user", "root"),
-                                              password=self.config["db_password"], autocommit=True)
+                                              password=self.config["db_password"],
+                                              autocommit=True)
 
         await load_extensions()
 

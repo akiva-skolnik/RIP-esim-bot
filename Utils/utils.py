@@ -50,7 +50,7 @@ class CoolDownModified:
         return Cooldown(self.rate, self.per)
 
 
-def remove_decimal(x: float | int) -> int | float:
+def remove_decimal(x: float or int) -> int or float:
     """5 -> 5, 5.0 -> 5, 5.1 -> 5.1"""
     return int(x) if isinstance(x, float) and x.is_integer() else x
 
@@ -457,7 +457,8 @@ def camel_case_merge(identifier: str) -> str:
     return " ".join([m.group(0) for m in matches]).title()
 
 
-async def get_content(link: str, return_type: str = "", method: str = "get", session=None, throw: bool = False):
+async def get_content(link: str, return_type: str = "", method: str = "get", session: ClientSession = None,
+                      throw: bool = False) -> Union[dict, fromstring]:
     """get content"""
     if not return_type:
         if "api" in link or link.startswith(api_url):
@@ -577,7 +578,7 @@ async def update_percent(current_id: int, ids_length: int, msg: Message) -> Mess
     try:
         if current_id >= ids_length - 3:
             try:
-                await msg.edit(content="Progress status: 100%", attachments=[])
+                await msg.edit(content="Progress status: 99%", attachments=[])
                 return msg
             except Exception:
                 pass

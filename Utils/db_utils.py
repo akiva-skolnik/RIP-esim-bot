@@ -16,7 +16,8 @@ api_fights_columns = ('battle_id', 'round_id', 'damage', 'weapon', 'berserk', 'd
                       'citizenId', 'time', 'militaryUnit')
 
 
-async def execute_query(pool: asyncmy.Pool, query: str, params=None, many=False, fetch=False) -> list:
+async def execute_query(pool: asyncmy.Pool, query: str, params: iter = None,
+                        many: bool = False, fetch: bool = False) -> list:
     async with pool.acquire() as connection:
         async with connection.cursor() as cursor:
             if many:
@@ -41,6 +42,8 @@ async def cache_api_battles(interaction: Interaction, server: str, battle_ids: i
     existing_battles = [x[0] for x in await execute_query(bot.pool, query, fetch=True)]  # x[0] = battle_id
 
     for battle_id in battle_ids:
+        if await bot.should_cancel(interaction):
+            break
         if battle_id not in existing_battles:
             await insert_into_api_battles(server, battle_id)
             await custom_delay(interaction)
@@ -118,6 +121,8 @@ async def cache_api_fights(interaction: Interaction, server: str, api_battles_df
 
     scanned_rounds = 0
     for i, api_battles in api_battles_df.iterrows():
+        if await bot.should_cancel(interaction, msg):
+            break
         battle_is_over = 8 in (api_battles['defenderScore'], api_battles['attackerScore'])
         if battle_is_over:
             current_round = api_battles["currentRound"]  # this can be 9...16 included
