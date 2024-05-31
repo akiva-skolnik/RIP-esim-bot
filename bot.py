@@ -473,16 +473,17 @@ async def update_prices(server: str) -> None:
 loop = asyncio.new_event_loop()
 
 
-async def delay(coro, seconds):
-    await asyncio.sleep(seconds)
+async def delay(coro: callable, index: int, seconds: int):
+    if index > 0:
+        await asyncio.sleep(seconds)
     await coro
 
 
 loop.create_task(update_monetary_market())
 
 for i, server in enumerate(servers):
-    loop.create_task(delay(update_prices(server), 10 + i * 900 / len(servers)))
-    loop.create_task(delay(update_time(server), 20 + i * 120 / len(servers)))
-    loop.create_task(delay(update_buffs(server), 30 + i * 120 / len(servers)))
+    loop.create_task(delay(update_prices(server), i, 10 + i * 900 // len(servers)))
+    loop.create_task(delay(update_time(server), i, 20 + i * 120 // len(servers)))
+    loop.create_task(delay(update_buffs(server), i, 30 + i * 120 // len(servers)))
 
 loop.run_forever()
