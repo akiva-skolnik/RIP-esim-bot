@@ -104,7 +104,8 @@ async def update_buffs(server: str) -> None:
 
                 # Calculate the seconds since the player was buffed
                 if player[BUFFED_AT]:
-                    buffed_at = datetime.strptime(player[BUFFED_AT], DATETIME_FORMAT)
+                    buffed_at = datetime.strptime(player[BUFFED_AT], DATETIME_FORMAT).astimezone(
+                        pytz.timezone(TIMEZONE))
                     buffed_seconds = (now - buffed_at).total_seconds()
                     player[DEBUFF_ENDS] = (timedelta(days=days) + buffed_at).strftime(DATETIME_FORMAT)
                 else:
@@ -114,8 +115,9 @@ async def update_buffs(server: str) -> None:
                 if 0 < buffed_seconds < day_seconds:  # If buffed within the last 24h
                     seconds_until_change = day_seconds - buffed_seconds
                 elif day_seconds < buffed_seconds < day_seconds * days:  # If in debuff period
-                    seconds_until_change = (
-                            datetime.strptime(player[DEBUFF_ENDS], DATETIME_FORMAT) - now).total_seconds()
+                    debuff_ends = datetime.strptime(player[DEBUFF_ENDS], DATETIME_FORMAT).astimezone(
+                        pytz.timezone(TIMEZONE))
+                    seconds_until_change = (debuff_ends - now).total_seconds()
                 else:  # If no buffs/debuffs are active
                     seconds_until_change = 0
 
@@ -133,7 +135,7 @@ async def update_buffs(server: str) -> None:
                         except IndexError:
                             print(f"index error for {nick} at {server}")
                         continue
-                    elapsed_since_update = now - datetime.strptime(last_update, DATETIME_FORMAT)
+                    elapsed_since_update = now - datetime.strptime(last_update, DATETIME_FORMAT).astimezone(pytz.timezone(TIMEZONE))
                     is_negative = "-" in player[elixir]
                     player[elixir] = player[elixir].replace("-", "")
                     try:
@@ -148,7 +150,8 @@ async def update_buffs(server: str) -> None:
                     if not is_negative:  # TODO: is there a nicer way to replace this logic?
                         is_negative = False
                         if remaining_seconds < 0:  # If the timer is negative, calculate the actual remaining time
-                            elixir_start = datetime.strptime(player[elixir + len(ELIXIRS)], DATETIME_FORMAT)
+                            elixir_start = datetime.strptime(player[elixir + len(ELIXIRS)], DATETIME_FORMAT).astimezone(
+                                pytz.timezone(TIMEZONE))
                             remaining_seconds += day_seconds - (now - elixir_start).total_seconds()
                             is_negative = True
 
@@ -398,7 +401,7 @@ async def update_prices(server: str) -> None:
                 this_month = "01-" + now.strftime("%m-%Y")
             else:
                 this_month = now.strftime("%d-%m-%Y")
-            now = now.strftime(DATETIME_FORMAT)
+            now_s = now.strftime(DATETIME_FORMAT)
 
             results = defaultdict(list)
             for product_key, product_offers in offers.items():
@@ -441,7 +444,7 @@ async def update_prices(server: str) -> None:
             # Update the spreadsheet with processed data
             new_values = []
             headers = {"Product": [
-                ["Price", "Stock", "Country", "Link", "Monetary market", f"Last update: {now} (game time)."]]}
+                ["Price", "Stock", "Country", "Link", "Monetary market", f"Last update: {now_s} (game time)."]]}
             headers.update(dict(sorted(results.items())))
             results = headers
             if len(results) > 1:
