@@ -8,13 +8,10 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from random import randint
 
-import pytz
-
 import utils
 from constants import countries_per_id, countries_per_server
 
-TIMEZONE = 'Europe/Berlin'
-DATETIME_FORMAT = "%d-%m-%Y %H:%M:%S"
+DEFAULT_DATETIME_FORMAT = "%d-%m-%Y %H:%M:%S"
 MAX_ERROR_LENGTH = 10000
 
 PRODUCT_SHEET = "17y8qEU4aHQRTXKdnlM278z3SDzY16bmxMwrZ0RKWcEI"
@@ -25,7 +22,8 @@ servers = {
     "suna": "1imlsoLdaEb45NnJGmo5T7mQxsjzzTGbrkvqfcR8pMlE",
     "alpha": "1KqxbZ9LqS191wRf1VGLNl-aw6UId9kmUE0k7NfKQdI4",
     "primera": "1laY2aYa5_TcaDPCZ4FrFjZnbvVkxRIrGdm7ZRaO41nY",
-    "secura": "10en9SJVsIQz7uGhbXwb9GInnOdcDuE4p7L93un0q6xw"}
+    "secura": "10en9SJVsIQz7uGhbXwb9GInnOdcDuE4p7L93un0q6xw"
+}
 
 
 # TODO: split into smaller functions.
@@ -43,8 +41,8 @@ async def update_buffs(server: str) -> None:
         loop_start_time = time.time()
         try:
             buffs_data = await utils.find_one("buffs", server) or {}
-            now = datetime.now().astimezone(pytz.timezone(TIMEZONE))
-            now_s = now.strftime(DATETIME_FORMAT)
+            now = utils.current_datetime()
+            now_s = utils.current_datetime_str()
             last_update = buffs_data.get("Last update:", [now_s])[0]
             buffs_data.pop("Nick", None)
             buffs_data.pop("Last update:", None)
@@ -52,20 +50,20 @@ async def update_buffs(server: str) -> None:
             for player_info in await utils.get_content(f"{base_url}apiOnlinePlayers.html"):
                 player = json.loads(player_info)
                 nick = player['login']
-                player_profile_link = f"{base_url}profile.html?id={player['id']}"
+                profile_link = f"{base_url}profile.html?id={player['id']}"
 
                 # Pause to comply with server request limits
                 await asyncio.sleep(0.37)
-                tree = await utils.get_content(player_profile_link)
-                player_details = utils.extract_player_details(player_profile_link, tree)
+                tree = await utils.get_content(profile_link)
+                player_details = utils.extract_player_details(profile_link, tree)
 
                 # Update the player data if they are buffed
                 if player_details.get("buffed"):
                     if nick not in buffs_data:
-                        buffs_data[nick] = [player_profile_link, player_details['citizenship'],
+                        buffs_data[nick] = [profile_link, player_details['citizenship'],
                                             player_details['damage'],
-                                            now_s, player_details['premium']] + [""] * (
-                                                   3 + len(ELIXIRS) * 2)  # 3 = buffed at, debuff ends, till change
+                                            now_s, player_details['premium']] + [""] * (3 + len(ELIXIRS) * 2)
+                        # 3 = buffed at, debuff ends, till change
                     if not buffs_data[nick][BUFFED_AT]:
                         buffs_data[nick][BUFFED_AT] = now_s
 
@@ -84,10 +82,10 @@ async def update_buffs(server: str) -> None:
                     elixir = buff.split("elixir")[0]
                     index = ELIXIRS.index(elixir)
                     if nick not in buffs_data:
-                        buffs_data[nick] = [player_profile_link, player_details['citizenship'],
+                        buffs_data[nick] = [profile_link, player_details['citizenship'],
                                             player_details['damage'],
-                                            now_s, player_details['premium']] + \
-                                           [""] * (3 + len(ELIXIRS) * 2)  # 3 = buffed at, debuff ends, till change
+                                            now_s, player_details['premium']] + [""] * (3 + len(ELIXIRS) * 2)
+                        # 3 = buffed at, debuff ends, till change
                     if not buffs_data[nick][base_columns + index]:
                         buffs_data[nick][base_columns + index] = str(
                             timedelta(minutes=(1 + elixir_bonus / 100) * BUFF_SIZES[size]))
@@ -104,10 +102,9 @@ async def update_buffs(server: str) -> None:
 
                 # Calculate the seconds since the player was buffed
                 if player[BUFFED_AT]:
-                    buffed_at = datetime.strptime(player[BUFFED_AT], DATETIME_FORMAT).astimezone(
-                        pytz.timezone(TIMEZONE))
+                    buffed_at = utils.datetime_from_str(player[BUFFED_AT])
                     buffed_seconds = (now - buffed_at).total_seconds()
-                    player[DEBUFF_ENDS] = (timedelta(days=days) + buffed_at).strftime(DATETIME_FORMAT)
+                    player[DEBUFF_ENDS] = utils.datetime_to_str(timedelta(days=days) + buffed_at)
                 else:
                     buffed_seconds = 0
 
@@ -115,8 +112,7 @@ async def update_buffs(server: str) -> None:
                 if 0 < buffed_seconds < day_seconds:  # If buffed within the last 24h
                     seconds_until_change = day_seconds - buffed_seconds
                 elif day_seconds < buffed_seconds < day_seconds * days:  # If in debuff period
-                    debuff_ends = datetime.strptime(player[DEBUFF_ENDS], DATETIME_FORMAT).astimezone(
-                        pytz.timezone(TIMEZONE))
+                    debuff_ends = utils.datetime_from_str(player[DEBUFF_ENDS])
                     seconds_until_change = (debuff_ends - now).total_seconds()
                 else:  # If no buffs/debuffs are active
                     seconds_until_change = 0
@@ -135,7 +131,7 @@ async def update_buffs(server: str) -> None:
                         except IndexError:
                             print(f"index error for {nick} at {server}")
                         continue
-                    elapsed_since_update = now - datetime.strptime(last_update, DATETIME_FORMAT).astimezone(pytz.timezone(TIMEZONE))
+                    elapsed_since_update = now - utils.datetime_from_str(last_update)
                     is_negative = "-" in player[elixir]
                     player[elixir] = player[elixir].replace("-", "")
                     try:
@@ -148,12 +144,10 @@ async def update_buffs(server: str) -> None:
                                                 seconds=elixir_time.second)
                     remaining_seconds = (elixir_duration - elapsed_since_update).total_seconds()
                     if not is_negative:  # TODO: is there a nicer way to replace this logic?
-                        is_negative = False
-                        if remaining_seconds < 0:  # If the timer is negative, calculate the actual remaining time
-                            elixir_start = datetime.strptime(player[elixir + len(ELIXIRS)], DATETIME_FORMAT).astimezone(
-                                pytz.timezone(TIMEZONE))
+                        is_negative = remaining_seconds < 0
+                        if is_negative:  # If the timer is negative, calculate the actual remaining time
+                            elixir_start = utils.datetime_from_str(player[elixir + len(ELIXIRS)])
                             remaining_seconds += day_seconds - (now - elixir_start).total_seconds()
-                            is_negative = True
 
                     if remaining_seconds > 0:
                         player[elixir] = (("-" if is_negative else "") + utils.format_seconds(remaining_seconds))
@@ -161,7 +155,7 @@ async def update_buffs(server: str) -> None:
                         player[elixir] = player[elixir + len(ELIXIRS)] = ""
 
                 # Remove the player if there are no active buffs or elixirs
-                if not any(player[i] for i in range(7, 12)):
+                if not any(player[i] for i in range(TILL_CHANGE, base_columns + len(ELIXIRS))):
                     del buffs_data[nick]
 
             # Sort the data for presentation in the spreadsheet, and update the database
@@ -211,7 +205,7 @@ async def update_time(server: str) -> None:
     while True:
         loop_start_time = time.time()
         try:
-            now = datetime.now().astimezone(pytz.timezone(TIMEZONE))
+            now = utils.current_datetime()
             player_data = await utils.find_one("time_online", server)  # Retrieve current player time online data
             player_data.pop("_headers", None)  # Remove headers if they are in the data already
 
@@ -233,9 +227,8 @@ async def update_time(server: str) -> None:
             start_date = datetime.strptime(initial_date_info.get(server, default_date_info)[1], date_format)
             start_of_month = max(start_date,
                                  datetime.strptime(f"01/{now.strftime('%m')}/{now.strftime('%Y')}", date_format))
-            now_naive = now.replace(tzinfo=None)
-            days_since_start = (now_naive - start_date).total_seconds() // seconds_in_day + 1
-            days_since_month_start = (now_naive - start_of_month).total_seconds() // seconds_in_day + 1
+            days_since_start = (now - start_date).total_seconds() // seconds_in_day + 1
+            days_since_month_start = (now - start_of_month).total_seconds() // seconds_in_day + 1
 
             if player_data:
                 days_online_top_player = next(iter(player_data.values()))[MONTH_MINUTES] // minutes_in_day + 1
@@ -263,7 +256,7 @@ async def update_time(server: str) -> None:
                 reverse=True)[:keep])
 
             # Update the headers with the current time
-            current_time = datetime.now().astimezone(pytz.timezone(TIMEZONE)).strftime(DATETIME_FORMAT)
+            current_time = utils.current_datetime_str()
             player_data["_headers"] = headers[1:] + [current_time]
 
             # Persist the updated data
@@ -317,7 +310,7 @@ async def update_monetary_market():
 
             # update history
             history = await utils.find_one("mm_history", server)
-            today = datetime.now().astimezone(pytz.timezone(TIMEZONE)).strftime(DATETIME_FORMAT.split()[0])
+            today = utils.current_datetime_str(DEFAULT_DATETIME_FORMAT.split()[0])
             for country_id, price in mm_per_server[server].items():
                 country_id = str(country_id)  # MongoDB forcing keys to be str
                 price = str(price)
@@ -332,11 +325,11 @@ async def update_monetary_market():
             history.clear()
 
             # update db
-            now = datetime.now().astimezone(pytz.timezone(TIMEZONE)).strftime(DATETIME_FORMAT)
+            now = utils.current_datetime_str()
             mm_per_server[server]["last_update"] = now
             await utils.replace_one("mm", server, mm_per_server[server])
 
-        now = datetime.now().astimezone(pytz.timezone(TIMEZONE)).strftime(DATETIME_FORMAT)
+        now = utils.current_datetime_str()
         values = [["Country Name", "Currency"] + list(servers) + [f"Last update: {now} (game time)."]]
 
         for country_id, country_details in countries_per_id.items():
@@ -396,12 +389,12 @@ async def update_prices(server: str) -> None:
                 offers[product_key] = sorted([x[-1] for x in product_offers], key=lambda x: x["price"])
 
             # Update the history
-            now = datetime.now().astimezone(pytz.timezone(TIMEZONE))
+            now = utils.current_datetime()
             if server not in ('xena', 'mega'):
                 this_month = "01-" + now.strftime("%m-%Y")
             else:
                 this_month = now.strftime("%d-%m-%Y")
-            now_s = now.strftime(DATETIME_FORMAT)
+            now_s = utils.current_datetime_str()
 
             results = defaultdict(list)
             for product_key, product_offers in offers.items():

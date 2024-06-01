@@ -2,10 +2,12 @@ import asyncio
 import json
 import os
 import traceback
+from datetime import datetime
 from random import randint
 from typing import Union
 
 import gspread_asyncio
+import pytz
 from aiohttp import ClientSession
 from dotenv import load_dotenv
 from google.oauth2.service_account import Credentials
@@ -14,6 +16,9 @@ from lxml.html import fromstring
 from constants import countries_per_id, countries_per_server
 
 load_dotenv()
+
+DEFAULT_TIMEZONE = 'Europe/Berlin'
+DEFAULT_DATETIME_FORMAT = "%d-%m-%Y %H:%M:%S"
 
 all_parameters: dict = {
     "avoid": "Chance to avoid damage",
@@ -238,3 +243,20 @@ def extract_player_details(player_profile_link: str, tree: fromstring) -> dict:
         'buffs': buffs,
         'buffed': buffed
     }
+
+
+def datetime_from_str(date_str: str, _format: str = DEFAULT_DATETIME_FORMAT) -> datetime:
+    return datetime.strptime(date_str, _format)
+
+
+def datetime_to_str(date: datetime, _format: str = DEFAULT_DATETIME_FORMAT) -> str:
+    return date.strftime(_format)
+
+
+def current_datetime() -> datetime:
+    """Convert to naive, so we can add / subtract timedelta & time from string."""
+    return datetime.now(pytz.timezone(DEFAULT_TIMEZONE)).replace(tzinfo=None)
+
+
+def current_datetime_str(_format: str = DEFAULT_DATETIME_FORMAT) -> str:
+    return current_datetime().strftime(_format)
