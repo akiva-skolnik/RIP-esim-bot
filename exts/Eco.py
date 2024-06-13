@@ -961,23 +961,26 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         await utils.custom_followup(interaction, files=files, embed=await utils.convert_embed(interaction, embed))
 
 
-async def calc_upgrades(bot, parameter: str, value: float, total: dict, ax, slot="") -> (list, list, int):
+async def calc_upgrades(bot, parameter: str, value: float, total: dict, ax, slot: str = "") -> (list, list, int):
     """calculate upgrades"""
-    ranges = {"max": [0, 2, 4, 6, 8, 12, 16, 20],
-              "core": [0, 0, 0, 0, 0, 0, 7, 8],  # must be before "damage"
-              "bonus damage": [0, 0, 0, 0, 0, 0, 3, 10],
-              "damage": [0, 1, 2, 3, 4, 6, 8, 8.5],
-              "miss": [0, 1.5, 3, 4.5, 6, 7.5, 9, 9.5],
-              "flight": [0.5, 1, 1.5, 2, 3, 4, 5.5, 6],
-              "eco": [0.1, 0.2, 0.4, 0.6, 0.8, 1.1, 1.4, 1.6],
-              "str": [10, 16, 20, 24, 28, 40, 60, 80],
-              "hit": [20, 40, 50, 60, 70, 90, 130, 150],
-              "less": [3, 4, 5, 6, 7, 8, 10, 10.5],
-              "find": [2, 2.5, 3, 3.5, 4, 4.5, 5, 6],
-              "production": [0, 0, 0, 0, 0, 0, 2.5, 3],
-              "split": [0, 0, 0, 0, 0, 0, 4, 5],
-              "increase": [0, 0, 0, 0, 0, 0, 10, 15],
-              "elixir": [0, 0, 0, 0, 0, 0, 6, 10],
+    # TODO: test
+    ranges = {"max": [0, 2, 4, 6, 8, 12, 16, 20, 22],
+              "core": [0, 0, 0, 0, 0, 0, 7, 8, 9],  # must be before "damage"
+              "bonus damage": [0, 0, 0, 0, 0, 0, 3, 10, 13],  # X bonus damage, bonus damage on every X hour
+              "damage": [0, 1, 2, 3, 4, 6, 8, 8.5, 9],  # dmg, crit, avoid
+              "miss": [0, 1.5, 3, 4.5, 6, 7.5, 9, 9.5, 10],
+              "flight": [0.5, 1, 1.5, 2, 3, 4, 5.5, 6, 7],
+              "eco": [0.1, 0.2, 0.4, 0.6, 0.8, 1.1, 1.4, 1.6, 2],
+              "str": [10, 16, 20, 24, 28, 40, 60, 80, 100],
+              "hit": [20, 40, 50, 60, 70, 90, 130, 150, 200],
+              "less": [3, 4, 5, 6, 7, 8, 10, 10.5, 11],
+              "find": [2, 2.5, 3, 3.5, 4, 4.5, 5, 6, 7],
+              "production": [0, 0, 0, 0, 0, 0, 2.5, 3, 4],  # bonus X production
+              "ammunition": [0, 0, 0, 0, 0, 0, 2.5, 3, 3.5],  # ammunition, restore, reduce merge price, bonus merge
+              "split": [0, 0, 0, 0, 0, 0, 4, 5, 6],
+              "increase": [0, 0, 0, 0, 0, 0, 10, 15, 20],
+              "elixir": [0, 0, 0, 0, 0, 0, 6, 10, 13],
+              "limit": [0, 0, 0, 0, 0, 0, 1, 1, 1],
               }
 
     if parameter in ("avoid", "crit", "dmg"):
@@ -985,7 +988,7 @@ async def calc_upgrades(bot, parameter: str, value: float, total: dict, ax, slot
     elif parameter in ("morning", "noon", "evening", "night"):
         ranges = ranges["bonus damage"]
     elif parameter in ("consume", "merge", "merging", "restore", "ammunition"):
-        ranges = ranges["production"]
+        ranges = ranges["ammunition"]
     else:
         ranges = ranges[parameter]
 
@@ -1019,7 +1022,7 @@ async def calc_upgrades(bot, parameter: str, value: float, total: dict, ax, slot
             label=f"{slot} ({parameter})" if slot else parameter))
     return data, percentages, quality
 
-
+# TODO: bot: MyBot
 async def setup(bot) -> None:
     """Setup"""
     await bot.add_cog(Eco(bot))

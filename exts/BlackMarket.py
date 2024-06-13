@@ -25,7 +25,7 @@ class BlackMarket(GroupCog, name="black-market"):
               product="you should provide product or eq link (but not both). Ignore both if you wish to see all offers",
               equipment="you should provide product or eq link (but not both). Ignore both if you wish to see all offers")
     async def list(self, interaction: Interaction, server: Optional[Transform[str, Server]],
-                   item_quality: Range[int, 0, 7] = 5, product: Transform[str, Product] = "",
+                   item_quality: Range[int, 0, 8] = 5, product: Transform[str, Product] = "",
                    equipment: Transform[str, Slots] = "") -> None:
         """Display a list of offers for specific products or equipment per server."""
         data = await utils.find_one("collection", __name__)
@@ -95,7 +95,7 @@ class BlackMarket(GroupCog, name="black-market"):
               stock_or_eq_link="if you provided a product, you must provide the stock, "
                                "and if an eq, you must provide its link.")
     async def add(self, interaction: Interaction, action: Literal["buy", "sell"],
-                  your_profile_link: Transform[dict, ProfileLink], item_quality: Optional[Range[int, 0, 7]],
+                  your_profile_link: Transform[dict, ProfileLink], item_quality: Optional[Range[int, 0, 8]],
                   product: Optional[Transform[str, Product]], equipment: Optional[Transform[str, Slots]],
                   price: float, stock_or_eq_link: str) -> None:
         """Add a buy/sell offer to the black market."""

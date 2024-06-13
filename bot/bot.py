@@ -74,7 +74,7 @@ class MyClient(Bot):
     """Custom Client"""
 
     def __init__(self) -> None:
-        super().__init__(command_prefix=when_mentioned, case_insensitive=True,
+        super().__init__(command_prefix="/", case_insensitive=True,
                          activity=Game("type /"), allowed_mentions=AllowedMentions(
                 replied_user=False), intents=Intents.default(), tree_cls=MyTree)
         self.root = root

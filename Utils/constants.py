@@ -250,6 +250,7 @@ all_parameters = {"morning": "Morning bonus damage",
                   "max": "Increased maximum damage",
                   "crit": "Increased critical hit chance",
                   "core": "Increased damage for cores",  # must be before damage
+                  # "Increased damage when defending your core regions"
                   "damage": "Increased damage", "dmg": "Increased damage",
                   "miss": "Miss chance reduction",
                   "flight": "Chance for free flight",
@@ -260,9 +261,12 @@ all_parameters = {"morning": "Morning bonus damage",
                   "less": "Less weapons for Berserk",
                   "find": "Find a weapon",
                   "split": "Improved split",
-                  "production": "Bonus * production",
-                  "merging": "Merge bonus",
-                  "merge": "Reduced equipment merge price",
+                  "production": "Bonus X production",
+                  "merging": "Merge bonus",  # Bonus merge
+                  "merge": "Reduced equipment merge price",  # "Reduced merge price"
                   "restore": "Restoration",
                   "increase": "Increase other parameters",
-                  "elixir": "Elixir time increased"}
+                  "elixir": "Elixir time increased",
+                  "limit": "Additional food limit",
+                  # TODO: Bonus damage on every 4th hour
+                  }
