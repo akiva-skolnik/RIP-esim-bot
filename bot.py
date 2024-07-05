@@ -16,8 +16,8 @@ MAX_ERROR_LENGTH = 10000
 
 PRODUCT_SHEET = "17y8qEU4aHQRTXKdnlM278z3SDzY16bmxMwrZ0RKWcEI"
 servers = {
+    "elysia": "1blDBu-_DA4UsvZJ7sG7SFLyuHzFKcnJgX_ke4hvlyw8",
     "xena": "1SPEeGyYuyVFsF8JHpLO0ioaP0oG3i1X2UVVWYEKKVL0",
-    "mega": "1C2u-KD1IoLzuTQ1olsWommqUvLYSWUimcxobmtpcCFY",
     "luxia": "1mx_JkHVnTVikNdTSxhvfFh4Pzuepp9ZGakCAtxnGxyY",
     "suna": "1imlsoLdaEb45NnJGmo5T7mQxsjzzTGbrkvqfcR8pMlE",
     "alpha": "1KqxbZ9LqS191wRf1VGLNl-aw6UId9kmUE0k7NfKQdI4",
@@ -192,7 +192,7 @@ async def update_time(server: str) -> None:
         "primera": ["Minutes online (since 10/12/20)", "10/12/2020"],
         "luxia": ["Minutes online (since day 1)", "11/02/2022"],
         "xena": ["Minutes online (since day 1)", "03/05/2024"],
-        "mega": ["Minutes online (since day 1)", "02/03/2024"],
+        "elysia": ["Minutes online (since day 1)", "05/07/2024"],
     }
     default_date_info = ["Minutes online (since 19/05/2020)", "19/05/2020"]
 
@@ -390,7 +390,7 @@ async def update_prices(server: str) -> None:
 
             # Update the history
             now = utils.current_datetime()
-            if server not in ('xena', 'mega'):
+            if server not in ('xena', 'elysia'):
                 this_month = "01-" + now.strftime("%m-%Y")
             else:
                 this_month = now.strftime("%d-%m-%Y")
