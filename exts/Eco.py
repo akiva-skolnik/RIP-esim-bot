@@ -25,7 +25,7 @@ from Utils.utils import CoolDownModified, draw_pil_table, split_list
 
 options = ["iron", "grain", "oil", "stone", "wood", "diamonds"]
 product_gids = {"primera": 6602346, "secura": 1142213909, "suna": 1317638633, "alpha": 1073258602,
-                'luxia': 1542255867, "mega": 1762742789, "xena": 681890089}
+                'luxia': 1542255867, "xena": 681890089, "elysia": 91790250}
 
 
 class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": False}):
@@ -525,7 +525,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                     d.append(datetime.now().astimezone(timezone('Europe/Berlin')))
                     d1.append(best_price)
 
-                temp_server = server in ('mega', 'xena')
+                temp_server = server in ('xena', 'elysia')
                 med = statistics.median(d1)
                 std = statistics.stdev(d1)
                 window = 12 if not temp_server else 7
