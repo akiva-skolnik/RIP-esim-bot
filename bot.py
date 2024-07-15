@@ -368,7 +368,7 @@ async def update_prices(server: str) -> None:
                 product_type = offer["resource"].title()
                 product_key = f"Q{offer['quality']} {product_type}" if product_type not in raw_products else product_type
                 price = db_mm.get(str(country_id), 0) * float(offer["price"])
-                if price < 1:  # ignore offers worth less than 1 gold
+                if price * offer["quantity"] < 1:  # ignore offers worth less than 1 gold
                     continue
                 total_stock_per_product[product_key] += offer["quantity"]
 
