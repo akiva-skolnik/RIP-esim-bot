@@ -290,16 +290,16 @@ async def update_monetary_market():
             for country_id in countries_per_server[server]:
                 monetary_market_ration = 0
                 try:
-                    func = utils.get_locked_content if server == "primera" else utils.get_content
                     url = f'{base_url}monetaryMarketOffers?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1'
-                    tree = await func(url)
+                    tree = await utils.get_content(url)
 
                     ratios = tree.xpath("//*[@class='ratio']//b/text()")
                     amounts = tree.xpath("//*[@class='amount']//b/text()")
 
                     for ratio, amount in zip(ratios, amounts):
-                        if float(amount) > 1:
-                            monetary_market_ration = float(ratio)
+                        ratio, amount = float(ratio), float(amount)
+                        if ratio * amount > 1:  # ignore offers worth less than 1 gold
+                            monetary_market_ration = ratio
                             break
                     if not monetary_market_ration and ratios:
                         monetary_market_ration = float(ratios[-1])
@@ -368,7 +368,7 @@ async def update_prices(server: str) -> None:
                 product_type = offer["resource"].title()
                 product_key = f"Q{offer['quality']} {product_type}" if product_type not in raw_products else product_type
                 price = db_mm.get(str(country_id), 0) * float(offer["price"])
-                if not price:
+                if price < 1:  # ignore offers worth less than 1 gold
                     continue
                 total_stock_per_product[product_key] += offer["quantity"]
 
@@ -400,7 +400,7 @@ async def update_prices(server: str) -> None:
             for product_key, product_offers in offers.items():
                 quality, product_type = product_key[1:].split() if product_key[0] == "Q" else (1, product_key)
                 n = 0
-                avg_price = 0
+                price = 0
                 for offer in product_offers:
                     country_id = offer["country_id"]
                     link = f"{base_url}productMarket.html?resource={product_type.upper()}&countryId={country_id}&quality={quality}"
@@ -410,16 +410,16 @@ async def update_prices(server: str) -> None:
                          monetary_market_link])
 
                     # Calculate the average price of the top 1% of total offers
-                    stock_left = int(total_stock_per_product[
-                                         product_key] * 0.01 - n) + 1  # +1 to avoid division by 0 for <100 offers
+                    # (+1 to avoid division by 0 for <100 offers)
+                    stock_left = int(total_stock_per_product[product_key] * 0.01 - n) + 1
                     if stock_left > 0:
                         stock = min(stock_left, offer["stock"])  # stock left to reach 1% of total stock
-                        avg_price += stock * offer["price"]
+                        price += stock * offer["price"]
                         n += stock
 
                 # Update history  TODO: use SQL
                 history_key = product_key.replace(" ", "_")
-                avg_price = str(round(avg_price / n if n else 0, 4))
+                avg_price = str(round(price / n if n else 0, 4))
                 history_entry = await utils.find_one("prices_history", history_key)
                 if server not in history_entry:
                     history_entry[server] = {}
