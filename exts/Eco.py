@@ -465,7 +465,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                             pass
                         ratios_per_country[country_id] = mm_ratio
                     price = round(mm_ratio * float(raw_price), 4)
-                    if price > 1:  # ignore offers worth less than 1 gold
+                    if price * stock > 1:  # ignore offers worth less than 1 gold
                         offers_per_country[country_id] = {"price": price, "stock": stock,
                                                           "country": all_countries[country_id]}
                 if len(raw_prices) < 20:  # last page
