@@ -433,44 +433,50 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
 
         if real_time:
             currency_names = {v: k for k, v in utils.get_countries(server, index=2).items()}
-            final = {}
-            for page in range(1, 10):  # the last page is unknown
+            offers_per_country = {}
+            ratios_per_country = {}
+            for page in range(1, 11):  # the last page is unknown, so we check up to the first 10 pages
                 tree = await utils.get_content(
                     f'{base_url}productMarketOffers?type={item}&countryId=-1&quality={quality}&page={page}')
                 raw_prices = tree.xpath("//*[@class='productMarketOffer']//b/text()")
-                cc = [x.strip() for x in tree.xpath("//*[@class='price']/div/text()") if x.strip()]
+                ccs = [x.strip().lower() for x in tree.xpath("//*[@class='price']/div/text()") if x.strip()]
                 stock = [int(x) for x in tree.xpath("//*[@class='quantity']//text()") if x.strip()]
-                for cc, raw_price, stock in zip(cc, raw_prices, stock):
-                    country_id = currency_names[cc.lower()]
-                    if country_id not in final:
+                for cc, raw_price, stock in zip(ccs, raw_prices, stock):
+                    country_id = currency_names[cc]
+                    if country_id in offers_per_country:
+                        continue  # TODO: should we allow multiple offers per country?
+                    if country_id in ratios_per_country:
+                        mm_ratio = ratios_per_country[country_id]
+                    else:
                         mm_ratio = 0
                         try:
-                            func = utils.get_locked_content if server == "primera" else utils.get_content
-                            tree = await func(f"{base_url}monetaryMarketOffers"
-                                              f"?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1")
+                            tree = await utils.get_content(f"{base_url}monetaryMarketOffers"
+                                                           f"?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1")
                             ratios = tree.xpath("//*[@class='ratio']//b/text()")
                             amounts = tree.xpath("//*[@class='amount']//b/text()")
                             for ratio, amount in zip(ratios, amounts):
-                                if float(amount) > 1:
+                                ratio, amount = float(ratio), float(amount)
+                                if ratio * amount > 1:  # ignore offers worth less than 1 gold
                                     mm_ratio = ratio
                                     break
                             if not mm_ratio and ratios:
-                                mm_ratio = ratios[-1]
+                                mm_ratio = float(ratios[-1])
                         except Exception:
                             pass
-                        price = round(float(mm_ratio) * float(raw_price), 4)
-                        if price:
-                            final[country_id] = {"price": price, "stock": stock,
-                                                 "country": all_countries[country_id]}
+                        ratios_per_country[country_id] = mm_ratio
+                    price = round(mm_ratio * float(raw_price), 4)
+                    if price > 1:  # ignore offers worth less than 1 gold
+                        offers_per_country[country_id] = {"price": price, "stock": stock,
+                                                          "country": all_countries[country_id]}
                 if len(raw_prices) < 20:  # last page
                     break
                 await utils.custom_delay(interaction)
 
             embed = Embed(colour=0x3D85C6, title=f"{product_name}, {server}")
-            final = dict(sorted(final.items(), key=lambda x: x[1]["price"]))
-            if final:
+            offers_per_country = dict(sorted(offers_per_country.items(), key=lambda x: x[1]["price"]))
+            if offers_per_country:
                 results = []
-                for country_id, db_dict in final.items():
+                for country_id, db_dict in offers_per_country.items():
                     product_market = f'{base_url}productMarket.html?resource={item}&countryId={country_id}&quality={quality}'
                     monetary_market = f'{base_url}monetaryMarket.html?buyerCurrencyId={country_id}'
                     results.append(
@@ -483,11 +489,11 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                     [f"{utils.codes(DICT['country'])} [{DICT['country']}]({base_url}productMarket.html?"
                      f"resource={item}&countryId={country_id}&quality={quality}) "
                      f"([MM]({base_url}monetaryMarket.html?buyerCurrencyId={country_id}))"
-                     for country_id, DICT in final.items()][:5]))
-                embed.add_field(name="**Price**", value="\n".join([f"{DICT['price']}g" for DICT in final.values()][:5]))
-                embed.add_field(name="**Stock**", value="\n".join([str(DICT["stock"]) for DICT in final.values()][:5]))
-                best_price = list(final.values())[0]['price']
-                if len(final.keys()) > 5:
+                     for country_id, DICT in offers_per_country.items()][:5]))
+                embed.add_field(name="**Price**", value="\n".join([f"{DICT['price']}g" for DICT in offers_per_country.values()][:5]))
+                embed.add_field(name="**Stock**", value="\n".join([str(DICT["stock"]) for DICT in offers_per_country.values()][:5]))
+                best_price = list(offers_per_country.values())[0]['price']
+                if len(offers_per_country.keys()) > 5:
                     embed.set_footer(text="(Top 5 offers)")
             else:
                 embed.add_field(name="Error", value="No offers found in the market.")
