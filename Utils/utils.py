@@ -573,6 +573,15 @@ async def get_locked_content(link: str, test_login: bool = False, method: str = 
         tree = await get_content(link, method=method, session=session)
     return tree
 
+async def edit_message(msg: Message, content: str, attachments: list = MISSING) -> Message:
+    if msg.content == content:
+        return msg
+    try:
+        logger.debug(f"Editing message `{msg.content}` to `{content}`")
+        return await msg.edit(content=content, attachments=attachments)
+    except Exception:
+        logger.warning(f"Failed to edit message {msg}")
+        return msg
 
 async def update_percent(current_id: int, ids_length: int, msg: Message) -> Message:
     """update percent"""
@@ -580,18 +589,13 @@ async def update_percent(current_id: int, ids_length: int, msg: Message) -> Mess
         return msg
     current_id += 1
     edit_at = [int(ids_length / 10 * x) for x in range(1, 11)]
-    try:
-        if current_id >= ids_length - 3:
-            try:
-                await msg.edit(content="Progress status: 99%", attachments=[])
-                return msg
-            except Exception:
-                pass
-        elif current_id in edit_at:
-            return await msg.edit(content=f"Progress status: {(edit_at.index(current_id) + 1) * 10}%."
-                                          "\n(I will update this message every 10%)")
-    except Exception:
-        pass
+    if current_id >= ids_length - 3:
+        msg = await edit_message(msg, content="Progress status: 99%", attachments=[])
+    elif current_id in edit_at:
+        content = f"Progress status: {(edit_at.index(current_id) + 1) * 10}%."\
+                  "\n(I will update this message every 10%)"
+        msg = await edit_message(msg, content=content)
+
     return msg
 
 

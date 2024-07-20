@@ -1,6 +1,7 @@
 """Admin.py"""
 import textwrap
 import traceback
+import logging
 from contextlib import redirect_stdout
 from datetime import date
 from io import BytesIO, StringIO
@@ -18,6 +19,13 @@ class Admin(Cog):
 
     def __init__(self, bot) -> None:
         self.bot = bot
+
+    @command()
+    @guilds(utils.hidden_guild)
+    async def set_logging_level(self, interaction: Interaction, level: str) -> None:
+        """Set Logging Level"""
+        logging.getLogger().setLevel(level)
+        await utils.custom_followup(interaction, f"Logging level set to {level}")
 
     @command()
     @guilds(utils.hidden_guild)
