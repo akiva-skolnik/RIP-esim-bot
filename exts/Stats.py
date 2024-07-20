@@ -389,7 +389,6 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
         battle_df.index = battle_df.index.map(lambda x: f"{base_url}battleStatistics.html?id={x}")
         battle_df.index.name = 'Battle Link'
 
-
         # get number of battles won and lost by each country
         # (country in defenderId and defenderScore == 8) or (country in attackerId and attackerScore == 8)
         # TODO: skip events?
@@ -397,7 +396,8 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
         country_ids = pd.concat([scores_df['attackerId'], scores_df['defenderId']]).unique()
         countries_df = pd.DataFrame(index=country_ids, columns=['won', 'lost'], data=0)
         countries_df.index.name = 'Country'
-        for idx, row in scores_df.iterrows():
+        # TODO: vectorize this
+        for row in scores_df.to_dict(orient="index").values():
             if row['attackerScore'] == 8:
                 countries_df.at[row['attackerId'], 'won'] += 1
                 countries_df.at[row['defenderId'], 'lost'] += 1

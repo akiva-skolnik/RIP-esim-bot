@@ -21,6 +21,16 @@ class Admin(Cog):
 
     @command()
     @guilds(utils.hidden_guild)
+    async def delete_old_api_fights(self, interaction: Interaction, servers: str = ""):
+        # TODO: automate this
+        for server in servers.split(",") if servers else all_servers:
+            async with self.bot.pool.acquire() as connection:
+                async with connection.cursor() as cursor:
+                    await cursor.execute(f"DELETE FROM {server}.apiFights WHERE time < NOW() - INTERVAL 1 MONTH")
+        await utils.custom_followup(interaction, "done")
+
+    @command()
+    @guilds(utils.hidden_guild)
     async def create_tables(self, interaction: Interaction, servers: str = ""):
         for server in servers.split(",") if servers else all_servers:
             async with self.bot.pool.acquire() as connection:

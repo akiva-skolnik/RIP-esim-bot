@@ -1,5 +1,6 @@
 """utils.py"""
 import json
+import logging
 import random
 from asyncio import sleep
 from collections import defaultdict
@@ -35,6 +36,7 @@ from .paginator import FieldPageSource, Pages
 
 hidden_guild = config_ids["commands_server_id"]
 font = ImageFont.truetype(path.join(path.dirname(path.dirname(__file__)), "files", "DejaVuSansMono.ttf"), 100)
+logger = logging.getLogger()
 
 
 class CoolDownModified:
@@ -165,7 +167,7 @@ async def dmg_trend(hit_time: dict, server: str, battle_id: str) -> BytesIO:
 async def get_auction(link: str) -> dict:
     """get auction"""
     tree = await get_content(link)
-    seller = tree.xpath("//div[1]//table[1]//tr[2]//td[1]//a/text()")[0]
+    seller = tree.xpath("//div[1]//table[1]//tr[2]//td[1]//a/text()")[0]  # TODO: update
     buyer = tree.xpath("//div[1]//table[1]//tr[2]//td[2]//a/text()") or ["None"]
     item = tree.xpath("//*[@id='esim-layout']//div[1]//tr[2]//td[3]/b/text()")
     if not item:
@@ -574,6 +576,8 @@ async def get_locked_content(link: str, test_login: bool = False, method: str = 
 
 async def update_percent(current_id: int, ids_length: int, msg: Message) -> Message:
     """update percent"""
+    if ids_length < 10:
+        return msg
     current_id += 1
     edit_at = [int(ids_length / 10 * x) for x in range(1, 11)]
     try:
@@ -651,6 +655,7 @@ async def custom_delay(interaction: Interaction) -> None:
 
 async def send_error(interaction: Optional[Interaction], error: Exception, cmd: str = "") -> None:
     """send error"""
+    logger.error(f"Error in {cmd}", exc_info=error)
     if interaction:
         data = interaction.data["name"] + " " + "  ".join(
             f"**{x.get('name')}**: {x.get('value')}" for x in interaction.data.get('options', []))
@@ -667,7 +672,7 @@ async def send_error(interaction: Optional[Interaction], error: Exception, cmd: 
         return
     user_error = f"An error occurred. Please report this at the support server: {config_ids['support_invite']}" \
                  f"\n `The program {cmd if cmd else interaction.command.name} has halted.`"
-    if cmd:
+    if cmd and (isinstance(cmd, int) or cmd.isdigit()):
         user_error += f"The following results do not include ID {cmd} onwards"
     await custom_followup(interaction, user_error)
 

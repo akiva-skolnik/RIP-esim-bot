@@ -490,8 +490,10 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                      f"resource={item}&countryId={country_id}&quality={quality}) "
                      f"([MM]({base_url}monetaryMarket.html?buyerCurrencyId={country_id}))"
                      for country_id, DICT in offers_per_country.items()][:5]))
-                embed.add_field(name="**Price**", value="\n".join([f"{DICT['price']}g" for DICT in offers_per_country.values()][:5]))
-                embed.add_field(name="**Stock**", value="\n".join([str(DICT["stock"]) for DICT in offers_per_country.values()][:5]))
+                embed.add_field(name="**Price**",
+                                value="\n".join([f"{DICT['price']}g" for DICT in offers_per_country.values()][:5]))
+                embed.add_field(name="**Stock**",
+                                value="\n".join([str(DICT["stock"]) for DICT in offers_per_country.values()][:5]))
                 best_price = list(offers_per_country.values())[0]['price']
                 if len(offers_per_country.keys()) > 5:
                     embed.set_footer(text="(Top 5 offers)")
@@ -624,7 +626,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             df = pd.read_html(html.tostring(tree))[0]
             raw = " ".join([x for x in company_type.split() if "Q" not in x])
             not_raw = raw not in ("Iron", "Diamonds", "Grain", "Oil", "Stone", "Wood")
-            for i, row in df.iloc[1:, 2:].iterrows():
+            for row in df.iloc[1:, 2:].to_dict(orient="index").values():
                 for key, value in row.items():
                     if not isinstance(value, str):
                         continue
@@ -1027,6 +1029,7 @@ async def calc_upgrades(bot, parameter: str, value: float, total: dict, ax, slot
             x + 1 for x in range(len(data))], percentages, marker='o', linestyle='--',
             label=f"{slot} ({parameter})" if slot else parameter))
     return data, percentages, quality
+
 
 # TODO: bot: MyBot
 async def setup(bot) -> None:

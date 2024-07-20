@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 
 import asyncmy
@@ -9,6 +10,7 @@ from bot.bot import bot
 from .utils import custom_delay, get_content, custom_followup, update_percent
 
 asyncmy_logger.setLevel("ERROR")  # I INSERT IGNORE, so I don't care about duplicate key warnings
+logger = logging.getLogger()
 
 api_battles_columns = ('battle_id', 'currentRound', 'lastVerifiedRound', 'attackerScore', 'regionId',
                        'defenderScore', 'frozen', 'type', 'defenderId', 'attackerId', 'totalSecondsRemaining')
@@ -18,6 +20,8 @@ api_fights_columns = ('battle_id', 'round_id', 'damage', 'weapon', 'berserk', 'd
 
 async def execute_query(pool: asyncmy.Pool, query: str, params: iter = None,
                         many: bool = False, fetch: bool = False) -> list:
+    logger.info(f"Executing query: {query} (many={many}, fetch={fetch})")
+    logger.debug(f"Params: {params}")
     async with pool.acquire() as connection:
         async with connection.cursor() as cursor:
             if many:
@@ -31,6 +35,7 @@ async def execute_query(pool: asyncmy.Pool, query: str, params: iter = None,
 async def cache_api_battles(interaction: Interaction, server: str, battle_ids: iter) -> None:
     """Verify all battles are in db, if not, insert them"""
     start_id, end_id = min(battle_ids), max(battle_ids)
+    logger.info(f"cache_api_battles: {server=}, {start_id=}, {end_id=}, {len(battle_ids)=}")
     excluded_ids = ",".join(str(i) for i in range(start_id, end_id + 1) if i not in battle_ids)
 
     # Select battles that are in the db and have finished, to be excluded from reinserting
@@ -47,6 +52,7 @@ async def cache_api_battles(interaction: Interaction, server: str, battle_ids: i
         if battle_id not in existing_battles:
             await insert_into_api_battles(server, battle_id)
             await custom_delay(interaction)
+    logger.info(f"cache_api_battles: Done caching {len(battle_ids)} battles from {server=}")
 
 
 async def insert_into_api_battles(server: str, battle_id: int) -> dict:
@@ -69,6 +75,7 @@ async def select_many_api_battles(server: str, battle_ids: iter, columns: tuple 
                                   custom_condition: str = None) -> pd.DataFrame:
     columns = columns or api_battles_columns
     start_id, end_id = min(battle_ids), max(battle_ids)
+    logger.info(f"select_many_api_battles: {server=}, {start_id=}, {end_id=}, {len(battle_ids)=}, {custom_condition=}")
     excluded_ids = ",".join(str(i) for i in range(start_id, end_id + 1) if i not in battle_ids)
     query = f"SELECT {', '.join(columns)} FROM {server}.apiBattles " \
             f"WHERE (battle_id BETWEEN {start_id} AND {end_id}) " + \
@@ -76,7 +83,9 @@ async def select_many_api_battles(server: str, battle_ids: iter, columns: tuple 
             ("" if not custom_condition else f"AND {custom_condition}")
 
     api_battles = await execute_query(bot.pool, query, fetch=True)
-    return pd.DataFrame(api_battles, columns=list(columns), index=[x[0] for x in api_battles])
+    df = pd.DataFrame(api_battles, columns=list(columns), index=[x[0] for x in api_battles])
+    logger.info(f"select_many_api_battles: Done selecting {len(df)} battles from {server=}")
+    return df
 
 
 async def select_one_api_battles(server: str, battle_id: int, columns: tuple = None) -> dict:
@@ -114,15 +123,17 @@ async def cache_api_fights(interaction: Interaction, server: str, api_battles_df
     total_rounds_to_be_scanned = (api_battles_df["currentRound"].sum() -
                                   api_battles_df["lastVerifiedRound"].sum() -
                                   len(api_battles_df))
+    logger.info(f"cache_api_fights: {server=}, {len(api_battles_df)=}, {total_rounds_to_be_scanned=}")
     msg = await custom_followup(interaction,
                                 "Progress status: 1%.\n(I will update you after every 10%)\n"
                                 if total_rounds_to_be_scanned > 10 else "Alright, Sir. Just a moment.",
                                 file=File(bot.typing_gif_path))
 
     scanned_rounds = 0
-    for i, api_battles in api_battles_df.iterrows():
+    for api_battles in api_battles_df.to_dict(orient="index").values():
         if await bot.should_cancel(interaction, msg):
             break
+
         battle_is_over = 8 in (api_battles['defenderScore'], api_battles['attackerScore'])
         if battle_is_over:
             current_round = api_battles["currentRound"]  # this can be 9...16 included
@@ -133,10 +144,16 @@ async def cache_api_fights(interaction: Interaction, server: str, api_battles_df
             # Using int because battle_id is np.int64
             await insert_into_api_fights(server, int(api_battles["battle_id"]), round_id)
             await custom_delay(interaction)
-            scanned_rounds += 1
+        scanned_rounds += current_round
 
         await update_last_verified_round(server, api_battles)
         msg = await update_percent(scanned_rounds, total_rounds_to_be_scanned, msg)
+
+    try:
+        await msg.delete()
+    except Exception:
+        pass
+    logger.info(f"cache_api_fights: Done caching {total_rounds_to_be_scanned} rounds from {server=}")
 
 
 async def update_last_verified_round(server: str, api_battles: pd.Series) -> None:
@@ -172,6 +189,7 @@ async def select_many_api_fights(server: str, battle_ids: iter, columns: tuple =
     """Select all fight records in the given battles (can be a lot)"""
     columns = columns or api_fights_columns
     start_id, end_id = min(battle_ids), max(battle_ids)
+    logger.info(f"select_many_api_fights: {server=}, {start_id=}, {end_id=}, {len(battle_ids)=}, {custom_condition=}")
     excluded_ids = ",".join(str(i) for i in range(start_id, end_id + 1) if i not in battle_ids)
 
     query = f"SELECT {', '.join(columns)} FROM {server}.apiFights " \
@@ -180,13 +198,16 @@ async def select_many_api_fights(server: str, battle_ids: iter, columns: tuple =
             ("" if not custom_condition else f"AND {custom_condition}")
 
     api_fights = await execute_query(bot.pool, query, fetch=True)
-    return pd.DataFrame(api_fights, columns=list(columns))
+    df = pd.DataFrame(api_fights, columns=list(columns))
+    logger.info(f"select_many_api_fights: Done selecting {len(df)} hits from {server=}, {start_id=}, {end_id=}")
+    return df
 
 
 async def get_api_fights_sum(server: str, battle_ids: iter, group_by: str = "citizenId") -> pd.DataFrame:
     """Get the sum of damage, hits, and quality for each citizen in the given battles.
     Returns a DataFrame with columns: citizenId, damage, Q0, Q1, Q2, Q3, Q4, Q5, hits"""
     start_id, end_id = min(battle_ids), max(battle_ids)
+    logger.info(f"get_api_fights_sum: {server=}, {start_id=}, {end_id=}, {len(battle_ids)=}, {group_by=}")
     excluded_ids = ",".join(str(i) for i in range(start_id, end_id + 1) if i not in battle_ids)
     query = (f"SELECT {group_by}, SUM(damage) AS damage, "
              "SUM(IF(weapon = 0, IF(berserk, 5, 1), 0)) AS Q0, "
@@ -205,7 +226,9 @@ async def get_api_fights_sum(server: str, battle_ids: iter, group_by: str = "cit
 
     api_fights = await execute_query(bot.pool, query, fetch=True)
     columns = [group_by, "damage", "Q0", "Q1", "Q2", "Q3", "Q4", "Q5", "hits"]
-    return pd.DataFrame(api_fights, columns=columns, index=[x[0] for x in api_fights])
+    df = pd.DataFrame(api_fights, columns=columns, index=[x[0] for x in api_fights])
+    logger.info(f"get_api_fights_sum: Done selecting {len(df)} citizens from {server=}, {start_id=}, {end_id=}")
+    return df
 
 
 async def select_one_api_fights(server: str, api: dict, round_id: int = 0) -> pd.DataFrame:

@@ -107,9 +107,9 @@ class General(Cog):
             indexes = []
             for tr in range(2, 17):
                 try:
-                    events.append((tree.xpath(f'//tr[{tr}]//td[1]/div/div[1]/div[4]/b/text()') or tree.xpath(
-                        f'//tr[{tr}]//td[1]/h2/text()') or tree.xpath(f'//tr[{tr}]//td[1]/div/div[2]/text()'))[
-                                      -1].strip())
+                    events.append((tree.xpath(f'//tr[{tr}]//td[1]/div/div[1]/div[4]/b/text()') or
+                                   tree.xpath(f'//tr[{tr}]//td[1]/h2/text()') or
+                                   tree.xpath(f'//tr[{tr}]//td[1]/div/div[2]/text()'))[-1].strip())
                     if tree.xpath(f'//tr[{tr}]//td[4]')[0].text == "active":
                         indexes.append(tr - 2)
                 except Exception:

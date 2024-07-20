@@ -160,17 +160,19 @@ class Battle(Cog):
             if ids:
                 find_cup[link] = [
                     {str(interaction.channel.id): {"nick": nick, "author_id": str(interaction.user.id)}}]
+                self.bot.logger.info(f"cup_plus: Starting a new cup_plus for {link}. ids range: {min(ids)}-{max(ids)}")
                 await utils.replace_one("collection", interaction.command.name, find_cup)
                 await cup_func(self.bot, interaction, link, server, ids)
             else:
                 await interaction.edit_original_response(
                     content="No IDs found. Consider using the `cup` command instead. "
                             "Example: `/cup server: alpha first_battle_id: 40730 last_battle_id: 40751`")
-                return
         else:
+            await interaction.edit_original_response(
+                content="On it. If this is taking more than 5 minutes, please report it in the support server.")
+            self.bot.logger.info(f"cup_plus: Adding channel {interaction.channel.id} to {link}")
             find_cup[link].append({str(interaction.channel.id): {"nick": nick, "author_id": str(interaction.user.id)}})
             await utils.replace_one("collection", interaction.command.name, find_cup)
-            return
 
     @checks.dynamic_cooldown(CoolDownModified(30))
     @command()

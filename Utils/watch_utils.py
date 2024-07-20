@@ -168,6 +168,7 @@ async def cup_func(bot, interaction: Interaction, db_key: str, server: str, batt
             db_dict = await utils.find_one("collection", interaction.command.name)
             del db_dict[db_key]
             return await utils.replace_one("collection", interaction.command.name, db_dict)
+        bot.logger.info(f"cup_func start: {server=}, {start_id=}, {end_id=}, {db_key=}, {battle_type=}")
         await db_utils.cache_api_battles(interaction, server, battle_ids)
         api_battles_df = await db_utils.select_many_api_battles(server, battle_ids,
                                                                 custom_condition=f"type = '{battle_type}'")
@@ -181,9 +182,7 @@ async def cup_func(bot, interaction: Interaction, db_key: str, server: str, batt
 
         final = defaultdict(lambda: {'hits': 0, 'damage': 0})
         top5 = {}
-        for i, (citizen_id, row) in enumerate(api_fights_df.iterrows()):
-            if i == 10:
-                break
+        for i, (citizen_id, row) in enumerate(api_fights_df.head(10).to_dict(orient="index").items()):
             api_citizen = await utils.get_content(
                 f'{base_url}apiCitizenById.html?id={citizen_id}')  # TODO: cache to db
             hyperlink = f"{utils.codes(api_citizen['citizenship'])}" \
@@ -243,6 +242,7 @@ async def cup_func(bot, interaction: Interaction, db_key: str, server: str, batt
     if db_key in db_dict:
         del db_dict[db_key]
         await utils.replace_one("collection", interaction.command.name, db_dict)
+    bot.logger.info(f"cup_func end: {server=}, {db_key=}")
 
 
 def generate_cup_plot(df: pd.DataFrame, names: dict) -> Optional[BytesIO]:

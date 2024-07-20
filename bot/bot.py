@@ -1,6 +1,6 @@
 """Bot.py"""
-import asyncio
 import json
+import logging
 import os
 from datetime import date, datetime
 
@@ -8,7 +8,7 @@ import asyncmy
 from aiohttp import ClientSession, ClientTimeout
 from discord import (AllowedMentions, Forbidden, Game, HTTPException, Intents,
                      Interaction, Message, NotFound, app_commands)
-from discord.ext.commands import Bot, when_mentioned
+from discord.ext.commands import Bot
 
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -97,6 +97,7 @@ class MyClient(Bot):
         self.premium_servers = (find_one("collection", "premium_guilds") or {"guilds": []})["guilds"]
         self.custom_delay_dict = find_one("collection", "delay")
         self.pool: asyncmy.Pool = None  # type: ignore
+        self.logger = logging.getLogger()
 
     async def setup_hook(self) -> None:
         headers = {"User-Agent": self.config["headers"]}
@@ -111,7 +112,8 @@ class MyClient(Bot):
 
 async def should_cancel(interaction: Interaction, msg: Message = None) -> bool:
     """Return whether the function should be cancelled"""
-    if bot.cancel_command.get(interaction.user.id, "") == interaction.command.name:
+    if (interaction.user.id in bot.cancel_command and
+            bot.cancel_command[interaction.user.id] == interaction.command.name):
         if msg is not None:
             try:
                 await msg.delete()
