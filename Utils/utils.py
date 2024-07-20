@@ -539,7 +539,6 @@ async def get_locked_content(link: str, test_login: bool = False, method: str = 
     nick = bot.config.get(server, bot.config['nick'])
     password = bot.config.get(server + "_password", bot.config['password'])
     session = await get_session(server)
-
     base_url = f"https://{server}.e-sim.org/"
     not_logged_in = False
     tree = None
@@ -549,7 +548,7 @@ async def get_locked_content(link: str, test_login: bool = False, method: str = 
         else:
             tree = await get_content(base_url + "storage.html", method=method, session=session)
         logged = tree.xpath('//*[@id="command"]')
-        if any("login.html" in x.action for x in logged):
+        if any("login.html" in x.action or "Iogin.html" in x.action for x in logged):
             not_logged_in = True
     except Exception as error:
         if "This page is locked for bots." not in str(error):
@@ -557,13 +556,15 @@ async def get_locked_content(link: str, test_login: bool = False, method: str = 
         not_logged_in = True
     if not_logged_in:
         payload = {'login': nick, 'password': password, "submit": "Login"}
-        async with session.get(base_url, ssl=False) as _:
-            async with session.post(base_url + "login.html", data=payload, ssl=False) as respond:
-                respond_text = await respond.text(encoding='utf-8')
-                tree = fromstring(respond_text)
+        async with (session.get(base_url, ssl=False) as main_page):
+            tree = fromstring(await main_page.text(encoding='utf-8'))
+            login_path = "login.html" if any("login.html" in x.action for x in tree.xpath('//*[@id="command"]')
+                                             ) else "Iogin.html"
+            async with session.post(base_url + login_path, data=payload, ssl=False) as respond:
+                tree = fromstring(await respond.text(encoding='utf-8'))
                 logged = tree.xpath('//*[@id="command"]')
                 print(respond.url, [x.action for x in logged])
-                if any("login.html" in x.action for x in logged):
+                if any("login.html" in x.action or "Iogin.html" in x.action for x in logged):
                     raise BadArgument("This command is currently unavailable")
         tree = await get_content(link, method=method, session=session)
     if test_login and not not_logged_in:
