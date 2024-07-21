@@ -1,4 +1,5 @@
 """Listener.py"""
+import sys
 from datetime import datetime
 from json import decoder
 from traceback import format_exception
@@ -64,7 +65,11 @@ class Listener(Cog):
         msg = self.__get_error_msg(interaction)
 
         error_channel = self.bot.get_channel(config_ids["error_channel_id"])
-        error_msg = f"{msg}\n```{''.join(format_exception(type(error), error, error.__traceback__))}```"
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        locals_before_exception = (exc_traceback.tb_next or exc_traceback).tb_frame.f_locals
+        locals_before_exception.pop("self", None)
+        locals_before_exception.pop("interaction", None)
+        error_msg = f"{locals_before_exception}\n{msg}\n```{''.join(format_exception(type(error), error, error.__traceback__))}```"
         if len(error_msg) > 2000:
             error_msg = error_msg[:990] + "\n...\n" + error_msg[-990:]
         await error_channel.send(error_msg)

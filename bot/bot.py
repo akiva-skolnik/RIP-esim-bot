@@ -41,6 +41,7 @@ class MyTree(app_commands.CommandTree):
 
     async def interaction_check(self, interaction: Interaction) -> bool:
         """Lock new server"""
+        # TODO: x free commands per day & free user
         # This is done at the beginning of every interaction.
         await interaction.response.defer()  # type: ignore
 
@@ -61,7 +62,7 @@ class MyTree(app_commands.CommandTree):
             # await replace_one("collection", "donors", bot.premium_users)
             return True
         try:
-            await interaction.response.send_message(  # type: ignore
+            await interaction.followup.send(  # type: ignore
                 "elysia server is for premium users only. You can use one command per day for free."
                 "\nGet premium at <https://www.buymeacoffee.com/RipEsim> :coffee:"
                 "\nSupport: https://discord.com/invite/q96wSd6")

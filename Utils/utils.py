@@ -558,7 +558,7 @@ async def get_locked_content(link: str, test_login: bool = False, method: str = 
         not_logged_in = True
     if not_logged_in:
         payload = {'login': nick, 'password': password, "submit": "Login"}
-        async with (session.get(base_url, ssl=False) as main_page):
+        async with session.get(base_url, ssl=False) as main_page:
             tree = fromstring(await main_page.text(encoding='utf-8'))
             login_path = "login.html" if any("login.html" in x.action for x in tree.xpath('//*[@id="command"]')
                                              ) else "Iogin.html"
