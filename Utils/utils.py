@@ -565,7 +565,7 @@ async def get_locked_content(link: str, test_login: bool = False, method: str = 
             async with session.post(base_url + login_path, data=payload, ssl=False) as respond:
                 tree = fromstring(await respond.text(encoding='utf-8'))
                 logged = tree.xpath('//*[@id="command"]')
-                print(respond.url, [x.action for x in logged])
+                logger.info(f"Logged in to {server}")
                 if any("login.html" in x.action or "Iogin.html" in x.action for x in logged):
                     raise BadArgument("This command is currently unavailable")
         tree = await get_content(link, method=method, session=session)
@@ -926,28 +926,38 @@ def shorten_country(country: str) -> str:
     return country.replace("south ", "s. ").title()
 
 
+def normalize_slot(slot: str) -> str:
+    return slot.lower().replace("personal", "").replace("charm", "").replace(
+        "weapon upgrade", "WU").replace("  ", " ").title().strip()
+
+
 def get_eqs(tree) -> iter:
     """get eqs"""
     for slot_path in tree.xpath('//*[@id="profileEquipmentNew"]//div//div//div//@title'):
         tree = fromstring(slot_path)
         try:
-            slot = tree.xpath('//b/text()')[0].lower().replace("personal", "").replace("charm", "").replace(
-                "weapon upgrade", "WU").replace("  ", " ").title().strip()
+            slot = normalize_slot(tree.xpath('//b/text()')[0])
         except IndexError:
             continue
         eq_link = get_ids_from_path(tree, "//a")[0]
         parameters = []
         values = []
-        for parameter_string in tree.xpath('//p/text()'):
-            for x in all_parameters:
-                if x in parameter_string.lower():
-                    parameters.append(x)
-                    try:
-                        values.append(float(parameter_string.split(" ")[-1].replace("%", "").strip()))
-                        break
-                    except Exception:
-                        pass
+        for full_parameter_string in tree.xpath('//p/text()'):
+            # full_parameter_string = "Increased damage by  8.71%", or "Merged by"
+            parameter = normalize_parameter_string(full_parameter_string)
+            if parameter:
+                parameters.append(parameter)
+                try:
+                    values.append(float(full_parameter_string.split(" ")[-1].replace("%", "").strip()))
+                except ValueError:
+                    break  # end of valid parameters for this eq
+            else:
+                logger.warning(f"Unknown parameter: {full_parameter_string}")
         yield slot, parameters, values, eq_link
+
+
+def normalize_parameter_string(parameter_string: str) -> str or None:
+    return next((parameter for parameter in all_parameters if parameter in parameter_string.lower()), None)
 
 
 def get_id(string: str) -> str:

@@ -861,28 +861,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
 
             embed.title = f"{utils.codes(api['citizenship'])} " + api['login'] + ", " + server
             embed.url = f"https://{server_nick['server']}.e-sim.org/profile.html?id={api['id']}"
-            tree = await utils.get_content(embed.url)
-
-            # update values precision from the api (bad format)
-            api_items = []
-            api_values = []
-            for item in api["gearInfo"]:
-                if "slot" in item:
-                    api_items.append(item["slot"].lower().replace("personal", "").replace("charm", "").replace(
-                        "weapon upgrade", "WU").title().strip())
-                else:
-                    for p in item["parameters"]:
-                        api_values.append(p["value"])
-
-            profile_items = {eq_type.split()[1]: {"type": eq_type,
-                                                  "parameters": [list(x) for x in zip(parameters, values)]}
-                             for eq_type, parameters, values, eq_link in utils.get_eqs(tree)}
-            api_count = 0
-            for item in api_items:
-                for profile_count in range(len(profile_items[item]["parameters"])):
-                    profile_items[item]["parameters"][profile_count][1] = api_values[api_count]
-                    api_count += 1
-            # end update
+            profile_items = await self.get_profile_parameters(profile_url=embed.url, api=api)
 
             array = []
             for profile_items_values in profile_items.values():
@@ -968,27 +947,64 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         embed.set_thumbnail(url=f"attachment://{interaction.id}.png")
         await utils.custom_followup(interaction, files=files, embed=await utils.convert_embed(interaction, embed))
 
+    async def get_profile_parameters(self, profile_url: str, api: dict) -> dict:
+        """Update values precision from the api.
+        The profile page contain info about the quality of the eqs, but the api has more precise values,
+            so we merge them together."""
+        
+        # Get the values from the api:
+        # api["gearInfo"] = [{"slot": "Vision", "parameters": [{"name": "Evening bonus damage", "value": 10.95},
+        #                                               {"name": "Chance to avoid damage", "value": 8.74},
+        #                                               {"name": "Chance to avoid damage", "value": 8.69}]},
+        #             {"slot": "Weapon upgrade", "parameters": [{...}]}]
+        parameters_per_item = {item["slot"]: tuple((utils.normalize_parameter_string(p["name"]), p["value"])
+                                                   for p in item["parameters"])
+                               for item in api["gearInfo"]}
+
+        # Get the values from the profile page:
+        tree = await utils.get_content(profile_url)
+        profile_items = {eq_type.split()[1]: {  # keys: "Q{quality} {slot}" -> "{slot}" to match the api format
+            "type": eq_type, "parameters": list(zip(parameters, values))}
+            for eq_type, parameters, values, eq_link in utils.get_eqs(tree)}
+
+        # Merge the values, assuming the parameters are ordered the same way in both sources:
+        for eq_type, profile_values in profile_items.items():
+            api_values = parameters_per_item.get(eq_type, ())
+            for i in range(len(profile_values["parameters"])):
+                profile_parameter, profile_value = profile_values["parameters"][i]
+                api_parameter, api_value = api_values[i]
+                if profile_parameter != api_parameter:
+                    self.bot.logger.warning(f"Profile parameter {profile_parameter} doesn't match API parameter "
+                                            f"{api_parameter} for {eq_type} in {profile_url}")
+                elif abs(profile_value - api_value) > 0.1:
+                    self.bot.logger.warning(f"Profile value {profile_value} doesn't match API value {api_value}"
+                                            f" for {eq_type} in {profile_url}")
+                else:
+                    profile_values["parameters"][i] = api_values[i]  # api_values are more precise
+
+        return profile_items
+
 
 async def calc_upgrades(bot, parameter: str, value: float, total: dict, ax, slot: str = "") -> (list, list, int):
     """calculate upgrades"""
     # TODO: test
-    ranges = {"max": [0, 2, 4, 6, 8, 12, 16, 20, 22],
-              "core": [0, 0, 0, 0, 0, 0, 7, 8, 9],  # must be before "damage"
-              "bonus damage": [0, 0, 0, 0, 0, 0, 3, 10, 13],  # X bonus damage, bonus damage on every X hour
-              "damage": [0, 1, 2, 3, 4, 6, 8, 8.5, 9],  # dmg, crit, avoid
-              "miss": [0, 1.5, 3, 4.5, 6, 7.5, 9, 9.5, 10],
-              "flight": [0.5, 1, 1.5, 2, 3, 4, 5.5, 6, 7],
-              "eco": [0.1, 0.2, 0.4, 0.6, 0.8, 1.1, 1.4, 1.6, 2],
-              "str": [10, 16, 20, 24, 28, 40, 60, 80, 100],
-              "hit": [20, 40, 50, 60, 70, 90, 130, 150, 200],
-              "less": [3, 4, 5, 6, 7, 8, 10, 10.5, 11],
-              "find": [2, 2.5, 3, 3.5, 4, 4.5, 5, 6, 7],
-              "production": [0, 0, 0, 0, 0, 0, 2.5, 3, 4],  # bonus X production
-              "ammunition": [0, 0, 0, 0, 0, 0, 2.5, 3, 3.5],  # ammunition, restore, reduce merge price, bonus merge
-              "split": [0, 0, 0, 0, 0, 0, 4, 5, 6],
-              "increase": [0, 0, 0, 0, 0, 0, 10, 15, 20],
-              "elixir": [0, 0, 0, 0, 0, 0, 6, 10, 13],
-              "limit": [0, 0, 0, 0, 0, 0, 1, 1, 1],
+    ranges = {"max": (0, 2, 4, 6, 8, 12, 16, 20, 22),
+              "core": (0, 0, 0, 0, 0, 0, 7, 8, 9),  # must be before "damage"
+              "bonus damage": (0, 0, 0, 0, 0, 0, 3, 10, 13),  # X bonus damage, bonus damage on every X hour
+              "damage": (0, 1, 2, 3, 4, 6, 8, 8.5, 9),  # dmg, crit, avoid
+              "miss": (0, 1.5, 3, 4.5, 6, 7.5, 9, 9.5, 10),
+              "flight": (0.5, 1, 1.5, 2, 3, 4, 5.5, 6, 7),
+              "eco": (0.1, 0.2, 0.4, 0.6, 0.8, 1.1, 1.4, 1.6, 2),
+              "str": (10, 16, 20, 24, 28, 40, 60, 80, 100),
+              "hit": (20, 40, 50, 60, 70, 90, 130, 150, 200),
+              "less": (3, 4, 5, 6, 7, 8, 10, 10.5, 11),
+              "find": (2, 2.5, 3, 3.5, 4, 4.5, 5, 6, 7),
+              "production": (0, 0, 0, 0, 0, 0, 2.5, 3, 4),  # bonus X production
+              "ammunition": (0, 0, 0, 0, 0, 0, 2.5, 3, 3.5),  # ammunition, restore, reduce merge price, bonus merge
+              "split": (0, 0, 0, 0, 0, 0, 4, 5, 6),
+              "increase": (0, 0, 0, 0, 0, 0, 10, 15, 20),
+              "elixir": (0, 0, 0, 0, 0, 0, 6, 10, 13),
+              "limit": (0, 0, 0, 0, 0, 0, 1, 1, 1),
               }
 
     if parameter in ("avoid", "crit", "dmg"):
@@ -1003,7 +1019,8 @@ async def calc_upgrades(bot, parameter: str, value: float, total: dict, ax, slot
     if value < 0:
         value = ranges[-2]
     if slot:
-        lowest, biggest = ranges[int(slot[1]) - 1], ranges[int(slot[1])]
+        quality = int(slot[1])  # slot = Q{quality} {slot}
+        lowest, biggest = ranges[quality - 1], ranges[quality]
     else:
         try:
             if value == ranges[-1]:
