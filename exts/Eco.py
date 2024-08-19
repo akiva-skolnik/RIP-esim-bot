@@ -12,8 +12,9 @@ from discord.app_commands import (Range, Transform, check, checks, command,
                                   describe, rename)
 from discord.ext.commands import BadArgument, Cog
 from lxml import html
+import matplotlib.axes
 from matplotlib import pyplot as plt
-from matplotlib.ticker import FixedLocator
+from matplotlib.ticker import FixedLocator, MaxNLocator
 from pytz import timezone
 
 from Utils import utils
@@ -23,13 +24,12 @@ from Utils.constants import (all_countries, all_countries_by_name,
 from Utils.transformers import Country, Product, ProfileLink, Server
 from Utils.utils import CoolDownModified, draw_pil_table, split_list
 
-options = ["iron", "grain", "oil", "stone", "wood", "diamonds"]
-product_gids = {"primera": 6602346, "secura": 1142213909, "suna": 1317638633, "alpha": 1073258602,
-                'luxia': 1542255867, "xena": 681890089, "elysia": 91790250}
-
 
 class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": False}):
     """Economy Commands"""
+    options = ["iron", "grain", "oil", "stone", "wood", "diamonds"]
+    product_gids = {"primera": 6602346, "secura": 1142213909, "suna": 1317638633, "alpha": 1073258602,
+                    'luxia': 1542255867, "xena": 681890089, "elysia": 91790250}
 
     def __init__(self, bot) -> None:
         self.bot = bot
@@ -357,7 +357,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
 
     @staticmethod
     def _get_product_sheet_link(server: str) -> str:
-        gid = product_gids.get(server, '')
+        gid = Eco.product_gids.get(server, '')
         return f"https://docs.google.com/spreadsheets/d/{config_ids['product_sheet_id']}/edit#gid={gid}"
 
     @command()
@@ -846,7 +846,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
     @rename(parameter="link_or_parameter")
     async def upgrade(self, interaction: Interaction, parameter: str, value: float = -1.0) -> None:
         """Displays estimated parameter value after upgrade, and how many needed until the maximum (90%)"""
-        total = {}
+        upgrades_per_stat = defaultdict(int)  # needed for the embed of upgrades per stat (profile)
 
         embed = Embed(colour=0x3D85C6)
         files = []
@@ -864,6 +864,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             profile_items = await self.get_profile_parameters(profile_url=embed.url, api=api)
 
             array = []
+            lines = []
             for profile_items_values in profile_items.values():
                 eq_type = profile_items_values["type"]
                 parameters = [x[0] for x in profile_items_values["parameters"]]
@@ -874,18 +875,26 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                     increase = values[inc_index] / 100 + 1
                     values[inc_index] *= values[inc_index] / 100 + 1  # Will be fixed later when dividing back
                 for parameter, value in zip(parameters, values):
-                    data, _, _ = await calc_upgrades(self.bot, parameter, value / increase, total, ax, eq_type)
+                    data, percentages, _ = await calc_upgrades(parameter, value / increase, upgrades_per_stat)
                     if data:
+                        line = await self.plot_percentages(ax, percentages)
+                        lines.append((percentages[0], line))
                         array.append([eq_type, parameter.title()] + data)
 
-            if total:
+            if upgrades_per_stat:
+                # sort lines by the min percentage
+                labels = [f"{x[0]} ({x[1]})" for x in array]
+                sorted_lines = sorted(zip(lines, labels), key=lambda x: x[0][0], reverse=True)
+                lines, labels = zip(*sorted_lines)
+                ax.legend([x[1] for x in lines], labels, prop={'size': 30 / (len(array) ** 0.5)})
                 biggest_column = max(len(x) for x in array)
                 header = ["Slot", "Parameter"] + [f"Upgrade {x + 1}:" for x in range(biggest_column)]
                 for row in array:
-                    row.extend((biggest_column - len(row)) * [""])
+                    row.extend([""] * (biggest_column - len(row)))
+
                 embed.add_field(name="\n**Upgrades per stat**", value="\n".join(
-                    f"**{k.title()}:** {v}" for k, v in sorted(total.items())), inline=False)
-                embed.set_footer(text=f"{sum(total.values())} total upgrades")
+                    f"**{k.title()}:** {v}" for k, v in sorted(upgrades_per_stat.items())), inline=False)
+                embed.set_footer(text=f"{sum(upgrades_per_stat.values())} total upgrades")
                 files.append(File(fp=await self.bot.loop.run_in_executor(None, draw_pil_table, array, header),
                                   filename=f'{server_nick["nick_or_id"]}.jpg'))
 
@@ -906,41 +915,50 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 increase = values[inc_index] / 100 + 1
                 values[inc_index] *= values[inc_index] / 100 + 1  # Will be fixed later when dividing back
 
-            all_parameters1 = {v: k for k, v in all_parameters.items()}
+            all_parameters_by_value = {v: k for k, v in all_parameters.items()}
+            labels = []
             for name, value in zip(parameters, values):
-                parameter = all_parameters1.get(name, "production")
-                data, percentages, quality = await calc_upgrades(self.bot, parameter, value / increase, total, ax)
+                parameter = all_parameters_by_value.get(name, "production")
+                data, percentages, _ = await calc_upgrades(parameter, value / increase, upgrades_per_stat)
                 if data:
+                    await self.plot_percentages(ax, percentages)
+                    labels.append(name)
                     embed.add_field(name="\u200B", value=f"**{parameter.title()}**", inline=False)
                     embed.add_field(name="Upgrades Count",
                                     value="\n".join([f"**Upgrade {num + 1}:**" for num in range(len(data))]))
                     embed.add_field(name="Expected Value", value="\n".join(data))
-                    embed.add_field(name="Percentages", value="\n".join([f'{item * 100:.2f}%' for item in percentages]))
+                    embed.add_field(name="Percentages", value="\n".join(f'{item * 100:.2f}%' for item in percentages))
                 else:
                     embed.add_field(name="\u200B", value=f"**{parameter.title()}**\nThere's nothing to upgrade!")
+            ax.legend(labels)  # TODO: sort?
 
         else:
+            if not value:
+                await utils.custom_followup(interaction, "You must provide a value to upgrade", ephemeral=True)
+                return
             if parameter.lower() not in all_parameters:
                 await utils.custom_followup(
                     interaction, f"Possible parameters: {', '.join(all_parameters.keys()).title()}.\n"
                                  f"You can also use `<profile link>` or `<eq link>`", ephemeral=True)
                 return
-            data, percentages, quality = await calc_upgrades(self.bot, parameter.lower(), value, total, ax)
+            data, percentages, quality = await calc_upgrades(parameter, value, upgrades_per_stat)
             if data:
+                await self.plot_percentages(ax, percentages)
+                ax.legend([parameter])
                 embed.title = f"__**Q{quality} {parameter.title()}**__"
                 embed.add_field(name="Upgrades Count",
                                 value="\n".join([f"**Upgrade {num + 1}:**" for num in range(len(data))]))
                 embed.add_field(name="Expected Value", value="\n".join(data))
-                embed.add_field(name="Percentages", value="\n".join([f'{item * 100:.2f}%' for item in percentages]))
+                embed.add_field(name="Percentages", value="\n".join(f'{item * 100:.2f}%' for item in percentages))
                 embed.set_footer(text="Try also /upgrade <Profile Link>")
 
-        if not total:
+        if not upgrades_per_stat:
             await utils.custom_followup(interaction, "There is nothing to upgrade")
             return
 
         ax.yaxis.set_major_locator(FixedLocator(ax.get_yticks()))
         ax.set_yticklabels([f'{x * 100:.0f}%' for x in ax.get_yticks()])
-        ax.legend()
+        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
         ax.set_xlabel('Upgrades Count')
         output_buffer = utils.plt_to_bytes(fig)
         files.append(File(fp=output_buffer, filename=f"{interaction.id}.png"))
@@ -951,15 +969,16 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         """Update values precision from the api.
         The profile page contain info about the quality of the eqs, but the api has more precise values,
             so we merge them together."""
-        
+        # TODO: we can drop the quality and use only the api
+
         # Get the values from the api:
         # api["gearInfo"] = [{"slot": "Vision", "parameters": [{"name": "Evening bonus damage", "value": 10.95},
         #                                               {"name": "Chance to avoid damage", "value": 8.74},
         #                                               {"name": "Chance to avoid damage", "value": 8.69}]},
         #             {"slot": "Weapon upgrade", "parameters": [{...}]}]
-        parameters_per_item = {item["slot"]: tuple((utils.normalize_parameter_string(p["name"]), p["value"])
-                                                   for p in item["parameters"])
-                               for item in api["gearInfo"]}
+        parameters_per_item = {utils.normalize_slot(item["slot"]): tuple(
+            (utils.normalize_parameter_string(p["name"]), p["value"]) for p in item["parameters"])
+            for item in api["gearInfo"]}
 
         # Get the values from the profile page:
         tree = await utils.get_content(profile_url)
@@ -969,7 +988,10 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
 
         # Merge the values, assuming the parameters are ordered the same way in both sources:
         for eq_type, profile_values in profile_items.items():
-            api_values = parameters_per_item.get(eq_type, ())
+            if eq_type not in parameters_per_item:
+                self.bot.logger.warning(f"Profile item {eq_type} not found in API for {profile_url}")
+                continue
+            api_values = parameters_per_item[eq_type]
             for i in range(len(profile_values["parameters"])):
                 profile_parameter, profile_value = profile_values["parameters"][i]
                 api_parameter, api_value = api_values[i]
@@ -984,8 +1006,13 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
 
         return profile_items
 
+    async def plot_percentages(self, ax: matplotlib.axes, percentages: list) -> matplotlib.lines.Line2D:
+        line, = await self.bot.loop.run_in_executor(None, lambda: ax.plot(
+            range(1, len(percentages) + 1), percentages, marker='o', linestyle='--'))
+        return line
 
-async def calc_upgrades(bot, parameter: str, value: float, total: dict, ax, slot: str = "") -> (list, list, int):
+
+async def calc_upgrades(parameter: str, value: float, upgrades_per_stat: dict) -> (list, list, str):
     """calculate upgrades"""
     # TODO: test
     ranges = {"max": (0, 2, 4, 6, 8, 12, 16, 20, 22),
@@ -1007,6 +1034,7 @@ async def calc_upgrades(bot, parameter: str, value: float, total: dict, ax, slot
               "limit": (0, 0, 0, 0, 0, 0, 1, 1, 1),
               }
 
+    parameter = parameter.lower()
     if parameter in ("avoid", "crit", "dmg"):
         ranges = ranges["damage"]
     elif parameter in ("morning", "noon", "evening", "night"):
@@ -1018,33 +1046,24 @@ async def calc_upgrades(bot, parameter: str, value: float, total: dict, ax, slot
 
     if value < 0:
         value = ranges[-2]
-    if slot:
-        quality = int(slot[1])  # slot = Q{quality} {slot}
-        lowest, biggest = ranges[quality - 1], ranges[quality]
-    else:
-        try:
-            if value == ranges[-1]:
-                value -= 0.01
-            lowest, biggest = [[x for x in ranges if x <= value][-1], [x for x in ranges if x > value][0]]
-        except IndexError as exc:
-            raise BadArgument(f"`{parameter.title()}` can be between {ranges[0]} and {ranges[-1]} only!") from exc
 
-    quality = ranges.index(biggest)
+    # The game allows both Q6 and Q5 to have 12 max for example, so in some rare cases this is not 100% accurate.
+    try:
+        quality = next(i for i, x in enumerate(ranges) if x >= value)
+    except StopIteration:
+        raise BadArgument(f"`{parameter.title()}` can be between {ranges[0]} and {ranges[-1]} only!")
+
+    lowest = ranges[quality - 1]  # there's not Q0
+    biggest = ranges[quality]
     max_value = biggest - (biggest - lowest) / 10
     data = []
     while value < max_value:
-        if f"Q{quality} {parameter}" not in total:
-            total[f"Q{quality} {parameter}"] = 0
-        total[f"Q{quality} {parameter}"] += 1
-        upgrade = round((biggest - value) / (3 if not ranges[-1] == biggest else (10 / 3)), 10)
-        value += upgrade
+        # calc a single upgrade:
+        value += round((biggest - value) / (3 if not ranges[-1] == biggest else (10 / 3)), 10)
         data.append(str(round(value, 2)))
+        upgrades_per_stat[parameter] += 1
 
     percentages = [(float(value) - lowest) / (biggest - lowest) for value in data]
-    if data:
-        await bot.loop.run_in_executor(None, lambda: ax.plot([
-            x + 1 for x in range(len(data))], percentages, marker='o', linestyle='--',
-            label=f"{slot} ({parameter})" if slot else parameter))
     return data, percentages, quality
 
 
