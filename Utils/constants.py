@@ -195,7 +195,7 @@ gids = {  # server: (sheet id, time gid, buffs gid)
     "elysia": ("1blDBu-_DA4UsvZJ7sG7SFLyuHzFKcnJgX_ke4hvlyw8", 1445005647, 1812695346),
 }
 
-api_url = "http://23.95.130.52:5000/"
+api_url = "http://107.174.205.248:5000/"
 date_format = "%d-%m-%Y %H:%M:%S"
 
 all_servers = ('primera', 'secura', 'suna', 'alpha', 'luxia', 'xena', 'elysia')
