@@ -56,7 +56,7 @@ class General(Cog):
             embed.add_field(name="Output:", value=f'{final_result:,}', inline=False)
         else:
 
-            res = self.wolfram.query(calculation)
+            res = await self.wolfram.aquery(calculation)
             if str(res['@success']).lower() == 'false':
                 embed.add_field(name="Output:", value=':warning: `No results found`', inline=False)
             else:
