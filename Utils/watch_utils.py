@@ -390,7 +390,7 @@ async def ping_func(channel: TextChannel, t: float, server: str, ping_id: str, c
                 embed.add_field(name=f"{utils.codes(d_name)} " + utils.shorten_country(d_name),
                                 value=f"{defender_dmg:,}")
                 embed.add_field(name=f"Battle type: {api_battles['type'].replace('_', ' ').title()}",
-                                value=await utils.bar(defender_dmg, attacker_dmg, d_name, a_name))
+                                value=utils.bar(defender_dmg, attacker_dmg, d_name, a_name))
                 embed.add_field(name=f"{utils.codes(a_name)} " + utils.shorten_country(a_name),
                                 value=f"{attacker_dmg:,}")
                 embed.set_footer(text="Type /stop if you wish to stop it.")
@@ -468,7 +468,7 @@ async def watch_func(bot, channel: TextChannel, link: str, t: float, role: str, 
         embed.add_field(name=f"{utils.codes(defender)}" + utils.shorten_country(defender),
                         value=f"{my_dict[defender]:,}")
         embed.add_field(name=f'Battle type: {api_battles["type"].replace("_", " ").title()}',
-                        value=await utils.bar(my_dict[defender], my_dict[attacker], defender, attacker))
+                        value=utils.bar(my_dict[defender], my_dict[attacker], defender, attacker))
         embed.add_field(name=f"{utils.codes(attacker)} " + utils.shorten_country(attacker),
                         value=f"{my_dict[attacker]:,}")
         embed.set_thumbnail(url=f"attachment://{channel.id}.png")

@@ -126,7 +126,7 @@ def draw_pil_table(my_table: list or tuple, header: list or tuple, new_lines: in
     return output_buffer
 
 
-async def bar(defender_dmg: int, attacker_dmg: int, defender: str = "", attacker: str = "", size: int = -1) -> str:
+def bar(defender_dmg: int, attacker_dmg: int, defender: str = "", attacker: str = "", size: int = -1) -> str:
     """bar"""
     if size < 0:
         def_len = max(len(f"{defender_dmg:,}"), len(defender), len("defender"))

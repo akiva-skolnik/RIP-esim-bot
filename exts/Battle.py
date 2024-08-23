@@ -599,7 +599,7 @@ class Battle(Cog):
             (x["time_remaining"],
              f"[{utils.shorten_country(x['defender']['name'])} vs " + utils.shorten_country(x['attacker']['name']) +
              f"]({base_url}battle.html?id={x['battle_id']}) ({x['defender']['score']}:{x['attacker']['score']})",
-             (await bar(x['defender']['bar'], x['attacker']['bar'], size=6)).splitlines()[0]) for x in battles)
+             (bar(x['defender']['bar'], x['attacker']['bar'], size=6)).splitlines()[0]) for x in battles)
         embed = Embed(colour=0x3D85C6, title=server, url=f'{base_url}battles.html')
         await utils.send_long_embed(interaction, embed, headers, battles)
         time_of_last = int(last.split(":")[0]) * 3600 + int(last.split(":")[1]) * 60 + int(last.split(":")[2])

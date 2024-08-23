@@ -513,7 +513,7 @@ class General(Cog):
                  f"({base_url}battle.html?id={v['battle_id']})"
                  f" ({v['defender']['score']}:{v['attacker']['score']})" for v in row['battles']][:5]))
             embed.add_field(name="Bar", value="\n".join(
-                [(await utils.bar(v['defender']['bar'], v['attacker']['bar'], size=6)).splitlines()[0]
+                [(utils.bar(v['defender']['bar'], v['attacker']['bar'], size=6)).splitlines()[0]
                  for v in row['battles']][:5]))
             embed.set_footer(text="Battles: " + ", ".join([str(x['battle_id']) for x in row['battles']]))
 
@@ -735,7 +735,7 @@ class General(Cog):
             embed.add_field(name=utils.codes(defender) + " " + utils.shorten_country(defender),
                             value=f"{my_dict[defender]:,}")
             embed.add_field(name=f'Battle type: {api_battles["type"]}',
-                            value=await utils.bar(my_dict[defender], my_dict[attacker], defender, attacker))
+                            value=utils.bar(my_dict[defender], my_dict[attacker], defender, attacker))
             embed.add_field(name=utils.codes(attacker) + " " + utils.shorten_country(attacker),
                             value=f"{my_dict[attacker]:,}")
             embed.set_thumbnail(url=f"attachment://{interaction.id}.png")
