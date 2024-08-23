@@ -303,8 +303,8 @@ class Battle(Cog):
         drops_per_q: dict[str, (int, int)] = {q: (round(hits_with_bonus / v), int(
             ((round(hits_with_bonus / v) + 1) * v - v / 2 - hits_with_bonus) / (bonus + 100) * 100)) for q, v in
                                               hits_for_q.items()}
-        drops_per_q["Elixir"] = (
-        int(hits_with_bonus / 150), (int(hits_with_bonus / 150) + 1) * 150 - int(hits_with_bonus))
+        drops_per_q["Elixir"] = (int(hits_with_bonus / 150),
+                                 (int(hits_with_bonus / 150) + 1) * 150 - int(hits_with_bonus))
         drops_per_q["upg. + shuffle"] = (hits // 1500, next_upgrade)
         embed.add_field(name="**Item : Drops**",
                         value="\n".join([f"**{k} :** {v[0]:,}" for k, v in drops_per_q.items()]))
@@ -674,6 +674,7 @@ class Battle(Cog):
             if api_battles["type"] not in ("RESISTANCE", "ATTACK"):
                 await utils.custom_followup(interaction, "I'm sorry, but I can only show online citizens in "
                                                          "resistance or attack battles.")
+                return
             try:
                 neighbours_id = next(z['neighbours'] for z in await utils.get_content(link.split("?")[0].replace(
                     "battle", "apiRegions")) if z["id"] == api_battles['regionId'])
@@ -743,6 +744,7 @@ class Battle(Cog):
                              f"<{base_url}citizensOnline.html?countryId={country}>")
             return
         if len(header) == 3:
+            # TODO: title disappears
             embed = Embed(colour=0x3D85C6, title="More Info",
                           url=f"{base_url}citizensOnline.html?countryId={country}")
             embed.set_footer(text="\U0001f7e2, \U0001f534, \U0001f513 = Buff / Debuff / Neither")

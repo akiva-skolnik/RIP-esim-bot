@@ -787,6 +787,7 @@ async def convert_embed(interaction_or_author: Union[Interaction, int], embed: E
                 first_item = embed_fields[index].value.splitlines()[0]
             except IndexError:
                 continue
+            # TODO: it shouldn't add fix if no emojis (example: drops, upgrades)
             if "fix" not in first_item and (
                     is_ascii(first_item) or "%" in first_item) and embed_fields[index].value.count("\n") > 3:
                 embed.set_field_at(index, name=embed_fields[index].name,
@@ -825,8 +826,8 @@ async def convert_embed(interaction_or_author: Union[Interaction, int], embed: E
         embed.insert_field_at(first, name="\n".join([field.name for field in embed_fields[first:first + columns]]),
                               value="\u200B",
                               inline=False)
-        my_list = [[embed_fields[x + first].value.splitlines()[i] for x in range(columns)] for i in
-                   range(len(embed_fields[0 + first].value.splitlines()))]
+        my_list = tuple(tuple(embed_fields[x + first].value.splitlines()[i] for x in range(columns)) for i in
+                        range(len(embed_fields[0 + first].value.splitlines())))
         for index, a_tuple in enumerate(await split_list(my_list, 3)):
             embed.insert_field_at(index + first + 1, name="\u200B", value="\n".join(["\n".join(x) for x in a_tuple]))
 
@@ -841,10 +842,10 @@ async def send_long_embed(interaction: Interaction, embed: Embed, headers: list 
     """send long embed"""
     for index, header in enumerate(headers):
         embed.add_field(name=header, value="\n".join(str(x[index]) for x in data))
-    embed1 = await convert_embed(interaction, deepcopy(embed))
+    converted_embed = await convert_embed(interaction, deepcopy(embed))
     result = list(zip(*tuple(
-        (embed if str(interaction.user.id) in bot.phone_users else embed1).fields[index].value.splitlines() for
-        index in range(len(embed.fields)))))
+        (embed if str(interaction.user.id) in bot.phone_users else converted_embed).fields[index].value.splitlines()
+        for index in range(len(embed.fields)))))
     pages = max(sum(len(str(x[index])) for x in result) for index in range(3)) // 950 + 1
     chunks = await split_list(result, pages)
     chunks = tuple((headers[i], "\n".join(str(x[i]) for x in chunk)) for chunk in chunks for i in range(3))
@@ -1081,4 +1082,4 @@ def parse_product_icon(icon: str) -> str:
 
 def strip(data: tuple or list) -> tuple:
     # same as tuple(x.strip() for x in data if x.strip()), but faster
-    return tuple(map(str.strip, filter(None, data)))
+    return tuple(filter(None, map(str.strip, data)))

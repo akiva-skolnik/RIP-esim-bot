@@ -220,7 +220,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
 
         embed = Embed(colour=0x3D85C6, title="NPC Estimate work time per country",
                       description=f"**ASSUMING npc have worked in region {region_id} at {hour}**")
-        embed.set_footer(text="NPCs will probably work around the estimated hours unless there is lag from e-sim")
+        embed.set_footer(text="NPCs will probably work around the estimated hours.")
         headers = ("#", "Country", "Estimate Work Time")
         output.seek(0)
         await utils.send_long_embed(interaction, embed, headers, result,

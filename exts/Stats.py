@@ -289,13 +289,13 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                     exact_sides.append(tuple(all_countries_by_name[country.strip().lower()] for country in
                                              battles_to_include.split("vs")))
                 elif battles_to_include:
-                    any_side.append(all_countries_by_name[battles_to_include.strip().lower()])
+                    any_side.append(str(all_countries_by_name[battles_to_include.strip().lower()]))
 
             # (defenderId, attacker_id) IN ((sides[0], sides[1]), (sides[1], sides[0]))
             reversed_sides = (tuple(reversed(side)) for side in exact_sides)
             str_exact_sides = f"{','.join(map(str, exact_sides))},{','.join(map(str, reversed_sides))}"
             exact_side_condition = f"((defenderId, attackerId) IN ({str_exact_sides}))"
-            any_side_condition = f"(defenderId IN {','.join(any_side)} OR attackerId IN {','.join(any_side)})"
+            any_side_condition = f"(defenderId IN ({','.join(any_side)}) OR attackerId IN ({','.join(any_side)}))"
             if exact_sides and any_side:
                 where = f"({exact_side_condition} OR {any_side_condition})"
             elif exact_sides:
@@ -471,7 +471,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
         player_stats = player_stats.reset_index().rename(columns={'index': 'citizenId'})
         player_stats = player_stats.merge(pd.DataFrame(player_dict).T, left_on='citizenId', right_index=True,
                                           how='left')
-        columns_to_drop = ('limits', 'last_hit', 'restores', 'has_restore')
+        columns_to_drop = ['limits', 'last_hit', 'restores', 'has_restore']
         player_stats.rename(columns={'medkits': 'Medkits used (rough estimation)'}).drop(
             columns=columns_to_drop).to_csv(player_stats_buffer, index=False, lineterminator='\n')
 

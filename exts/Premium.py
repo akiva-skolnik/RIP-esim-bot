@@ -806,6 +806,8 @@ class Premium(Cog):
                         final[sc_id]["cc"][coin] = amount
 
             except Exception as error:
+                if index == 0:
+                    raise error
                 await utils.send_error(interaction, error, sc_id)
                 break
             await utils.custom_delay(interaction)

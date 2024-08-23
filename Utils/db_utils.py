@@ -233,7 +233,7 @@ async def get_api_fights_sum(server: str, battle_ids: iter, group_by: str = "cit
 
 
 async def select_one_api_fights(server: str, api: dict, round_id: int = 0) -> pd.DataFrame:
-    # TODO: rewrite
+    # TODO: rewrite - not used yet
     battle_id = api["battle_id"]
     query = f"SELECT * FROM {server}.apiFights WHERE battle_id = {battle_id}" + \
             (f" AND round_id = {round_id}" if round_id else "")
