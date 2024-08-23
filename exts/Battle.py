@@ -805,7 +805,8 @@ class Battle(Cog):
         await utils.custom_followup(interaction, "Ok", ephemeral=True)
         find_ping = await utils.find_one("collection", "ping")
         if ping_id == 0:
-            for ping_id in (x.split()[1] for x in find_ping if str(interaction.channel.id) == x.split()[0]):
+            ping_ids = tuple(x.split()[1] for x in find_ping if str(interaction.channel.id) == x.split()[0])
+            for ping_id in ping_ids:
                 del find_ping[f"{interaction.channel.id} {ping_id}"]
             await utils.replace_one("collection", "ping", find_ping)
             await utils.custom_followup(interaction, "Program `ping` have been stopped. no more spam!")

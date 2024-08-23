@@ -39,6 +39,7 @@ class BlackMarket(GroupCog, name="black-market"):
                 if offer_dict["item"] not in (y["item"] for y in by_servers[offer_dict["server"]]):
                     by_servers[offer_dict["server"]].append(offer_dict)
             if not by_servers:
+                server = server or "all servers"
                 await utils.custom_followup(interaction, f"No offers found for {server}!", ephemeral=True)
                 return
             embed = Embed(colour=0x3D85C6, title="Current selling offers")
