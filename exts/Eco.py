@@ -4,15 +4,17 @@ from collections import defaultdict
 from csv import writer
 from datetime import datetime, timedelta
 from io import BytesIO, StringIO
+from itertools import islice
 from typing import Optional
 
+import matplotlib.axes
+import matplotlib.lines
 import pandas as pd
 from discord import Embed, File, Interaction
 from discord.app_commands import (Range, Transform, check, checks, command,
                                   describe, rename)
 from discord.ext.commands import BadArgument, Cog
 from lxml import html
-import matplotlib.axes
 from matplotlib import pyplot as plt
 from matplotlib.ticker import FixedLocator, MaxNLocator
 from pytz import timezone
@@ -27,7 +29,7 @@ from Utils.utils import CoolDownModified, draw_pil_table, split_list
 
 class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": False}):
     """Economy Commands"""
-    options = ["iron", "grain", "oil", "stone", "wood", "diamonds"]
+    options = ("iron", "grain", "oil", "stone", "wood", "diamonds")
     product_gids = {"primera": 6602346, "secura": 1142213909, "suna": 1317638633, "alpha": 1073258602,
                     'luxia': 1542255867, "xena": 681890089, "elysia": 91790250}
 
@@ -52,8 +54,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             n_workers, skill = x.split("x")
             workers_dict[float(skill)] = int(n_workers)
         workers_count = workers_dict.values()
-        ecos = [[k] * v for k, v in workers_dict.items()]
-        ecos = [j for i in ecos for j in i]
+        ecos = (j for i in ((k,) * v for k, v in workers_dict.items()) for j in i)
 
         raw = company_type.lower() in all_products[:6]
         high_raw = high_product = False
@@ -81,8 +82,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             P = (4 + E) * N * C * R * M * S
             worker.append(P)
         high = ("high", True) if high_product or high_raw else ("high", False)
-        parameters = [("capital", country_control_capital), high, ("speed", speed_server)]
-        parameters = [i[0] for i in parameters if i[1]]
+        parameters = (i[0] for i in (("capital", country_control_capital), high, ("speed", speed_server)) if i[1])
 
         embed = Embed(colour=0x3D85C6, title=f"Q{quality} {company_type.title()}, {', '.join(parameters)}".title())
         if not raw:
@@ -181,49 +181,47 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         try:
             hours, minutes, seconds = (int(x) for x in (hour if hour.count(":") == 2 else hour + ":00").split(":"))
             seconds += hours * 3600 + minutes * 60 - seconds_per_region
-        except Exception:
+        except ValueError:
             await utils.custom_followup(interaction, f"Hour format should be like 14:43 or 00:25:35 (not {hour})",
                                         ephemeral=True)
             return
 
         base_url = f"https://{server}.e-sim.org/"
-        regions = sorted(await utils.get_content(f'{base_url}apiRegions.html'), key=lambda x: x["id"])
+        api_regions = sorted(await utils.get_content(f'{base_url}apiRegions.html'), key=lambda x: x["id"])
 
-        countries = utils.get_countries(server, index=0)
-        regions_country = {}
-        for region in regions:
-            if region["homeCountry"] not in regions_country:
-                regions_country[region["homeCountry"]] = []
-            regions_country[region["homeCountry"]].append(region["id"])
+        regions_per_country = defaultdict(list)
+        for region in api_regions:
+            regions_per_country[region["homeCountry"]].append(region["id"])
+        first_region_of_each_country = set()
+        for country, regions in regions_per_country.items():
+            # for some countries, the first region is not a good representative, so we take the second one.
+            regions = sorted(regions)
+            first_region_of_each_country.add(regions[0] if regions[1] - regions[0] == 1 else regions[1])
+        del regions_per_country
 
-        for k, v in regions_country.items():
-            v = sorted(v)
-            regions_country[k] = v[0] if v[0] == v[1] - 1 else v[1]
-        regions_country = {v: k for k, v in regions_country.items()}
-
-        regions = [k for k in regions if k['id'] >= region_id] + [k for k in regions if k['id'] < region_id]
         result = []
         output = StringIO()
         csv_writer = writer(output)
         csv_writer.writerow(["Estimate Time", "Region Id", "Region Name", "Country Id",
                              "Country Name", "Raw Richness", "Resource"])
         count = 1
-        for row in regions:
+        for region in [k for k in api_regions if k['id'] >= region_id] + [k for k in api_regions if
+                                                                          k['id'] < region_id]:
             seconds += seconds_per_region
-            region = row["id"]
-            country_name = countries[row["homeCountry"]].title()
+            _region_id = region["id"]
+            country_name = utils.get_countries(server, country=region["homeCountry"], index=0).title()
             estimate_time = str(timedelta(seconds=int(seconds))).replace("1 day, ", "")
-            csv_writer.writerow([estimate_time, region, row["name"], row["homeCountry"], country_name,
-                                 row["rawRichness"].title().replace("None", ""),
-                                 row.get("resource", "").title()])
-            if region in regions_country:
+            csv_writer.writerow([estimate_time, _region_id, region["name"], region["homeCountry"], country_name,
+                                 region["rawRichness"].title().replace("None", ""),
+                                 region.get("resource", "").title()])
+            if _region_id in first_region_of_each_country:
                 result.append((count, f"{utils.codes(country_name)} " + country_name, estimate_time))
                 count += 1
 
         embed = Embed(colour=0x3D85C6, title="NPC Estimate work time per country",
-                      description=f"**ASSUMING npc have worked at region {region_id} at {hour}**")
+                      description=f"**ASSUMING npc have worked in region {region_id} at {hour}**")
         embed.set_footer(text="NPCs will probably work around the estimated hours unless there is lag from e-sim")
-        headers = ["#", "Country", "Estimate Work Time"]
+        headers = ("#", "Country", "Estimate Work Time")
         output.seek(0)
         await utils.send_long_embed(interaction, embed, headers, result,
                                     files=[File(fp=await utils.csv_to_image(output), filename=f"Preview_{server}.png"),
@@ -296,10 +294,10 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         """Shows list of region penalties for the given raw product"""
         country_name, country = country, all_countries_by_name.get(country.lower())
 
-        region_ids = [i['regionId'] for i in await utils.get_content(f'https://{server}.e-sim.org/apiMap.html')
-                      if i['rawRichness'] == "HIGH"
-                      and (not country or i['occupantId'] == country)
-                      and i.get('raw', '') == raw.upper()]
+        region_ids = tuple(i['regionId'] for i in await utils.get_content(f'https://{server}.e-sim.org/apiMap.html')
+                           if i['rawRichness'] == "HIGH"
+                           and (not country or i['occupantId'] == country)
+                           and i.get('raw', '') == raw.upper())
 
         msg = await utils.custom_followup(
             interaction, "Progress status: 1%.\n(I will update you after every 10%)" if len(region_ids) > 10 else
@@ -313,8 +311,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             api_region = await utils.get_content(link.replace("region", "apiRegionById"))
             region_name = api_region["Region"][0]["name"]
             owner = api_region["Region"][0]["currentOwner"]
-            penalties_per_company_type = [(x["company"].split()[1].lower(), int(x["penalty"].replace("%", "")))
-                                          for x in api_region["Industry"] if "penalty" in x and "company" in x]
+            penalties_per_company_type = ((x["company"].split()[1].lower(), int(x["penalty"].replace("%", "")))
+                                          for x in api_region["Industry"] if "penalty" in x and "company" in x)
             penalty_in_region = next((penalty for company_type, penalty in penalties_per_company_type
                                       if company_type == raw.lower()), 100)
             penalty_per_region[(link, region_name, owner)] = penalty_in_region
@@ -322,9 +320,10 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
 
         embed = Embed(colour=0x3D85C6, title=f"{raw}, {server}".title())
         limit = 30  # TODO: send multiple pages
-        result = [f"**{num}.** {penalty}% {utils.codes(owner)} [{region_name[:15]}]({link})" for
-                  num, ((link, region_name, owner), penalty) in enumerate(
-                sorted(penalty_per_region.items(), key=lambda x: x[1], reverse=True), start=1)][:limit]
+        result_iter = (f"**{num}.** {penalty}% {utils.codes(owner)} [{region_name[:15]}]({link})" for
+                       num, ((link, region_name, owner), penalty) in enumerate(
+            sorted(penalty_per_region.items(), key=lambda x: x[1], reverse=True), start=1))
+        result = tuple(islice(result_iter, limit))
         if not result:
             await utils.custom_followup(interaction,
                                         f"I couldn't find {raw} regions in {country_name if country else server}")
@@ -348,12 +347,9 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         embed = Embed(colour=0x3D85C6, title=server,
                       description=f"[All products]({self._get_product_sheet_link(server)}),"
                                   f" [API For developers]({api_url}/https:/{server}.e-sim.org/prices.html)")
-        headers = ["Cheapest Item", "Price", "Stock"]
-        results = []
-        for item, row in db_dict.items():
-            if item != "Product":
-                results.append([f"**{item.replace('Defense_System', 'DS')}**: {utils.codes(row[0][2])} {row[0][2]}",
-                                f"{row[0][0]}g", f"{row[0][1]:,}"])
+        headers = ("Cheapest Item", "Price", "Stock")
+        results = tuple((f"**{item}**: {utils.codes(row[0][2])} {row[0][2]}", f"{row[0][0]}g", f"{row[0][1]:,}")
+                        for item, row in db_dict.items() if item != "Product")
         embed.set_footer(text=db_dict["Product"][0][-1])
         await utils.send_long_embed(interaction, embed, headers, results)
 
@@ -420,8 +416,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 tree = await utils.get_content(
                     f'{base_url}productMarketOffers?type={item}&countryId=-1&quality={quality}&page={page}')
                 raw_prices = tree.xpath("//*[@class='productMarketOffer']//b/text()")
-                ccs = [x.strip().lower() for x in tree.xpath("//*[@class='price']/div/text()") if x.strip()]
-                stock = [int(x) for x in tree.xpath("//*[@class='quantity']//text()") if x.strip()]
+                ccs = (x.strip().lower() for x in tree.xpath("//*[@class='price']/div/text()") if x.strip())
+                stock = (int(x) for x in tree.xpath("//*[@class='quantity']//text()") if x.strip())
                 for cc, raw_price, stock in zip(ccs, raw_prices, stock):
                     country_id = currency_names[cc]
                     if country_id in offers_per_country:
@@ -502,36 +498,33 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         db_dict = db_dict[server] if server in db_dict else {}
         if len(db_dict.keys()) > 2:
             def x(db_dict: dict) -> BytesIO:
-                d = []
-                d1 = []
-                length = 0
-                for k, v in db_dict.items():
-                    length += 1
-                    d.append(datetime.strptime(k, "%d-%m-%Y"))
-                    d1.append(sum(float(key) * val for key, val in v.items()) / sum(v.values()))
+                prices_per_day = {
+                    datetime.strptime(k, "%d-%m-%Y"): sum(float(key) * val for key, val in v.items()) / sum(v.values())
+                    for k, v in db_dict.items()}
 
                 if best_price:
-                    d.append(datetime.now().astimezone(timezone('Europe/Berlin')))
-                    d1.append(best_price)
+                    prices_per_day[datetime.now().astimezone(timezone('Europe/Berlin'))] = best_price
 
+                med = statistics.median(prices_per_day.values())
+                std = statistics.stdev(prices_per_day.values())
+                prices_per_day = {day: min(price, med + 2 * std) for day, price in prices_per_day.items()}
+
+                # calculate the moving average
                 temp_server = server in ('xena', 'elysia')
-                med = statistics.median(d1)
-                std = statistics.stdev(d1)
                 window = 12 if not temp_server else 7
-                average_y = []
-                for i, item in enumerate(d1):
-                    d1[i] = min(item, med + 2 * std)
-                    if i + window // 2 <= len(d1) and i >= window // 2:
-                        average_y.append(statistics.median(d1[i - window // 2: i + window // 2]))
-                    else:
-                        average_y.append(None)
+                prices_list = list(prices_per_day.values())
+                moving_average = tuple(statistics.median(prices_list[i - window // 2: i + window // 2])
+                                       if i + window // 2 <= len(prices_list) and i >= window // 2 else None
+                                       for i in range(len(prices_list)))
+
                 fig, ax = plt.subplots()
                 ax.set_title(f"{product_name}, {server}")
                 ax.set_ylabel('Price')
                 ax.set_xlabel('Date')
-                ax.plot(d, d1, label="Daily Average" if temp_server else "Monthly Average")
-                if any(average_y):
-                    ax.plot(d, average_y, '.-', label="Moving Average")
+                ax.plot(prices_per_day.keys(), prices_per_day.values(),  # noqa WPS221
+                        label="Daily Average" if temp_server else "Monthly Average")
+                if any(moving_average):
+                    ax.plot(prices_per_day.keys(), moving_average, '.-', label="Moving Average")  # noqa WPS221
                 ax.legend()
                 fig.autofmt_xdate()
                 ax.grid()
@@ -555,24 +548,23 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         base_url = f"https://{server}.e-sim.org/"
         used = defaultdict(lambda: [0] * 10)
         produced = defaultdict(lambda: [0] * 10)
-        headers1 = []
+        headers = []
         link = link.replace("militaryUnit.html", "militaryUnitCompanies.html").replace("profile", "companies")
 
         if "/stockCompany.html" in link:
             tree = await utils.get_locked_content(link)
-
-            types = [x.strip() for x in tree.xpath('//tr//td[1]//div[4]//tr[position()>1]//td[2]/text()')]
+            types = tuple(x.strip() for x in tree.xpath('//tr//td[1]//div[4]//tr[position()>1]//td[2]/text()'))
             companies = utils.get_ids_from_path(tree, '//tr//td[1]//div[4]//tr[position()>1]//td[1]/a')
 
         elif "/militaryUnitCompanies.html" in link or "/companies.html" in link:
             tree = await utils.get_locked_content(link)
             companies = utils.get_ids_from_path(tree, '//*[@id="myCompaniesToSortTable"]//tr//td[1]/a')
-            types = [x.split("productIcons/")[1].split(".")[0].replace("Rewards/", "") for x in
-                     tree.xpath('//*[@id="myCompaniesToSortTable"]//tr//td[2]//img[1]/@src')]
-            qualities = [x.split("productIcons/")[1].split(".")[0].upper() for x in
-                         tree.xpath('//*[@id="myCompaniesToSortTable"]//tr//td[2]//img[2]/@src')]
-            types = [Type if Type in ["Iron", "Diamonds", "Grain", "Oil", "Stone", "Wood"] else f"{Q} {Type}" for
-                     Q, Type in zip(qualities, types)]
+            types = (x.split("productIcons/")[1].split(".")[0].replace("Rewards/", "") for x in
+                     tree.xpath('//*[@id="myCompaniesToSortTable"]//tr//td[2]//img[1]/@src'))
+            qualities = (x.split("productIcons/")[1].split(".")[0].upper() for x in
+                         tree.xpath('//*[@id="myCompaniesToSortTable"]//tr//td[2]//img[2]/@src'))
+            types = tuple(Type if Type in ["Iron", "Diamonds", "Grain", "Oil", "Stone", "Wood"] else f"{Q} {Type}" for
+                          Q, Type in zip(qualities, types))
         else:
             await utils.custom_followup(interaction, "`link` must be SC / MU / profile link!", ephemeral=True)
             return
@@ -602,8 +594,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             except Exception:
                 await utils.custom_followup(interaction, f"Skipped company {company}")
                 continue
-            if not headers1:
-                headers1 = tree.xpath('//*[@id="productivityTable"]//tr[1]//td[position()>2]//text()')
+            if not headers:
+                headers = tree.xpath('//*[@id="productivityTable"]//tr[1]//td[position()>2]//text()')
             df = pd.read_html(html.tostring(tree))[0]
             raw = " ".join([x for x in company_type.split() if "Q" not in x])
             not_raw = raw not in ("Iron", "Diamonds", "Grain", "Oil", "Stone", "Wood")
@@ -622,8 +614,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         total_profit = 0
         per_day = defaultdict(lambda: {"cost": 0, "worth": 0})
         csv_writer.writerow(
-            ["Raw Used", "Cost (gold)"] + headers1 + ["Sum (units)", "Daily Average (units)", "Sum (gold)",
-                                                      "Daily Average (gold)"])
+            ["Raw Used", "Cost (gold)"] + headers + ["Sum (units)", "Daily Average (units)", "Sum (gold)",
+                                                     "Daily Average (gold)"])
         for k, v in used.items():
             val = db_dict.get(k, [[0]])[0][0]
             s = round(sum(v), 2)
@@ -631,13 +623,13 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             csv_writer.writerow([k, val] + [round(x, 2) for x in v] + [s, round(s / len(v), 2), round(val * s, 2),
                                                                        round(val * s / len(v), 2)])
             for index, x in enumerate(v):
-                per_day[headers1[index]]["cost"] += val * x
+                per_day[headers[index]]["cost"] += val * x
 
         csv_writer.writerow([""])
 
         csv_writer.writerow(
-            ["Produced", "Worth (gold)"] + headers1 + ["Sum (units)", "Daily Average (units)", "Sum (gold)",
-                                                       "Daily Average (gold)"])
+            ["Produced", "Worth (gold)"] + headers + ["Sum (units)", "Daily Average (units)", "Sum (gold)",
+                                                      "Daily Average (gold)"])
         for k, v in produced.items():
             val = db_dict.get(k.replace("Defense System", "Defense_System"), [[0]])[0][0]
             s = round(sum(v), 2)
@@ -645,7 +637,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             csv_writer.writerow([k, val] + [round(x, 3) for x in v] + [s, round(s / len(v), 2), round(val * s, 2),
                                                                        round(val * s / len(v), 2)])
             for index, x in enumerate(v):
-                per_day[headers1[index]]["worth"] += val * x
+                per_day[headers[index]]["worth"] += val * x
 
         csv_writer.writerow([""])
         csv_writer.writerow(["Cost per day (gold)", ""] + [str(round(val["cost"], 2)) for val in per_day.values()])
@@ -714,19 +706,19 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 break
             msg = await utils.update_percent(page, last_page + last_page2, msg)
             tree = await utils.get_content(link + f'&page={page}')
-            gold = [float(x) for x in tree.xpath("//tr[position()>1]//td[2]//b[1]//text()")]
-            player = [x.strip() for x in tree.xpath("//tr[position()>1]//td[2]//a[@class='profileLink']/text()")]
-            for gold, player in zip(gold, player):
+            golds = (float(x) for x in tree.xpath("//tr[position()>1]//td[2]//b[1]//text()"))
+            player_names = (x.strip() for x in tree.xpath("//tr[position()>1]//td[2]//a[@class='profileLink']/text()"))
+            for gold, player in zip(golds, player_names):
                 balance[player]["dividends"] += gold
             await utils.custom_delay(interaction)
 
         for page in range(1, last_page2):
             msg = await utils.update_percent(last_page + page, last_page + last_page2, msg)
             tree = await utils.get_content(link2 + f'&page={page}')
-            sellers = [x.strip() for x in tree.xpath("//tr[position()>1]//td[4]//a/text()")]
-            buyers = [x.strip() for x in tree.xpath("//tr[position()>1]//td[5]//a/text()")]
-            golds = [float(x) for x in tree.xpath("//tr[position()>1]//td[3]//b//text()")]
-            amounts = [int(x) for x in tree.xpath("//tr[position()>1]//td[2]//b//text()")]
+            sellers = (x.strip() for x in tree.xpath("//tr[position()>1]//td[4]//a/text()"))
+            buyers = (x.strip() for x in tree.xpath("//tr[position()>1]//td[5]//a/text()"))
+            golds = (float(x) for x in tree.xpath("//tr[position()>1]//td[3]//b//text()"))
+            amounts = (int(x) for x in tree.xpath("//tr[position()>1]//td[2]//b//text()"))
             for seller, buyer, gold, amount in zip(sellers, buyers, golds, amounts):
                 balance[seller]["shares sold"] += amount * gold
                 balance[buyer]["shares purchased"] += amount * gold
@@ -735,11 +727,11 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         tree = await utils.get_content(f'{base_url}stockCompany.html?id={stock_company_id}')
 
         per_share = float(tree.xpath('//*[@class="muColEl"]//b/text()')[2])
-        shares = [int(x) for x in tree.xpath("//td[2]//div[2]//table[1]//tr[position()>1]//td[1]//b//text()")]
+        shares = tuple(int(x) for x in tree.xpath("//td[2]//div[2]//table[1]//tr[position()>1]//td[1]//b//text()"))
         # Remove "Show" row. It won't work if there's only 1 minor share, but it's really rare.
-        shares = [shares[0]] + [shares[x] for x in range(len(shares)) if shares[x] <= shares[x - 1]]
-        holders = [x.strip() for x in
-                   tree.xpath("//td[2]//div[2]//table[1]//tr[position()>1]//td[2]//a[@class='profileLink']/text()")]
+        shares = [shares[0]] + [shares[i] for i in range(1, len(shares)) if shares[i] <= shares[i - 1]]
+        holders = (x.strip() for x in
+                   tree.xpath("//td[2]//div[2]//table[1]//tr[position()>1]//td[2]//a[@class='profileLink']/text()"))
         for share, holder in zip(shares, holders):
             balance[holder]["owned shares"] += share * per_share
 
@@ -771,28 +763,24 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             mm_db = await utils.find_one("mm", server)
             embed.set_footer(text="Last update: " + mm_db['last_update'])
             del mm_db['last_update']
-            headers = ["Id", "Country", "Price"]
-            data = [[f"[{k}](https://{server}.e-sim.org/monetaryMarket.html?buyerCurrencyId={k})",
-                     utils.get_countries(server, int(k)).title(), v] for k, v in
-                    sorted(mm_db.items(), key=lambda item: float(item[1]))]
+            headers = ("Id", "Country", "Price")
+            data = tuple((f"[{k}](https://{server}.e-sim.org/monetaryMarket.html?buyerCurrencyId={k})",
+                          utils.get_countries(server, int(k)).title(), v) for k, v in
+                         sorted(mm_db.items(), key=lambda item: float(item[1])))
             return await utils.send_long_embed(interaction, embed, headers, data)
         mm_history = (await utils.find_one("mm_history", server))[str(country_id)]
-        d = []
-        d1 = []
-        length = 0
-        for k, v in mm_history.items():
-            length += 1
-            d.append(datetime.strptime(k, "%d-%m-%Y"))
-            d1.append(sum(float(key) * val for key, val in v.items()) / sum(v.values()))
-        med = statistics.median(d1)
-        std = statistics.stdev(d1)
-        for i, item in enumerate(d1):
-            d1[i] = min(item, med + 2 * std)
+        prices_per_day = {
+            datetime.strptime(k, "%d-%m-%Y"): sum(float(key) * val for key, val in v.items()) / sum(v.values())
+            for k, v in mm_history.items()}
+
+        med = statistics.median(prices_per_day.values())
+        std = statistics.stdev(prices_per_day.values())
+        prices_per_day = {day: min(price, med + 2 * std) for day, price in prices_per_day.items()}
         fig, ax = plt.subplots()
         ax.set_title(f"{utils.get_countries(server, country_id).title()}, {server}")
         ax.set_ylabel('Price')
         ax.set_xlabel('Date')
-        ax.plot(d, d1)
+        ax.plot(prices_per_day.keys(), prices_per_day.values())  # noqa WPS221
         fig.autofmt_xdate()
         ax.grid()
         output_buffer = utils.plt_to_bytes(fig)
@@ -804,16 +792,16 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                               f"?sellerCurrencyId=0&buyerCurrencyId={country_id}&page=1")
             sellers = tree.xpath("//*[@class='seller']/a/text()")
             buy = tree.xpath("//*[@class='buy']/button")[0].attrib['data-buy-currency-name']
-            seller_ids = [int(x.split("?id=")[1]) for x in tree.xpath("//*[@class='seller']/a/@href")]
+            seller_ids = (int(x.split("?id=")[1]) for x in tree.xpath("//*[@class='seller']/a/@href"))
             amounts = tree.xpath("//*[@class='amount']//b/text()")
             ratios = tree.xpath("//*[@class='ratio']//b/text()")
-            row = []
-            for seller, seller_id, amount, ratio in zip(sellers, seller_ids, amounts, ratios):
-                row.append({"seller": seller.strip(), "seller_id": seller_id, "amount": amount, "ratio": ratio})
+            limit = 5
+            data = islice(({"seller": seller.strip(), "seller_id": seller_id, "amount": amount, "ratio": ratio}
+                           for seller, seller_id, amount, ratio in zip(sellers, seller_ids, amounts, ratios)), limit)
             embed.add_field(name="Seller", value="\n".join(
-                [f'[{x["seller"]}](https://{server}.e-sim.org/profile.html?id={x["seller_id"]})' for x in row[:5]]))
-            embed.add_field(name="Stock", value="\n".join([x["amount"] for x in row[:5]]))
-            embed.add_field(name="Price", value="\n".join([x["ratio"] for x in row[:5]]))
+                [f'[{x["seller"]}](https://{server}.e-sim.org/profile.html?id={x["seller_id"]})' for x in data]))
+            embed.add_field(name="Stock", value="\n".join([x["amount"] for x in data]))
+            embed.add_field(name="Price", value="\n".join([x["ratio"] for x in data]))
             embed.set_footer(text=buy)
         except Exception:
             pass
@@ -842,21 +830,24 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
 
             embed.title = f"{utils.codes(api['citizenship'])} " + api['login'] + ", " + server
             embed.url = f"https://{server_nick['server']}.e-sim.org/profile.html?id={api['id']}"
-            profile_items = await self.get_profile_parameters(profile_url=embed.url, api=api)
+            profile_items = {utils.normalize_slot(item["slot"]): tuple(
+                (utils.normalize_parameter_string(p["name"]), p["value"]) for p in item["parameters"])
+                for item in api["gearInfo"]}
 
             array = []
             lines = []
-            for profile_items_values in profile_items.values():
-                eq_type = profile_items_values["type"]
-                parameters = [x[0] for x in profile_items_values["parameters"]]
-                values = [x[1] for x in profile_items_values["parameters"]]
-                increase = 1
+            for eq_type, profile_items_values in profile_items.items():
+                # eq_type = profile_items_values["type"]
+                parameters = tuple(x[0] for x in profile_items_values)
+                values = tuple(x[1] for x in profile_items_values)
                 if "increase" in parameters:
+                    # The displayed values are after the increase, but the upgrade calculation should be before
                     inc_index = parameters.index("increase")
                     increase = values[inc_index] / 100 + 1
-                    values[inc_index] *= values[inc_index] / 100 + 1  # Will be fixed later when dividing back
+                    values = tuple(values[i] / increase if i != inc_index else values[i] for i in range(len(values)))
+
                 for parameter, value in zip(parameters, values):
-                    data, percentages, _ = await calc_upgrades(parameter, value / increase, upgrades_per_stat)
+                    data, percentages, _ = await calc_upgrades(parameter, value, upgrades_per_stat)
                     if data:
                         line = await self.plot_percentages(ax, percentages)
                         lines.append((percentages[0], line))
@@ -864,7 +855,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
 
             if upgrades_per_stat:
                 # sort lines by the min percentage
-                labels = [f"{x[0]} ({x[1]})" for x in array]
+                labels = (f"{x[0]} ({x[1]})" for x in array)
                 sorted_lines = sorted(zip(lines, labels), key=lambda x: x[0][0], reverse=True)
                 lines, labels = zip(*sorted_lines)
                 ax.legend([x[1] for x in lines], labels, prop={'size': 30 / (len(array) ** 0.5)})
@@ -888,19 +879,19 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 embed.description = f"[Owner Profile]({owner_link})"
             embed.set_footer(text="Try also /upgrade <Profile Link>")
 
-            parameters = [p["Name"] for p in api["Parameters"]]
-            values = [p["Value"] for p in api["Parameters"]]
-            increase = 1
+            parameters = tuple(p["Name"] for p in api["Parameters"])
+            values = tuple(p["Value"] for p in api["Parameters"])
             if "Increase other parameters" in parameters:
+                # The displayed values are after the increase, but the upgrade calculation should be before
                 inc_index = parameters.index("Increase other parameters")
                 increase = values[inc_index] / 100 + 1
-                values[inc_index] *= values[inc_index] / 100 + 1  # Will be fixed later when dividing back
+                values = tuple(values[i] / increase if i != inc_index else values[i] for i in range(len(values)))
 
             all_parameters_by_value = {v: k for k, v in all_parameters.items()}
             labels = []
             for name, value in zip(parameters, values):
                 parameter = all_parameters_by_value.get(name, "production")
-                data, percentages, _ = await calc_upgrades(parameter, value / increase, upgrades_per_stat)
+                data, percentages, _ = await calc_upgrades(parameter, value, upgrades_per_stat)
                 if data:
                     await self.plot_percentages(ax, percentages)
                     labels.append(name)
@@ -945,47 +936,6 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         files.append(File(fp=output_buffer, filename=f"{interaction.id}.png"))
         embed.set_thumbnail(url=f"attachment://{interaction.id}.png")
         await utils.custom_followup(interaction, files=files, embed=await utils.convert_embed(interaction, embed))
-
-    async def get_profile_parameters(self, profile_url: str, api: dict) -> dict:
-        """Update values precision from the api.
-        The profile page contain info about the quality of the eqs, but the api has more precise values,
-            so we merge them together."""
-        # TODO: we can drop the quality and use only the api
-
-        # Get the values from the api:
-        # api["gearInfo"] = [{"slot": "Vision", "parameters": [{"name": "Evening bonus damage", "value": 10.95},
-        #                                               {"name": "Chance to avoid damage", "value": 8.74},
-        #                                               {"name": "Chance to avoid damage", "value": 8.69}]},
-        #             {"slot": "Weapon upgrade", "parameters": [{...}]}]
-        parameters_per_item = {utils.normalize_slot(item["slot"]): tuple(
-            (utils.normalize_parameter_string(p["name"]), p["value"]) for p in item["parameters"])
-            for item in api["gearInfo"]}
-
-        # Get the values from the profile page:
-        tree = await utils.get_content(profile_url)
-        profile_items = {eq_type.split()[1]: {  # keys: "Q{quality} {slot}" -> "{slot}" to match the api format
-            "type": eq_type, "parameters": list(zip(parameters, values))}
-            for eq_type, parameters, values, eq_link in utils.get_eqs(tree)}
-
-        # Merge the values, assuming the parameters are ordered the same way in both sources:
-        for eq_type, profile_values in profile_items.items():
-            if eq_type not in parameters_per_item:
-                self.bot.logger.warning(f"Profile item {eq_type} not found in API for {profile_url}")
-                continue
-            api_values = parameters_per_item[eq_type]
-            for i in range(len(profile_values["parameters"])):
-                profile_parameter, profile_value = profile_values["parameters"][i]
-                api_parameter, api_value = api_values[i]
-                if profile_parameter != api_parameter:
-                    self.bot.logger.warning(f"Profile parameter {profile_parameter} doesn't match API parameter "
-                                            f"{api_parameter} for {eq_type} in {profile_url}")
-                elif abs(profile_value - api_value) > 0.1:
-                    self.bot.logger.warning(f"Profile value {profile_value} doesn't match API value {api_value}"
-                                            f" for {eq_type} in {profile_url}")
-                else:
-                    profile_values["parameters"][i] = api_values[i]  # api_values are more precise
-
-        return profile_items
 
     async def plot_percentages(self, ax: matplotlib.axes, percentages: list) -> matplotlib.lines.Line2D:
         line, = await self.bot.loop.run_in_executor(None, lambda: ax.plot(
@@ -1044,7 +994,7 @@ async def calc_upgrades(parameter: str, value: float, upgrades_per_stat: dict) -
         data.append(str(round(value, 2)))
         upgrades_per_stat[parameter] += 1
 
-    percentages = [(float(value) - lowest) / (biggest - lowest) for value in data]
+    percentages = tuple((float(value) - lowest) / (biggest - lowest) for value in data)
     return data, percentages, quality
 
 

@@ -255,7 +255,7 @@ def generate_cup_plot(df: pd.DataFrame, names: dict) -> Optional[BytesIO]:
 
     has_second_day = False
 
-    colors = ['red', 'blue', 'green', 'orange', 'purple', 'brown', 'pink', 'gray', 'olive', 'cyan']
+    colors = ('red', 'blue', 'green', 'orange', 'purple', 'brown', 'pink', 'gray', 'olive', 'cyan')
 
     for i, (citizen_id, group) in enumerate(df.groupby('citizenId')):
         color = colors[i]
@@ -300,8 +300,8 @@ def generate_cup_plot(df: pd.DataFrame, names: dict) -> Optional[BytesIO]:
 
     # sort legends based on tops
     lines, labels = ax0.get_legend_handles_labels()
-    lines = [lines[labels.index(label)] for label in names.values()]
-    labels = [labels[labels.index(label)] for label in names.values()]
+    lines = tuple(lines[labels.index(label)] for label in names.values())
+    labels = tuple(labels[labels.index(label)] for label in names.values())
     ax0.legend(lines, labels)
 
     fig.autofmt_xdate()

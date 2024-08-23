@@ -44,7 +44,7 @@ async def cache_api_battles(interaction: Interaction, server: str, battle_ids: i
             (f"AND battle_id NOT IN ({excluded_ids})" if excluded_ids else "") + \
             " AND (defenderScore = 8 OR attackerScore = 8)"
 
-    existing_battles = [x[0] for x in await execute_query(bot.pool, query, fetch=True)]  # x[0] = battle_id
+    existing_battles = {x[0] for x in await execute_query(bot.pool, query, fetch=True)}  # x[0] = battle_id
 
     for battle_id in battle_ids:
         if await bot.should_cancel(interaction):
@@ -108,10 +108,11 @@ async def insert_into_api_fights(server: str, battle_id: int, round_id: int) -> 
                        'citizenId': 0, 'time': datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]}]
     # time can be one of: (%d-%m-%Y %H:%M:%S:%f, %Y-%m-%d %H:%M:%S:%f, %Y-%m-%d %H:%M:%S.%f, %Y-%m-%d %H:%M:%S)
     # so we should replace last : with . if the count of : is 3
-    api_fights = [(battle_id, round_id, hit['damage'], hit['weapon'], hit['berserk'], hit['defenderSide'],
-                   hit['citizenship'], hit['citizenId'],
-                   ".".join(hit["time"].strip().rsplit(":", 1)) if hit["time"].count(":") == 3 else hit["time"].strip(),
-                   hit.get('militaryUnit')) for hit in reversed(api_fights)]
+    api_fights = tuple((battle_id, round_id, hit['damage'], hit['weapon'], hit['berserk'], hit['defenderSide'],
+                        hit['citizenship'], hit['citizenId'],
+                        ".".join(hit["time"].strip().rsplit(":", 1)) if hit["time"].count(":") == 3 else hit[
+                            "time"].strip(),
+                        hit.get('militaryUnit')) for hit in reversed(api_fights))
 
     placeholders = ', '.join(['%s'] * len(api_fights[0]))
     query = f"INSERT IGNORE INTO {server}.apiFights VALUES ({placeholders})"
@@ -225,7 +226,7 @@ async def get_api_fights_sum(server: str, battle_ids: iter, group_by: str = "cit
              )
 
     api_fights = await execute_query(bot.pool, query, fetch=True)
-    columns = [group_by, "damage", "Q0", "Q1", "Q2", "Q3", "Q4", "Q5", "hits"]
+    columns = (group_by, "damage", "Q0", "Q1", "Q2", "Q3", "Q4", "Q5", "hits")
     df = pd.DataFrame(api_fights, columns=columns, index=[x[0] for x in api_fights])
     logger.info(f"get_api_fights_sum: Done selecting {len(df)} citizens from {server=}, {start_id=}, {end_id=}")
     return df
@@ -233,15 +234,13 @@ async def get_api_fights_sum(server: str, battle_ids: iter, group_by: str = "cit
 
 async def select_one_api_fights(server: str, api: dict, round_id: int = 0) -> pd.DataFrame:
     # TODO: rewrite
-    columns = ['battle_id', 'round_id', 'damage', 'weapon', 'berserk', 'defenderSide', 'citizenship',
-               'citizenId', 'time', 'militaryUnit']
     battle_id = api["battle_id"]
     query = f"SELECT * FROM {server}.apiFights WHERE battle_id = {battle_id}" + \
             (f" AND round_id = {round_id}" if round_id else "")
     values = await execute_query(bot.pool, query, fetch=True)
     dfs = []
     if values:
-        dfs.append(pd.DataFrame(values, columns=["index"] + columns))
+        dfs.append(pd.DataFrame(values, columns=("index",) + api_fights_columns))
 
     current_round, first_round = api["currentRound"], api["lastVerifiedRound"] + 1
     if 8 in (api['defenderScore'], api['attackerScore']):
@@ -258,7 +257,7 @@ async def select_one_api_fights(server: str, api: dict, round_id: int = 0) -> pd
                       for hit in reversed(api_fights)]
         if round_id != current_round:
             placeholders = ', '.join(['%s'] * len(api_fights[0]))
-            query = f"INSERT IGNORE INTO {server}.apiFights {tuple(columns)} VALUES ({placeholders})"
+            query = f"INSERT IGNORE INTO {server}.apiFights {api_fights_columns} VALUES ({placeholders})"
             await execute_query(bot.pool, query, api_fights, many=True)
-        dfs.append(pd.DataFrame(api_fights, columns=columns))
+        dfs.append(pd.DataFrame(api_fights, columns=api_fights_columns))
     return pd.concat(dfs, ignore_index=True, copy=False) if dfs else None

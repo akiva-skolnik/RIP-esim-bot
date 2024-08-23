@@ -81,11 +81,11 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
             if break_main:
                 break
 
-        headers = ["#", "Nick", "Citizenship", "BHs"]
+        headers = ("#", "Nick", "Citizenship", "BHs")
         await self.__send_csv_file_and_preview(interaction, output, headers, server, link, -1)
 
     @staticmethod
-    async def __send_csv_file_and_preview(interaction: Interaction, output: StringIO, headers: list,
+    async def __send_csv_file_and_preview(interaction: Interaction, output: StringIO, headers: tuple[str, ...],
                                           server: str, link: str, sort_by: int) -> None:
         """__send_csv_file_and_preview"""
         output.seek(0)
@@ -124,38 +124,38 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                 ephemeral=True)
             return
         if ids is None:
-            ids = []
+            ids = ()
         else:
-            ids = [x.strip() for x in ids.split(",")]
+            ids = utils.strip(ids.split(","))
         if ids_in_file:
-            ids.extend([i.decode("utf-8").split(",")[0] for i in (await ids_in_file.read()).splitlines() if i])
+            ids += tuple(i.decode("utf-8").split(",")[0] for i in (await ids_in_file.read()).splitlines() if i)
         key = your_input_is
 
         if "members" in key:
             mu_embers = await utils.get_content(f'https://{server}.e-sim.org/apiMilitaryUnitMembers.html?id={ids[0]}')
-            ids = [str(row["id"]) for row in mu_embers]
+            ids = tuple(str(row["id"]) for row in mu_embers)
             link = "apiCitizenById.html?id"
             name = "login"
-            header = ["Id", "Nick", "citizenship", "MU id"]
+            headers = ("Id", "Nick", "citizenship", "MU id")
 
         elif "citizenship" in key:
-            header = ["Citizenship"]
+            headers = ("Citizenship",)
             name = link = ""
 
         elif "military unit" in key:
             link = "apiMilitaryUnitById.html?id"
             name = "name"
-            header = ["Id", "Name", "Total damage", "Max members", "Gold value", "Country", "Type"]
+            headers = ("Id", "Name", "Total damage", "Max members", "Gold value", "Country", "Type")
 
         elif key == "citizen ids":
             link = "apiCitizenById.html?id"
             name = "login"
-            header = ["Id", "Nick", "citizenship", "MU id"]
+            headers = ("Id", "Nick", "citizenship", "MU id")
 
         elif key == "citizen names":
             link = "apiCitizenByName.html?name"
             name = "id"
-            header = ["Nick", "ID", "citizenship", "MU id"]
+            headers = ("Nick", "ID", "citizenship", "MU id")
 
         else:
             await utils.custom_followup(interaction, "Key Error", ephemeral=True)
@@ -164,13 +164,13 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
         output = StringIO()
         csv_writer = writer(output)
         if extra_premium_info:
-            csv_writer.writerow(["Id", "Link", "Nick", "Citizenship", "MU Id", "Inactive Since", "ES", "XP", "Strength",
+            csv_writer.writerow(("Id", "Link", "Nick", "Citizenship", "MU Id", "Inactive Since", "ES", "XP", "Strength",
                                  "Per limit", "Per Berserk", "Crit", "Avoid", "Miss", "Dmg", "Max", "Total Dmg",
                                  "Today's dmg", "Premium till", "", "Vision", "Helmet", "Armor", "Pants", "Shoes", "LC",
                                  "WU", "Offhand", "", "Congress medal", "CP", "Train", "Inviter", "Subs", "work", "BHs",
-                                 "RW", "Tester", "Tournament"])
+                                 "RW", "Tester", "Tournament"))
         else:
-            csv_writer.writerow(header)
+            csv_writer.writerow(headers)
         msg = await utils.custom_followup(
             interaction, "Progress status: 1%.\n(I will update you after every 10%)" if len(ids) > 10 else
             "I'm on it, Sir. Be patient.", file=File(self.bot.typing_gif_path))
@@ -205,8 +205,8 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                 tree = await utils.get_content(profile_link)
 
                 if api['status'] == "inactive":
-                    days_number = [x.split()[-2] for x in tree.xpath('//*[@class="profile-data red"]/text()') if
-                                   "This citizen has been inactive for" in x][0]
+                    days_number = next(x.split()[-2] for x in tree.xpath('//*[@class="profile-data red"]/text()') if
+                                       "This citizen has been inactive for" in x)
                     status = str(date.today() - timedelta(days=int(days_number)))
                 elif api['status'] == "active":
                     status = ""
@@ -216,20 +216,19 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                     premium = date.today() + timedelta(days=int(api['premiumDays']))
                 else:
                     premium = ""
-                eqs = []
-                for quality in tree.xpath("//div[1]//div[2]//div[5]//tr//td[2]//div[1]//div[1]//@class"):
-                    if "equipmentBack" in quality:
-                        quality = quality.replace("equipmentBack q", "")
-                        eqs.append(quality)
-                medals1 = []
+                eqs = [quality.replace("equipmentBack q", "")
+                       for quality in tree.xpath("//div[1]//div[2]//div[5]//tr//td[2]//div[1]//div[1]//@class")
+                       if "equipmentBack" in quality]
+                # TODO: move to func
+                profile_medals = []
                 for i in range(1, 11):
                     a = tree.xpath(f"//*[@id='medals']//ul//li[{i}]//div//text()")
                     if a:
-                        medals1.append(*[x.replace("x", "") for x in a])
+                        profile_medals.append(*[x.replace("x", "") for x in a])
                     elif "emptyMedal" not in tree.xpath(f"//*[@id='medals']//ul//li[{i}]/img/@src")[0]:
-                        medals1.append("1")
+                        profile_medals.append("1")
                     else:
-                        medals1.append(0)
+                        profile_medals.append("0")
                 strength = api['strength']
                 dmg = await dmg_calculator(api=api)
                 stats = {"crit": 12.5, "avoid": 5, "miss": 12.5, "damage": 0, "max": 0}
@@ -241,7 +240,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                 row = [api['id'], profile_link, api['login'], api['citizenship'], api['militaryUnitId'] or "", status,
                        round(api['economySkill'], 2), api['xp'], strength, dmg["avoid"], dmg["clutch"]] + stats + [
                           api['totalDamage'] - api['damageToday'], api['damageToday'], premium, ""] + eqs + [
-                          ""] + medals1
+                          ""] + profile_medals
                 csv_writer.writerow(row)
             await utils.custom_delay(interaction)
         output.seek(0)
@@ -293,7 +292,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                     any_side.append(all_countries_by_name[battles_to_include.strip().lower()])
 
             # (defenderId, attacker_id) IN ((sides[0], sides[1]), (sides[1], sides[0]))
-            reversed_sides: list[tuple] = [tuple(reversed(side)) for side in exact_sides]
+            reversed_sides = (tuple(reversed(side)) for side in exact_sides)
             str_exact_sides = f"{','.join(map(str, exact_sides))},{','.join(map(str, reversed_sides))}"
             exact_side_condition = f"((defenderId, attackerId) IN ({str_exact_sides}))"
             any_side_condition = f"(defenderId IN {','.join(any_side)} OR attackerId IN {','.join(any_side)})"
@@ -472,7 +471,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
         player_stats = player_stats.reset_index().rename(columns={'index': 'citizenId'})
         player_stats = player_stats.merge(pd.DataFrame(player_dict).T, left_on='citizenId', right_index=True,
                                           how='left')
-        columns_to_drop = ['limits', 'last_hit', 'restores', 'has_restore']
+        columns_to_drop = ('limits', 'last_hit', 'restores', 'has_restore')
         player_stats.rename(columns={'medkits': 'Medkits used (rough estimation)'}).drop(
             columns=columns_to_drop).to_csv(player_stats_buffer, index=False, lineterminator='\n')
 
@@ -554,10 +553,10 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                 for page in range(1, last_page):
                     tree = await utils.get_content(battle_link + f'&page={page}')
                     qualities = tree.xpath("//tr[position()>1]//td[2]/text()")
-                    items = [x.strip() for x in tree.xpath("//tr[position()>1]//td[3]/text()")]
-                    nicks = [x.strip() for x in tree.xpath("//tr[position()>1]//td[4]//a/text()")]
-                    links = [f"{base_url}battle.html?id={x}" for x in
-                             utils.get_ids_from_path(tree, "//tr[position()>1]//td[4]//a")]
+                    items = utils.strip(tree.xpath("//tr[position()>1]//td[3]/text()"))
+                    nicks = utils.strip(tree.xpath("//tr[position()>1]//td[4]//a/text()"))
+                    links = (f"{base_url}battle.html?id={x}" for x in
+                             utils.get_ids_from_path(tree, "//tr[position()>1]//td[4]//a"))
                     for nick, link, quality, item in zip(nicks, links, qualities, items):
                         my_dict[(nick, link)]["Q"][int(quality.replace("Q", "")) - 1] += 1
                         if item == "Lucky charm":
@@ -570,10 +569,10 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                     last_page = await utils.last_page(battle_link)
                     for page in range(1, last_page):
                         tree = await utils.get_content(battle_link + f'&page={page}')
-                        nicks = [x.strip() for x in tree.xpath("//tr[position()>1]//td[2]//a/text()")]
-                        links = [f"{base_url}battle.html?id={x}" for x in
-                                 utils.get_ids_from_path(tree, "//tr[position()>1]//td[2]//a")]
-                        items = [x.strip() for x in tree.xpath("//tr[position()>1]//td[1]//text()") if x.strip()]
+                        nicks = utils.strip(tree.xpath("//tr[position()>1]//td[2]//a/text()"))
+                        links = (f"{base_url}battle.html?id={x}" for x in
+                                 utils.get_ids_from_path(tree, "//tr[position()>1]//td[2]//a"))
+                        items = utils.strip(tree.xpath("//tr[position()>1]//td[1]//text()"))
                         for nick, link, item in zip(nicks, links, items):
                             key = item.replace("Equipment parameter ", "")
                             if key not in my_dict[(nick, link)]:
@@ -588,9 +587,9 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                 csv_writer.writerow(row)
             await utils.custom_delay(interaction)
         f.close()
-        headers = ["Nick", "Link", "Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Upgrade", "Reshuffle"]
+        headers = ("Nick", "Link", "Q1", "Q2", "Q3", "Q4", "Q5", "Q6", "Upgrade", "Reshuffle")
         if lucky:
-            headers += ["Q1 LC", "Q2 LC", "Q3 LC", "Q4 LC", "Q5 LC", "Q6 LC"]
+            headers += ("Q1 LC", "Q2 LC", "Q3 LC", "Q4 LC", "Q5 LC", "Q6 LC")
         my_dict = {}
         with open(filename, 'r') as csvfile:
             for row in reader(csvfile):
@@ -652,7 +651,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                                      dmg["avoid"], dmg["clutch"], api['eqIncreaseEcoSkill']])
                 await utils.custom_delay(interaction)
 
-        headers = ["#", "Nick", "Citizenship", "Crit", "Miss", "Avoid", "Max", "Dmg", "Per limit", "Per berserk", "Eco"]
+        headers = ("#", "Nick", "Citizenship", "Crit", "Miss", "Avoid", "Max", "Dmg", "Per limit", "Per berserk", "Eco")
         await self.__send_csv_file_and_preview(interaction, output, headers, server, link, -3)
 
     @checks.dynamic_cooldown(CoolDownModified(5))
@@ -673,7 +672,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
             custom_api = api_url + custom_api.replace("//", "/")
         files = []
         base_url = f"https://{server}.e-sim.org/"
-        links = ["apiRegions", "apiMap", "apiRanks", "apiCountries", "apiOnlinePlayers"]
+        links = ("apiRegions", "apiMap", "apiRanks", "apiCountries", "apiOnlinePlayers")
         for link in links if not custom_api else [custom_api]:
             api: list[str or dict] or dict = await utils.get_content(
                 (base_url + link + ".html") if not custom_api else custom_api, return_type="json", throw=True)
@@ -684,9 +683,9 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                 return
             if not isinstance(api, list):
                 api = [api]
-            lists_headers = [k for k, v in api[0].items() if isinstance(v, list)]
+            lists_headers = tuple(k for k, v in api[0].items() if isinstance(v, list))
             headers = [k for k, v in api[0].items() if not isinstance(v, list)]
-            headers = await update_missing_keys(link, headers)
+            await update_missing_keys(link, headers)
             output = StringIO()
             csv_writer = writer(output)
             csv_writer.writerow(headers)
@@ -722,17 +721,13 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
         await utils.custom_followup(interaction, files=files)
 
 
-async def update_missing_keys(link: str, headers: list) -> list:
+async def update_missing_keys(link: str, headers: list) -> None:
     """update missing keys"""
     missing = {'apiRegions': ['resource'], 'apiMap': ['battleId', 'raw'], 'apiCountries': ['president'],
                'apiMilitaryUnitMembers': ['companyId'],
                'apiFights': ['dsQuality', 'militaryUnitBonus', 'localizationBonus', 'militaryUnit']}
-    for k, v in missing.items():
-        if k in link:
-            for key in v:
-                if key not in headers:
-                    headers.append(key)
-    return headers
+    headers.extend([header for base_api, expected_headers in missing.items() if base_api in link
+                    for header in expected_headers if header not in headers])
 
 
 async def setup(bot) -> None:

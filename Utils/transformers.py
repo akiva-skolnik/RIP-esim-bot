@@ -68,45 +68,44 @@ class Country(Transformer):
 class BattleTypes(Transformer):
     """BattleTypes"""
 
-    async def transform(self, interaction: Interaction, battles_types: str) -> list:
-        correct_battle_types = ['ATTACK', 'CIVIL_WAR', 'COUNTRY_TOURNAMENT', 'CUP_EVENT_BATTLE', 'LEAGUE',
+    async def transform(self, interaction: Interaction, battles_types: str) -> tuple[str, ...]:
+        correct_battle_types = ('ATTACK', 'CIVIL_WAR', 'COUNTRY_TOURNAMENT', 'CUP_EVENT_BATTLE', 'LEAGUE',
                                 'MILITARY_UNIT_CUP_EVENT_BATTLE', 'PRACTICE_BATTLE', 'RESISTANCE', 'DUEL_TOURNAMENT',
-                                'TEAM_NATIONAL_CUP_BATTLE', 'TEAM_TOURNAMENT', 'WORLD_WAR_EVENT_BATTLE']
+                                'TEAM_NATIONAL_CUP_BATTLE', 'TEAM_TOURNAMENT', 'WORLD_WAR_EVENT_BATTLE')
+        battle_mapping = {
+            'ww': 'WORLD_WAR_EVENT_BATTLE',
+            'world war': 'WORLD_WAR_EVENT_BATTLE',
+            'tournament': 'COUNTRY_TOURNAMENT',
+            'country tournament': 'COUNTRY_TOURNAMENT',
+            'country': 'COUNTRY_TOURNAMENT',
+            'cw': 'CIVIL_WAR',
+            'civil war': 'CIVIL_WAR',
+            'rw': 'RESISTANCE',
+            'resistance war': 'RESISTANCE',
+            'cup': 'CUP_EVENT_BATTLE',
+            'mu cup': 'MILITARY_UNIT_CUP_EVENT_BATTLE',
+            'duel': 'DUEL_TOURNAMENT'
+        }
+        battle_types = tuple(battle_mapping.get(formal_battle_type.lower().strip(), formal_battle_type.strip().upper())
+                             for formal_battle_type in
+                             battles_types.replace("and", ",").replace("\n", ",").split(","))
 
-        battle_types = []
-        for formal_battle_type in battles_types.replace("and", ",").replace("\n", ",").split(","):
-            formal_battle_type = formal_battle_type.lower().strip()
-            if formal_battle_type in ("ww", "world war"):
-                formal_battle_type = 'WORLD_WAR_EVENT_BATTLE'
-            elif formal_battle_type in ("tournament", "country tournament", "country"):
-                formal_battle_type = 'COUNTRY_TOURNAMENT'
-            elif formal_battle_type in ("cw", "civil war"):
-                formal_battle_type = 'CIVIL_WAR'
-            elif formal_battle_type in ("rw", "resistance war"):
-                formal_battle_type = 'RESISTANCE'
-            elif formal_battle_type == "cup":
-                formal_battle_type = 'CUP_EVENT_BATTLE'
-            elif formal_battle_type == "mu cup":
-                formal_battle_type = 'MILITARY_UNIT_CUP_EVENT_BATTLE'
-            elif formal_battle_type == "duel":
-                formal_battle_type = 'DUEL_TOURNAMENT'
-            battle_types.append(formal_battle_type.strip().upper())
         for x in battle_types:
             if x not in correct_battle_types:
                 raise CheckFailure(f"No such type (`{x}`). Pls choose from this list:\n" + ", ".join(
                     [f"`{i}`" for i in correct_battle_types]))
-        return battle_types or ['ATTACK', 'RESISTANCE']
+        return battle_types or ('ATTACK', 'RESISTANCE')
 
 
 class Ids(Transformer):
     """Ids"""
 
-    async def transform(self, interaction: Interaction, ids: str) -> list:
+    async def transform(self, interaction: Interaction, ids: str) -> tuple:
         try:
             fixed_ids = ids.replace("_", "-").replace("\n", " ").replace(",", " ")
             ids_list = fixed_ids.split()
             if ".e-sim.org" in ids:
-                ids = [get_id(ids)]
+                ids = (get_id(ids),)
             elif ids.startswith("https://"):
                 if ids.startswith("https://docs.google.com/spreadsheets/d/"):
                     ids = ids.split("/edit")[0] + "/export?format=csv"
@@ -119,7 +118,7 @@ class Ids(Transformer):
             elif len(ids_list) == 1:
                 ids = range(int(ids_list[0]), int(ids_list[0]) + 1)
             else:
-                ids = [int(x.strip()) for x in ids_list]
+                ids = tuple(int(x.strip()) for x in ids_list)
 
             if len(ids) > 500 and not await utils.is_premium_level_1(interaction, False, False):
                 raise CheckFailure("It's too much... sorry. "
@@ -202,7 +201,7 @@ class BattleLink(Transformer):
                 except Exception:
                     server, battle = battle.strip(), server.strip()
             elif "_" in link:
-                battle, last_battle = [int(x) for x in link.split("_")]
+                battle, last_battle = (int(x) for x in link.split("_"))
                 server = ""
             else:
                 raise TransformerError(link, self.type, self)
@@ -217,7 +216,7 @@ class BattleLink(Transformer):
 class Product(Transformer):
     """Product"""
 
-    def __init__(self, products_list: list = all_products):
+    def __init__(self, products_list: tuple = all_products):
         self.products = products_list
 
     async def transform(self, interaction: Interaction, product: str) -> str:
@@ -236,5 +235,6 @@ class Slots(Transformer):
 
     @property
     def choices(self) -> List[Choice]:
-        slots = ["helmet", "vision", "armor", "pants", "shoes", "lucky charm", "weapon upgrade", "offhand"]
+        slots = ("helmet", "vision", "armor", "pants", "shoes", "lucky charm", "weapon upgrade", "offhand")
+        # TODO: can we return tuple?
         return [Choice(name=x.title(), value=x.title()) for x in slots]

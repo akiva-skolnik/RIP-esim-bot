@@ -1,4 +1,5 @@
 """BlackMarket.py"""
+from collections import defaultdict
 from datetime import date
 from random import randint
 from typing import Literal, Optional
@@ -30,13 +31,11 @@ class BlackMarket(GroupCog, name="black-market"):
         """Display a list of offers for specific products or equipment per server."""
         data = await utils.find_one("collection", __name__)
         if not product and not equipment:
-            by_servers = {}
+            by_servers = defaultdict(list)
             for offer_dict in sorted(data.values(), key=lambda y: y["server"]):
                 if (server and server != offer_dict["server"]) or (
                         offer_dict.get("buy") or offer_dict["server"] not in all_servers):
                     continue
-                if offer_dict["server"] not in by_servers:
-                    by_servers[offer_dict["server"]] = []
                 if offer_dict["item"] not in (y["item"] for y in by_servers[offer_dict["server"]]):
                     by_servers[offer_dict["server"]].append(offer_dict)
             if not by_servers:

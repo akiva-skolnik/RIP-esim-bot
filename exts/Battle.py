@@ -60,10 +60,10 @@ class Battle(Cog):
         if military_unit_id:
             members = await utils.get_content(
                 f'https://{server}.e-sim.org/apiMilitaryUnitMembers.html?id={military_unit_id}')
-            members = [row["login"] for row in members]
+            members = tuple(row["login"] for row in members)
             mu_name = f"MU id {military_unit_id}"
         else:
-            members = []
+            members = ()
             mu_name = ""
 
         result = []
@@ -89,7 +89,7 @@ class Battle(Cog):
             else:
                 buff = ":red_circle: "
                 total_debuff += 1
-            row = [hyperlink, last, buff + till_change, dmg]
+            row = (hyperlink, last, buff + till_change, dmg)
             if row not in result:
                 result.append(row)
 
@@ -99,10 +99,10 @@ class Battle(Cog):
                              f"See https://docs.google.com/spreadsheets/d/{gids[server][0]}/edit#gid="
                              f"{gids[server][2]}\n")
             return
-        dmg = [int(x[-1].replace(",", "")) for x in result]
-        median = statistics.median(dmg)
-        result = [[x[0], (":low_brightness: " if int(x[-1].replace(",", "")) < median else ":high_brightness: ") + x[1],
-                   x[2]] for x in result]
+        median_dmg = statistics.median(tuple(int(x[-1].replace(",", "")) for x in result))
+        result = [(x[0],
+                   (":low_brightness: " if int(x[-1].replace(",", "")) < median_dmg else ":high_brightness: ") + x[1],
+                   x[2]) for x in result]
         result = sorted(result, key=lambda x: datetime.strptime(x[-1].split(": ")[-1], "%H:%M:%S"))
         embed = Embed(colour=0x3D85C6,
                       description=f"**Buffed players {country or mu_name}, {server}**\n"
@@ -110,9 +110,9 @@ class Battle(Cog):
                       url=f"https://docs.google.com/spreadsheets/d/{gids[server][0]}/edit#gid={gids[server][2]}")
         embed.set_footer(text="\U00002b50 / \U0001f512 = Premium / Non Premium\n"
                               "\U0001f7e2 / \U0001f534 = Buff / Debuff\n"
-                              f"\U0001f505 / \U0001f506 = Below / Above median total dmg ({round(median):,})\n"
+                              f"\U0001f505 / \U0001f506 = Below / Above median total dmg ({round(median_dmg):,})\n"
                               f"Last update: {find_buffs['Last update:'][0]}")
-        headers = ["Nick, Citizenship" if not country else "Nick", "Last Seen (game time)", "Till Debuff (over)"]
+        headers = ("Nick, Citizenship" if not country else "Nick", "Last Seen (game time)", "Till Debuff (over)")
         await utils.send_long_embed(interaction, embed, headers, result)
 
     @checks.dynamic_cooldown(CoolDownModified(5))
@@ -300,11 +300,12 @@ class Battle(Cog):
         embed = Embed(colour=0x3D85C6, title=f'**Total hits : ** {hits:,}', url=link)
         hits_for_q = {"Q6": 150000, "Q5": 30000, "Q4": 10000, "Q3": 3000, "Q2": 1000, "Q1": 300}
         # item: [drops, hits for next]
-        drops_per_q = {q: [round(hits_with_bonus / v), int(
-            ((round(hits_with_bonus / v) + 1) * v - v / 2 - hits_with_bonus) / (bonus + 100) * 100)] for q, v in
-                       hits_for_q.items()}
-        drops_per_q["Elixir"] = [int(hits_with_bonus / 150), (hits_with_bonus // 150 + 1) * 150 - hits_with_bonus]
-        drops_per_q["upg. + shuffle"] = [hits // 1500, next_upgrade]
+        drops_per_q: dict[str, (int, int)] = {q: (round(hits_with_bonus / v), int(
+            ((round(hits_with_bonus / v) + 1) * v - v / 2 - hits_with_bonus) / (bonus + 100) * 100)) for q, v in
+                                              hits_for_q.items()}
+        drops_per_q["Elixir"] = (
+        int(hits_with_bonus / 150), (int(hits_with_bonus / 150) + 1) * 150 - int(hits_with_bonus))
+        drops_per_q["upg. + shuffle"] = (hits // 1500, next_upgrade)
         embed.add_field(name="**Item : Drops**",
                         value="\n".join([f"**{k} :** {v[0]:,}" for k, v in drops_per_q.items()]))
         embed.add_field(name="**Hits For Next**", value="\n".join([f"{int(v[1]):,}" for v in drops_per_q.values()]))
@@ -318,7 +319,7 @@ class Battle(Cog):
             except Exception:
                 nick = ""
 
-        final = defaultdict(lambda: defaultdict(lambda: []))
+        final = defaultdict(lambda: defaultdict(lambda: tuple()))
         qualities = set()
         all_total_tops = {index: sum(x['tops'][index] for x in tops_per_player.values()) for index in range(3)}
         fig, ax = plt.subplots()
@@ -367,21 +368,21 @@ class Battle(Cog):
                         else:
                             drops_range = f"{first}-{last}" if first != last else str(first)
                             chances = sum(x[first:last + 1])
-                        final[player][quality] = [drops_range, f"{round(chances)}%"]
+                        final[player][quality] = (drops_range, f"{round(chances)}%")
                         qualities.add(quality)
                     else:
-                        final[player][quality] = [0, "100%"]
+                        final[player][quality] = (0, "100%")
 
                     if nick and len(x) > 1:
                         await self.bot.loop.run_in_executor(None, lambda: ax.plot(y, x, marker='.', label=quality))
 
-        csv_writer = output = None
+        csv_writer = None
         if not nick:
             qualities = sorted(qualities, reverse=True)
-            header = [[f"{x} Prediction Range", f"{x} chance"] for x in qualities]
+            headers = tuple(a for a in ((f"{x} Prediction Range", f"{x} chance") for x in qualities) for a in a)
             output = StringIO()
             csv_writer = writer(output)
-            csv_writer.writerow(["Citizen Id", "Hits", "Top 1", "Top 3", "Top 10"] + [a for a in header for a in a])
+            csv_writer.writerow(("Citizen Id", "Hits", "Top 1", "Top 3", "Top 10") + headers)
         for player, chances in final.items():
             if not nick:
                 row = [player, tops_per_player[player]["hits"]] + tops_per_player[player]["tops"]
@@ -400,12 +401,11 @@ class Battle(Cog):
                     # convert the x to log scale
                     ax.set_xscale('log')
 
-                    means = [round(x) for x in mean_values if x > 20]
-                    ticks = sorted(set(list(range(1, min(10, max_k + 1))) + means))
+                    ticks = sorted(set(round(x) for x in mean_values if x > 20).union(range(1, min(10, max_k + 1))))
 
                     ax.set_xticks(ticks)
                     # Shift back the data to the original
-                    tick_labels = [str(tick - 1) for tick in ticks]
+                    tick_labels = tuple(str(tick - 1) for tick in ticks)
                     ax.set_xticklabels(tick_labels)
                     return utils.plt_to_bytes(fig)
 
@@ -447,30 +447,30 @@ class Battle(Cog):
             countries = tree.xpath("//tr//td[2]/span/text()")
             registration_time = tree.xpath("//tr[position()>1]//td[3]/text()[1]")
             registration_time1 = tree.xpath("//tr//td[3]/text()[2]")
-            xp = [int(x) for x in tree.xpath("//tr[position()>1]//td[4]/text()")]
+            xp = tuple(int(x) for x in tree.xpath("//tr[position()>1]//td[4]/text()"))
             wep = tree.xpath("//tr[position()>1]//td[5]/i/@class")
             food = tree.xpath("//tr[position()>1]//td[6]/i/@class")
             gift = tree.xpath("//tr[position()>1]//td[5]/i/@class")
-            row = []
-            for name, citizen_id, country, registration_time, registration_time1, xp, wep, food, gift in zip(
-                    names, citizen_ids, countries, registration_time, registration_time1, xp, wep, food, gift):
-                row.append({"name": name.strip(), "citizen_id": int(citizen_id.split("?id=")[1]), "country": country,
-                            "registration_time": registration_time.strip(), "registered": registration_time1[1:-1],
-                            "xp": xp, "wep": "479" in wep, "food": "479" in food, "gift": "479" in gift})
-            result = [[], [], []]
-            for citizen_data in row:
+            citizens_data = tuple(
+                {"name": name.strip(), "citizen_id": int(citizen_id.split("?id=")[1]), "country": country,
+                 "registration_time": registration_time.strip(), "registered": registration_time1[1:-1],
+                 "xp": xp, "wep": "479" in wep, "food": "479" in food, "gift": "479" in gift}
+                for name, citizen_id, country, registration_time, registration_time1, xp, wep, food, gift in zip(
+                    names, citizen_ids, countries, registration_time, registration_time1, xp, wep, food, gift))
+            result = {"nick": [], "motivate": [], "registered": []}
+            for citizen_data in citizens_data:
                 types = citizen_data["food"], citizen_data["gift"], citizen_data["wep"]
-                if not all(types):
-                    result[0].append(f"{utils.codes(citizen_data['country'])} ["
-                                     f"{citizen_data['name']}]({base_url}profile.html?id={citizen_data['citizen_id']})")
-                    result[1].append(" ".join("\U0001f534" if not x else "\U0001f7e2" for x in types))
-                    result[2].append(citizen_data['registered'])
+                if any(types):
+                    result["nick"].append(f"{utils.codes(citizen_data['country'])} ["
+                                          f"{citizen_data['name']}]({base_url}profile.html?id={citizen_data['citizen_id']})")
+                    result["motivate"].append(" ".join("\U0001f534" if not x else "\U0001f7e2" for x in types))
+                    result["registered"].append(citizen_data['registered'])
 
-            if any(result):
+            if any(result.values()):
                 embed = Embed(colour=0x3D85C6, title="Source", url=f'{base_url}newCitizenStatistics.html')
-                embed.add_field(name="Nick", value="\n".join(result[0]))
-                embed.add_field(name="Motivate", value="\n".join(result[1]))
-                embed.add_field(name="Registered", value="\n".join(result[2]))
+                embed.add_field(name="Nick", value="\n".join(result["nick"]))
+                embed.add_field(name="Motivate", value="\n".join(result["motivate"]))
+                embed.add_field(name="Registered", value="\n".join(result["registered"]))
                 await interaction.edit_original_response(embed=await utils.convert_embed(interaction, embed))
         except Exception as error:
             await utils.send_error(interaction, error)
@@ -594,16 +594,16 @@ class Battle(Cog):
             return
         battles = sorted(battles, key=lambda k: k['time_remaining'])
         last = battles[-1]["time_remaining"]
-        headers = ["**Time remaining**", "**Defender | Attacker (Score)**", "**Bar**"]
-        battles = [
-            [x["time_remaining"],
+        headers = ("**Time remaining**", "**Defender | Attacker (Score)**", "**Bar**")
+        battles = tuple(
+            (x["time_remaining"],
              f"[{utils.shorten_country(x['defender']['name'])} vs " + utils.shorten_country(x['attacker']['name']) +
              f"]({base_url}battle.html?id={x['battle_id']}) ({x['defender']['score']}:{x['attacker']['score']})",
-             (await bar(x['defender']['bar'], x['attacker']['bar'], size=6)).splitlines()[0]] for x in battles]
+             (await bar(x['defender']['bar'], x['attacker']['bar'], size=6)).splitlines()[0]) for x in battles)
         embed = Embed(colour=0x3D85C6, title=server, url=f'{base_url}battles.html')
         await utils.send_long_embed(interaction, embed, headers, battles)
         time_of_last = int(last.split(":")[0]) * 3600 + int(last.split(":")[1]) * 60 + int(last.split(":")[2])
-        battles.clear()
+        del battles
 
         update_seconds = 60
         while time_of_last > 0:
@@ -657,13 +657,13 @@ class Battle(Cog):
             await utils.custom_followup(interaction, "You must provide server or battle link", ephemeral=True)
             return
 
-        members = []
+        members = ()
         country = all_countries_by_name.get(country.lower(), 0)
 
         if military_unit_id:
             members = await utils.get_content(
                 f'https://{server}.e-sim.org/apiMilitaryUnitMembers.html?id={military_unit_id}')
-            members = [row["login"] for row in members]
+            members = tuple(row["login"] for row in members)
 
         base_url = f"https://{server}.e-sim.org/"
         api_map = await utils.get_content(f"{base_url}apiMap.html")
@@ -671,24 +671,28 @@ class Battle(Cog):
         api_battles = None
         if check_battle:
             api_battles = await utils.get_content(link.replace("battle", "apiBattles").replace("id", "battleId"))
+            if api_battles["type"] not in ("RESISTANCE", "ATTACK"):
+                await utils.custom_followup(interaction, "I'm sorry, but I can only show online citizens in "
+                                                         "resistance or attack battles.")
             try:
-                neighbours_id = [z['neighbours'] for z in await utils.get_content(link.split("?")[0].replace(
-                    "battle", "apiRegions")) if z["id"] == api_battles['regionId']][0]
-            except IndexError:
-                await utils.custom_followup(interaction, "Only attack and RW...")
+                neighbours_id = next(z['neighbours'] for z in await utils.get_content(link.split("?")[0].replace(
+                    "battle", "apiRegions")) if z["id"] == api_battles['regionId'])
+            except StopIteration:
+                await utils.custom_followup(interaction,
+                                            "I'm sorry, but I could not find any neighbours of this battle.")
                 return
-            defender = [i for z in api_map for i in neighbours_id if z['occupantId'] == api_battles['defenderId']] + [
-                api_battles['regionId']]
-            attacker = [i for z in api_map for i in neighbours_id if z['occupantId'] == api_battles['attackerId']]
-            neighbours = defender if api_battles['type'] == "RESISTANCE" else \
-                defender + attacker if api_battles['type'] == "ATTACK" else None
+            defender = set(
+                i for z in api_map for i in neighbours_id if z['occupantId'] == api_battles['defenderId']).union(
+                {api_battles['regionId']})
+            attacker = set(i for z in api_map for i in neighbours_id if z['occupantId'] == api_battles['attackerId'])
+            neighbours = defender if api_battles['type'] == "RESISTANCE" else defender.union(attacker)
         else:
-            neighbours = []
+            neighbours = set()
         api_map.clear()
-        table1 = []
+        table = []
         find_buff = await utils.find_one("buffs", server)
         now = datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)
-        header = []
+        header = ()
         for row in await utils.get_content(f"{base_url}apiOnlinePlayers.html?countryId={country}"):
             row = loads(row)
             name = row['login']
@@ -707,14 +711,14 @@ class Battle(Cog):
                 buffs, debuffs = utils.get_buffs_debuffs(tree)
                 if check_battle and api_battles['type'] != "ATTACK":
                     header = "Nick", "Citizenship", "lvl", "Total DMG", "Buffs", "Debuffs"
-                    row = [name, all_countries[citizenship], level, dmg, buffs, debuffs]
+                    table.append((name, all_countries[citizenship], level, dmg, buffs, debuffs))
                 else:
                     if not country:
                         header = "Nick", "Citizenship", "lvl", "Total DMG", "Location", "Buffs", "Debuffs"
-                        row = [name, all_countries[citizenship], level, dmg, location, buffs, debuffs]
+                        table.append((name, all_countries[citizenship], level, dmg, location, buffs, debuffs))
                     else:
                         header = "Nick", "lvl", "Total DMG", "Location", "Buffs", "Debuffs"
-                        row = [name, level, dmg, location, buffs, debuffs]
+                        table.append((name, level, dmg, location, buffs, debuffs))
             else:
                 if name in find_buff and find_buff[name][5]:
                     buff = ":red_circle: " if not (datetime.strptime(now, date_format) - datetime.strptime(
@@ -729,9 +733,8 @@ class Battle(Cog):
                     level = f":unlock: {level}"
 
                 header = "CS, Nick", "Level", "Location"
-                row = [name, level, f"{utils.codes(location)} {location}"]
-            table1.append(row)
-        if not table1:
+                table.append((name, level, f"{utils.codes(location)} {location}"))
+        if not table:
             await utils.custom_followup(
                 interaction, "I'm sorry, but I could not find anyone online " +
                              (f"at the bonus locations of <{link}>" if check_battle else "") +
@@ -743,13 +746,13 @@ class Battle(Cog):
             embed = Embed(colour=0x3D85C6, title="More Info",
                           url=f"{base_url}citizensOnline.html?countryId={country}")
             embed.set_footer(text="\U0001f7e2, \U0001f534, \U0001f513 = Buff / Debuff / Neither")
-            await utils.send_long_embed(interaction, embed, header, table1)
+            await utils.send_long_embed(interaction, embed, header, table)
 
         else:
             new_lines = 0
             if server in gids:
                 find_buffs = await utils.find_one("buffs", server)
-                for row in table1:
+                for row in table:
                     if row[0] not in find_buffs or not find_buffs[row[0]][5]:
                         continue
 
@@ -763,7 +766,7 @@ class Battle(Cog):
                     if index and row[index]:
                         row[index] += f"\n(Time left: {db_row[7].strip()})"
                         new_lines += 1
-            output_buffer = await self.bot.loop.run_in_executor(None, draw_pil_table, table1, header, new_lines)
+            output_buffer = await self.bot.loop.run_in_executor(None, draw_pil_table, table, header, new_lines)
             await utils.custom_followup(interaction, file=File(fp=output_buffer, filename=f'{server}.jpg'))
 
     @checks.dynamic_cooldown(CoolDownModified(10))
@@ -800,8 +803,7 @@ class Battle(Cog):
         await utils.custom_followup(interaction, "Ok", ephemeral=True)
         find_ping = await utils.find_one("collection", "ping")
         if ping_id == 0:
-            ping_ids = [x.split()[1] for x in find_ping if str(interaction.channel.id) == x.split()[0]]
-            for ping_id in ping_ids:
+            for ping_id in (x.split()[1] for x in find_ping if str(interaction.channel.id) == x.split()[0]):
                 del find_ping[f"{interaction.channel.id} {ping_id}"]
             await utils.replace_one("collection", "ping", find_ping)
             await utils.custom_followup(interaction, "Program `ping` have been stopped. no more spam!")
@@ -845,21 +847,21 @@ class Battle(Cog):
 
         top = {}
         for key in ("recentDefenders", "recentAttackers", "topDefenders", "topAttackers"):
-            top[key] = [f'**{x["playerName"]}:** {x["influence"]}' for x in api[key]]
+            top[key] = tuple(f'**{x["playerName"]}:** {x["influence"]}' for x in api[key])
         embed = Embed(colour=0x3D85C6, title=f'Time Reminding: {timedelta(seconds=api["remainingTimeInSeconds"])}',
                       description=f'**Defender**: {api["defenderScore"]} ({round(100 - api["percentAttackers"], 2)}%)\n'
                                   f'**Attacker**: {api["attackerScore"]} ({api["percentAttackers"]}%)', url=link)
-        for key, value in spect.items():
+        for key, values in spect.items():
             key = key.replace("ByCountries", "")
             if key == "spectators":
                 api[key + 'Online'] -= 1
-            embed.add_field(name=f"__{api[key + 'Online']} {key}__".title(), value=("\n".join(value) or "-"))
+            embed.add_field(name=f"__{api[key + 'Online']} {key}__".title(), value=("\n".join(values) or "-"))
 
-        for key, value in top.items():
+        for key, values in top.items():
             if key == "topDefenders":
                 embed.add_field(name="\u200B", value="\u200B")
             key = key.replace("10", " 10 ").replace("A", " A").replace("D", " D").title()
-            embed.add_field(name=f"__{key}__", value="\n".join(value) or "-")
+            embed.add_field(name=f"__{key}__", value="\n".join(values) or "-")
 
         await utils.custom_followup(interaction, embed=await utils.custom_author(embed))
 

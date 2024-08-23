@@ -34,35 +34,35 @@ async def dmg_func(bot, interaction: Interaction, battle_link: Transform[dict, B
     server = utils.server_validation(server or "")
     base_url = f"https://{server}.e-sim.org/"
     api_battles = await utils.get_content(f'{base_url}apiBattles.html?battleId={battle_id}')
-    key = mu_name = mu_api = header = citizen = None
+    key = mu_name = mu_api = headers = citizen = None
     if country:
         nick = country
         key_id = all_countries_by_name[country.lower()]
         key = 'citizenship'
-        header = ["Country", "Q0 wep", "Q1", "Q5", "DMG"]
+        headers = ("Country", "Q0 wep", "Q1", "Q5", "DMG")
     elif mu_id:
         nick = mu_id
         mu_api = await utils.get_content(f'{base_url}apiMilitaryUnitById.html?id={mu_id}')
         mu_name = mu_api['name']
         key_id = int(mu_id)
         key = 'militaryUnit'
-        header = ["Military Unit", "Q0 wep", "Q1", "Q5", "DMG"]
+        headers = ("Military Unit", "Q0 wep", "Q1", "Q5", "DMG")
     elif nick:
         citizen = await utils.get_content(f'{base_url}apiCitizenByName.html?name={nick.lower()}')
         key_id = int(citizen['id'])
         nick = citizen['login']
         key = 'citizenId'
         if not round_id and not range_of_battles:
-            header = ["Nick", "Q0 wep", "Q1", "Q5", "DMG", "Top 1", "Top 3", "Top 10", "Total Participation"]
+            headers = ("Nick", "Q0 wep", "Q1", "Q5", "DMG", "Top 1", "Top 3", "Top 10", "Total Participation")
         else:
-            header = ["Nick", "Q0 wep", "Q1", "Q5", "DMG"]
+            headers = ("Nick", "Q0 wep", "Q1", "Q5", "DMG")
     else:
         key_id = ""
 
     if not key:
         key = "citizenId"
         if api_battles["type"] == "MILITARY_UNIT_CUP_EVENT_BATTLE" and not range_of_battles:
-            header = ["Military unit", "Q0 wep", "Q1", "Q5", "DMG"]
+            headers = ("Military unit", "Q0 wep", "Q1", "Q5", "DMG")
             attacker_id = (await utils.get_content(
                 f'{base_url}apiMilitaryUnitById.html?id={api_battles["attackerId"]}'))["name"]
             defender_id = (await utils.get_content(
@@ -70,7 +70,7 @@ async def dmg_func(bot, interaction: Interaction, battle_link: Transform[dict, B
         else:
             attacker_id = api_battles["attackerId"]
             defender_id = api_battles["defenderId"]
-            header = ["Side", "Q0 wep", "Q1", "Q5", "DMG"]
+            headers = ("Side", "Q0 wep", "Q1", "Q5", "DMG")
     else:
         attacker_id, defender_id = 0, 0
 
@@ -243,14 +243,14 @@ async def dmg_func(bot, interaction: Interaction, battle_link: Transform[dict, B
             citizenship = table[0][0]
             embed.url = f"{base_url}countryPoliticalStatistics.html?countryId={key_id}"
         embed.title = f"**{utils.codes(citizenship)} {table[0][0]}** - {table[0][-1]} DMG"
-        for num, (name, value) in enumerate(zip(header[1:], table[0][1:])):
+        for num, (name, value) in enumerate(zip(headers[1:], table[0][1:])):
             embed.insert_field_at(num, name=name, value=value)
         embed.insert_field_at(-3, name="\u2800", value="\u2800", inline=False)
         msg = await utils.custom_followup(interaction, files=files,
                                           embed=await utils.convert_embed(interaction, deepcopy(embed)), view=view)
     else:
         embed.description = f'**Battle type: {api_battles["type"]}**'
-        output_buffer1 = await bot.loop.run_in_executor(None, draw_pil_table, table, header)
+        output_buffer1 = await bot.loop.run_in_executor(None, draw_pil_table, table, headers)
         msg = await utils.custom_followup(interaction,
                                           embed=await utils.convert_embed(interaction, deepcopy(embed)),
                                           files=[File(fp=output_buffer1,

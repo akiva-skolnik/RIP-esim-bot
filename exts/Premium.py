@@ -73,8 +73,8 @@ class Premium(Cog):
             except Exception as error:
                 await utils.send_error(interaction, error, str(article_id))
                 break
-            preview = [x for x in tree.xpath("//b/text()") if
-                       "This article is in preview mode and is not visible in the news section" in x]
+            preview = any(x for x in tree.xpath("//b/text()") if
+                          "This article is in preview mode and is not visible in the news section" in x)
             if preview:
                 preview_articles += 1
                 continue
@@ -91,16 +91,16 @@ class Premium(Cog):
             for page in range(1, last_page):
                 await utils.custom_delay(interaction)
                 tree = await utils.get_locked_content(link + f"&page={page}")
-                author = [x.replace("\xa0", "") for x in tree.xpath("//*[@id='comments']//div//div[1]//a/text()")]
-                cs = [x.replace("xflagsSmall xflagsSmall-", "").replace("-", " ") for x in tree.xpath(
-                    "//*[@id='comments']//div//div[1]/@class")]
-                posted_comment = [x[1:-1] for x in tree.xpath("//*[@id='comments']//div//div[2]//div[1]/text()[2]") if
-                                  x != "\n"]
-                for author, cs, posted_comment in zip(author, cs, posted_comment):
+                authors = (x.replace("\xa0", "") for x in tree.xpath("//*[@id='comments']//div//div[1]//a/text()"))
+                citizenships = (x.replace("xflagsSmall xflagsSmall-", "").replace("-", " ") for x in tree.xpath(
+                    "//*[@id='comments']//div//div[1]/@class"))
+                posted_comment = (x[1:-1] for x in tree.xpath("//*[@id='comments']//div//div[2]//div[1]/text()[2]") if
+                                  x != "\n")
+                for author, citizenship, posted_comment in zip(authors, citizenships, posted_comment):
                     if "month" not in posted_comment and "year" not in posted_comment:
                         posted_comment = "0 months ago"
                     authors_per_month[author_name, citizenship, posted]["replies (to author)"] += 1
-                    authors_per_month[author, cs, posted_comment]["replies (by author)"] += 1
+                    authors_per_month[author, citizenship, posted_comment]["replies (by author)"] += 1
             await utils.custom_delay(interaction)
 
         await msg.delete()
@@ -268,9 +268,10 @@ class Premium(Cog):
         if not fund_raising_link:
             base_url = f"https://{server}.e-sim.org/"
             tree = await utils.get_locked_content(base_url, True)
-            fund_link = [x for x in tree.xpath('//*[@id="slideWrap"]//li//div//div//a/@href') if "fundRaising" in x]
+            fund_link = next((x for x in tree.xpath('//*[@id="slideWrap"]//li//div//div//a/@href')
+                              if "fundRaising" in x), None)
             if fund_link:
-                tree = await utils.get_locked_content(base_url + fund_link[0])
+                tree = await utils.get_locked_content(base_url + fund_link)
             else:
                 age = int(tree.xpath('//*[@class="sidebar-clock"]//b/text()')[-1].split()[-1])
                 if server not in servers:
@@ -300,7 +301,7 @@ class Premium(Cog):
             base_url = f"https://{server}.e-sim.org/"
             tree = await utils.get_locked_content(fund_raising_link)
 
-        ids = [int(x) for x in tree.xpath('//form[@action="fundRaising.html"]//select//option/@value')]
+        ids = {int(x) for x in tree.xpath('//form[@action="fundRaising.html"]//select//option/@value')}
         if not ids:
             await utils.custom_followup(interaction, "Sorry, but I couldn't find anything")
             return
@@ -310,7 +311,8 @@ class Premium(Cog):
         countries_dict = defaultdict(
             lambda: {"euro": 0, 'medkits': 0, 'Q5 LC': 0, 'Q6 item': 0, "gold": 0, "donations": 0, "donors count": 0})
         last = bb_id
-        msg = await utils.custom_followup(interaction, "I'm on it, Sir. Be patient.", file=File(self.bot.typing_gif_path))
+        msg = await utils.custom_followup(interaction, "I'm on it, Sir. Be patient.",
+                                          file=File(self.bot.typing_gif_path))
         for index in range(500):
             if await self.bot.should_cancel(interaction, msg):
                 break
@@ -324,10 +326,10 @@ class Premium(Cog):
             except Exception:
                 break
             bb_id -= 1
-            nicks = [x.strip() for x in
-                     tree.xpath('//*[@class="testDivblue fund-table"]//*[@class="profileLink"]/text()')]
-            amounts = [float(x.replace("-", "").replace("€", "").strip()) for x in
-                       tree.xpath('//*[@class="testDivblue fund-table"]//ul//li//text()') if "€" in x]
+            nicks = (x.strip() for x in
+                     tree.xpath('//*[@class="testDivblue fund-table"]//*[@class="profileLink"]/text()'))
+            amounts = (float(x.replace("-", "").replace("€", "").strip()) for x in
+                       tree.xpath('//*[@class="testDivblue fund-table"]//ul//li//text()') if "€" in x)
             for nick, amount in zip(nicks, amounts):
                 citizens_dict[nick]["euro"] += amount
                 citizens_dict[nick]["donations"] += 1
@@ -434,9 +436,8 @@ class Premium(Cog):
                     f"&date={month}" if month else ""))
             votes = tree.xpath("//tr[position()>1]//td[5]//text()")
             candidates = tree.xpath("//tr//td[2]//a/text()")
-            candidates = [f'{candidate.strip()} ({vote.strip()})\\n' for candidate, vote in zip(candidates, votes)]
-            data = [str(index + 1), country.title(), "".join(candidates)[:-2]]
-            csv_writer.writerow(data)
+            candidates = (f'{candidate.strip()} ({vote.strip()})\\n' for candidate, vote in zip(candidates, votes))
+            csv_writer.writerow((str(index + 1), country.title(), "".join(candidates)[:-2]))
             await utils.custom_delay(interaction)
 
         output.seek(0)
@@ -471,11 +472,9 @@ class Premium(Cog):
             tree = await utils.get_content(
                 f'https://{server}.e-sim.org/presidentalElections.html?countryId={country_id}' + (
                     f"&date={month}" if month else ""))
-            votes = tree.xpath("//tr[2]//td[4]//text()")
-            president = tree.xpath("//td[2]//a/text()")
-            if not president:
-                president, votes = ["No candidates"], ["-"]
-            row = [str(index + 1), country.title(), president[0].strip(), votes[0].strip()]
+            votes = next(iter(tree.xpath("//tr[2]//td[4]//text()")), "-").strip()
+            president = next(iter(tree.xpath("//td[2]//a/text()")), "No candidates").strip()
+            row = (str(index + 1), country.title(), president, votes)
             csv_writer.writerow(row)
             await utils.custom_delay(interaction)
 
@@ -512,16 +511,16 @@ class Premium(Cog):
                     citizenship = tree.xpath("//div[@class='profile-data']//div[8]//span[1]//span[1]")[0].text
                 except IndexError:
                     break
-                medals1 = []
+                profile_medals = []
                 for i in range(1, 11):
-                    a = tree.xpath(f"//*[@id='medals']//ul//li[{i}]//div//text()")
-                    if a:
-                        medals1.extend([x.replace("x", "") for x in a])
+                    medals_list = tree.xpath(f"//*[@id='medals']//ul//li[{i}]//div//text()")
+                    if medals_list:
+                        profile_medals.extend([x.replace("x", "") for x in medals_list])
                     elif "emptyMedal" not in tree.xpath(f"//*[@id='medals']//ul//li[{i}]/img/@src")[0]:
-                        medals1.append("1")
+                        profile_medals.append("1")
                     else:
-                        medals1.append("0")
-                csv_writer.writerow([nick, citizenship, friends] + medals1)
+                        profile_medals.append("0")
+                csv_writer.writerow([nick, citizenship, friends] + profile_medals)
                 await utils.custom_delay(interaction)
             if break_main:
                 break
@@ -597,26 +596,28 @@ class Premium(Cog):
                 except IndexError:
                     amounts = ""
 
-                row = get_row(tr, log_type, amounts, base_url, tree, content)
+                row = get_org_log_entry(tr, log_type, amounts, base_url, tree, content)
                 if not row:
                     continue
                 if log_type == "COMPANY":
                     donor, receiver = row[2:]
                     row = row[:2]
 
-                csv_writer.writerow([log_type, date, donor, receiver] + row)
+                csv_writer.writerow((log_type, date, donor, receiver) + row)
 
         output.seek(0)
-        csv_reader = sorted(reader(output))
-        if not csv_reader:
+        csv_reader_list = sorted(reader(output))
+        if not csv_reader_list:
             await utils.custom_followup(interaction, "No logs were found.")
             return
-        for num, row in enumerate(csv_reader):
+
+        # Fixing the logs:
+        for index, row in enumerate(csv_reader_list):
             log_type = row[0]
             if log_type in ("MONETARY_MARKET", "PRODUCT"):
-                row = [row[0], row[1], row[2], "has bought total of", row[4], row[5], "and he paid for it total of",
+                row = (row[0], row[1], row[2], "has bought total of", row[4], row[5], "and he paid for it total of",
                        row[6] if log_type == "MONETARY_MARKET" else float(row[6]) * float(row[4]), row[7], "to", row[3],
-                       f"Ratio: 1 {row[5]} =", row[8], row[7]]
+                       f"Ratio: 1 {row[5]} =", row[8], row[7])
             elif log_type == "DEBT":
                 row[3], row[6] = row[6], row[3]
                 row.insert(7, row[6])
@@ -624,19 +625,22 @@ class Premium(Cog):
             elif log_type == "CONTRACT":
                 row[3], row[4] = row[4], row[3]
             elif log_type == "DONATE":
-                row = [row[0], row[1], row[2], "donated total of", row[4], row[5], "to", row[3]]
+                row = (row[0], row[1], row[2], "donated total of", row[4], row[5], "to", row[3])
             elif log_type == "GOLD_FROM_REF":
-                row = [row[0], row[1], row[3], "has received", row[4], "from inviting", row[2]]
-            csv_reader[num] = row
+                row = (row[0], row[1], row[3], "has received", row[4], "from inviting", row[2])
+            csv_reader_list[index] = row
+
+        # Writing the logs:
         output = StringIO()
         csv_writer = writer(output)
         temp_log_type = ""
-        for row in csv_reader:
+        for row in csv_reader_list:
             if row[0] != temp_log_type:
                 csv_writer.writerow(["-"] * len(headers[row[0]]))
                 csv_writer.writerow(headers[row[0]])
                 temp_log_type = row[0]
             csv_writer.writerow(row)
+
         output.seek(0)
         donate = defaultdict(int)
         monetary_market = defaultdict(lambda: [0, 0])
@@ -646,7 +650,7 @@ class Premium(Cog):
         output1 = StringIO()
         csv_writer = writer(output1)
         temp_log_type = ""
-        for row in csv_reader:
+        for row in csv_reader_list:
             log_type = row[0]
             if log_type == "DONATE":
                 donate[(row[2], row[-1], row[5])] += float(row[4])
@@ -754,34 +758,31 @@ class Premium(Cog):
                 await utils.custom_delay(interaction)
                 tree = await utils.get_content(f'{base_url}stockCompanyProducts.html?id={sc_id}')
                 products_storage = {}
-                amount = [int(x.strip()) for x in tree.xpath('//*[@id="esim-layout"]//center//div//div//div[1]/text()')]
-                products = [x.split("img/productIcons/")[1].split(".png")[0].replace("Rewards/", "")
-                            for x in
-                            tree.xpath('//*[@id="esim-layout"]//center//div//div//div[2]//img[1]/@src')]
-                for count, product in enumerate(products):
-                    quality = tree.xpath(f'//*[@id="esim-layout"]//center//div//div[{count + 1}]//div[2]//img[2]/@src')
-                    if "Defense System" in product:
-                        product = product.replace("Defense System", "Defense_System")
+                amount = (int(x.strip()) for x in tree.xpath('//*[@id="esim-layout"]//center//div//div//div[1]/text()'))
+                products = [utils.parse_product_icon(x)
+                            for x in tree.xpath('//*[@id="esim-layout"]//center//div//div//div[2]//img[1]/@src')]
+
+                # Add quality to the product (we must use i, as some quality icons are missing)
+                for i, product in enumerate(products):
+                    quality = tree.xpath(f'//*[@id="esim-layout"]//center//div//div[{i + 1}]//div[2]//img[2]/@src')
                     if quality:
-                        products[count] = quality[0].split("img/productIcons/")[1].split(
-                            ".png")[0].replace("Rewards/", "").upper() + " " + product
+                        products[i] = (utils.parse_product_icon(quality[0]).upper() + " " +
+                                       product.replace("Defense System", "Defense_System"))
 
                 for product, amount in zip(products, amount):
                     all_products.add(product)
                     products_storage[product] = amount
+
                 # Offers
-                amount = [int(x.strip()) for x in
-                          tree.xpath('//*[@id="esim-layout"]//div[2]//table//tr//td[3]/text()')[1:]]
-                products = [x.split("img/productIcons/")[1].split(".png")[0].replace("Rewards/", "")
-                            for x in
-                            tree.xpath('//*[@id="esim-layout"]//div[2]//table//tr//td[1]//img[1]/@src')]
-                for count, product in enumerate(products):
-                    quality = tree.xpath(f'//*[@id="esim-layout"]//div[2]//table//tr[{count + 2}]//td[1]//img[2]/@src')
-                    if "Defense System" in product:
-                        product = product.replace("Defense System", "Defense_System")
+                amount = (int(x.strip()) for x in
+                          tree.xpath('//*[@id="esim-layout"]//div[2]//table//tr//td[3]/text()')[1:])
+                products = [utils.parse_product_icon(x)
+                            for x in tree.xpath('//*[@id="esim-layout"]//div[2]//table//tr//td[1]//img[1]/@src')]
+                for i, product in enumerate(products):
+                    quality = tree.xpath(f'//*[@id="esim-layout"]//div[2]//table//tr[{i + 2}]//td[1]//img[2]/@src')
                     if quality:
-                        products[count] = quality[0].split("img/productIcons/")[1].split(
-                            ".png")[0].replace("Rewards/", "").upper() + " " + product
+                        products[i] = (utils.parse_product_icon(quality[0]).upper() + " " +
+                                       product.replace("Defense System", "Defense_System"))
                 for product, amount in zip(products, amount):
                     all_products.add(product)
                     if product in products_storage:
@@ -792,12 +793,11 @@ class Premium(Cog):
                 final[sc_id]["products"] = products_storage
                 await utils.custom_delay(interaction)
                 tree = await utils.get_content(f'{base_url}stockCompanyMoney.html?id={sc_id}')
-                cc = [x.strip() for x in tree.xpath('//*[@id="esim-layout"]//div[3]//div//text()') if x.strip()]
+                cc = utils.strip(tree.xpath('//*[@id="esim-layout"]//div[3]//div//text()'))
                 final[sc_id]["cc"] = {k: float(v) for k, v in zip(cc[1::2], cc[0::2])}
                 all_cc.update(final[sc_id]["cc"])
-                amount = [float(x) for x in tree.xpath('//*[@id="esim-layout"]//div[3]//table//tr/td[2]/b/text()')]
-                coin = [x.strip() for x in tree.xpath('//*[@id="esim-layout"]//div[3]//table//tr/td[2]/text()') if
-                        x.strip()][1:]
+                amount = map(float, tree.xpath('//*[@id="esim-layout"]//div[3]//table//tr/td[2]/b/text()'))
+                coin = utils.strip(tree.xpath('//*[@id="esim-layout"]//div[3]//table//tr/td[2]/text()'))[1:]
                 for amount, coin in zip(amount, coin):
                     all_cc.add(coin)
                     if coin in final[sc_id]["cc"]:
@@ -870,8 +870,8 @@ class Premium(Cog):
             author = (x.strip() for x in tree.xpath("//*[@class='shoutAuthor']/a/text()"))
             citizenship = (x.split("xflagsSmall xflagsSmall-")[-1].replace("-", " ") for x in
                            tree.xpath("//*[@class='shoutAuthor']/span/@class"))
-            ids = (int(x) for x in tree.xpath("//*[@class='shoutEditButtons']//form//input[1]/@value"))
-            votes_replies = [int(x) for x in tree.xpath("//*[@class='showShoutDetails']//font/text()")]
+            ids = map(int, tree.xpath("//*[@class='shoutEditButtons']//form//input[1]/@value"))
+            votes_replies = tuple(map(int, tree.xpath("//*[@class='showShoutDetails']//font/text()")))
             votes, replies = votes_replies[0::2], votes_replies[1::2]
             for posted, author, citizenship, shout_id, votes, replies in zip(
                     posted, author, citizenship, ids, votes, replies):
@@ -971,32 +971,31 @@ class Premium(Cog):
                                     files=files, mention_author=page > 100)
 
 
-def get_row(tr: int, log_type: str, amounts: str, base_url: str, tree, content: str) -> list:
-    """get row"""
+def get_org_log_entry(tr: int, log_type: str, amounts: str, base_url: str, tree, content: str) -> tuple:
     if log_type == "DONATE":
         if amounts:
             amount, item = amounts.split(" * ") if "*" in amounts else amounts.split()
         else:
             amount, item = "1", base_url + tree.xpath(f'//*[@id="esim-layout"]//tr[{tr}]//td[3]/a/@href')[0]
-        row = [amount, item.strip()]
+        row = (amount, item.strip())
 
     elif log_type == "MONETARY_MARKET":
         amount1, cc1 = amounts.split(" for ")[0].split()
         amount2, cc2 = amounts.split(" for ")[1].split()
         ratio = tree.xpath(f'//*[@id="esim-layout"]//tr[{tr}]//td[3]/text()[2]')[0].split(" at ratio ")[1].split(
             " from ")[0]
-        row = [amount1, cc1, amount2, cc2, ratio]
+        row = (amount1, cc1, amount2, cc2, ratio)
 
     elif log_type == "PRODUCT":
         amount1, item = amounts.split(" * ")
         amount2, cc = tree.xpath(f'//*[@id="esim-layout"]//tr[{tr}]//td[3]/text()[3]')[0].split(" for ")[1].split(
             " from ")[0].split()
-        row = [amount1, item, amount2, cc, amount2]
+        row = (amount1, item, amount2, cc, amount2)
 
     elif log_type == "DEBT":
         amount, cc = tree.xpath(f'//*[@id="esim-layout"]//tr[{tr}]//td[3]/b[2]/text()')[0].split()
         action = "has canceled debt of" if "canceled" in content else "has paid debt of"
-        row = [amount, cc, action]
+        row = (amount, cc, action)
 
     elif log_type == "CONTRACT":
         side1, side2 = content.split("\n")
@@ -1008,19 +1007,15 @@ def get_row(tr: int, log_type: str, amounts: str, base_url: str, tree, content: 
         side2 = " ".join((side2.split(key)[1].replace("Donate", "").replace("Pay", "").strip()).split())
         if side1 == ",":
             side1 = ""
-        eqs = tree.xpath(f'//*[@id="esim-layout"]//tr[{tr}]//td[3]/b/img/@title')
-        final_eqs = []
-        for eq in eqs:
-            tree1 = fromstring(eq)
-            eq1 = tree1.xpath('//*/bdo/a/text()')[0].replace("#", "")
-            final_eqs.append(base_url + "showEquipment.html?id=" + eq1)
+        final_eqs = (base_url + "showEquipment.html?id=" + fromstring(eq).xpath('//*/bdo/a/text()')[0].replace("#", "")
+                     for eq in tree.xpath(f'//*[@id="esim-layout"]//tr[{tr}]//td[3]/b/img/@title'))
         if final_eqs:
             side1 += ", ".join(final_eqs)
-        row = [side2, side1]
+        row = (side2, side1)
 
     elif log_type == "GOLD_FROM_REF":
         amount, cc = amounts.split()
-        row = [amount]
+        row = (amount,)
 
     elif log_type == "AUCTIONS":
         eq = tree.xpath(f'//*[@id="esim-layout"]//tr[{tr}]//td[3]/img/@title')
@@ -1030,7 +1025,7 @@ def get_row(tr: int, log_type: str, amounts: str, base_url: str, tree, content: 
         else:
             eq1 = content.split("has bought")[1].split("for")[0].strip()
         amount = tree.xpath(f'//*[@id="esim-layout"]//tr[{tr}]//td[3]/b[1]/text()')[0]
-        row = [eq1, amount]
+        row = (eq1, amount)
 
     elif log_type == "COMPANY":
         donor = content.split("has")[0].strip()
@@ -1043,10 +1038,10 @@ def get_row(tr: int, log_type: str, amounts: str, base_url: str, tree, content: 
         gold = ""
         if action == "bought":
             gold = content.split("for")[1].split("Gold")[0].strip()
-        row = [action, gold, donor, receiver]
+        row = (action, gold, donor, receiver)
 
     else:
-        row = False
+        row = ()
     return row
 
 

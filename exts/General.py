@@ -241,9 +241,9 @@ class General(Cog):
         if military_unit_id:
             members = await utils.get_content(
                 f'{base_url}apiMilitaryUnitMembers.html?id={military_unit_id}')
-            members = [str(row["id"]) for row in members]
+            members = set(str(row["id"]) for row in members)
         else:
-            members = []
+            members = set()
 
         embed = Embed(colour=0x3D85C6, title="Time Online",
                       url=f"https://docs.google.com/spreadsheets/d/{gids[server][0]}/edit#gid={gids[server][1]}")
@@ -259,10 +259,10 @@ class General(Cog):
             if any((country, military_unit_id, nick)) and not any(
                     (cs.lower() == country.lower(), citizen_id in members, nick.lower() == current_nick.lower())):
                 continue
-            row = [f"#{index} {utils.codes(cs) if not country else ''}"
+            row = (f"#{index} {utils.codes(cs) if not country else ''}"
                    f" [{current_nick[:17]}]({base_url}profile.html?id={citizen_id})",
                    f"**{int(total_minutes):,}** ({total_avg}h per day)",
-                   f"**{int(month_minutes):,}** ({month_avg}h per day)"]
+                   f"**{int(month_minutes):,}** ({month_avg}h per day)")
             if row not in result:
                 result.append(row)
             if len(result) == 100:
@@ -274,8 +274,8 @@ class General(Cog):
                 interaction, f"No results were found\n"
                              f"See https://docs.google.com/spreadsheets/d/{gids[server][0]}/edit#gid={gids[server][1]}\n")
             return
-        headers = ["Global Rank, Nick", "Minutes " + find_time["_headers"][2].split("(")[1].split(")")[0].title(),
-                   "Minutes " + find_time["_headers"][4].split("(")[1].split(")")[0].title()]
+        headers = ("Global Rank, Nick", "Minutes " + find_time["_headers"][2].split("(")[1].split(")")[0].title(),
+                   "Minutes " + find_time["_headers"][4].split("(")[1].split(")")[0].title())
         await utils.send_long_embed(interaction, embed, headers, result)
 
     @checks.dynamic_cooldown(CoolDownModified(5))
@@ -338,7 +338,7 @@ class General(Cog):
             return
 
         if reminder_id == 0:
-            reminder_id = [x.split()[1] for x in find_remind if str(interaction.channel.id) == x.split()[0]]
+            reminder_id = tuple(x.split()[1] for x in find_remind if str(interaction.channel.id) == x.split()[0])
             if len(reminder_id) == 1:
                 if f"{interaction.channel.id} {reminder_id[0]}" in find_remind:
                     del find_remind[f"{interaction.channel.id} {reminder_id[0]}"]
@@ -381,7 +381,6 @@ class General(Cog):
     @command()
     async def usage(self, interaction: Interaction) -> None:
         """Displays some bot usage statistics"""
-
         lookup = ['\N{FIRST PLACE MEDAL}', '\N{SECOND PLACE MEDAL}', '\N{THIRD PLACE MEDAL}'] + ['\N{SPORTS MEDAL}'] * 7
         embed = Embed(colour=0x3D85C6)
         b = await utils.find_one("collection", "commands_count")
@@ -406,7 +405,7 @@ class General(Cog):
                                 utils.camel_case(selected_site) + "Statistics.html").replace("&", "?", 1)
         if "/achievement.html" in link:
             row = await utils.get_content(get_url)
-            wanted_keys = ["description", "achieved_by", "category"]
+            wanted_keys = {"description", "achieved_by", "category"}
             embed.add_field(name="Info",
                             value="\n".join([f"**{k.replace('_', ' ').title()}:** {v}"
                                              for k, v in row.items() if k in wanted_keys]))
@@ -420,7 +419,7 @@ class General(Cog):
             tree = await utils.get_content(link)
             posted = " ".join(tree.xpath('//*[@class="mobile_article_preview_width_fix"]/text()')[0].split()[1:-1])
             title = tree.xpath('//*[@class="articleTitle"]/text()')[0]
-            subs, votes = [int(x.strip()) for x in tree.xpath('//*[@class="bigArticleTab"]/text()')]
+            subs, votes = (int(x.strip()) for x in tree.xpath('//*[@class="bigArticleTab"]/text()'))
             author_name, newspaper_name = tree.xpath('//*[@class="mobileNewspaperStatus"]/a/text()')
             author_id = utils.get_ids_from_path(tree, '//*[@class="mobileNewspaperStatus"]/a')[0]
             newspaper_id = utils.get_ids_from_path(tree, '//*[@class="mobileNewspaperStatus"]/a')[1]
@@ -433,15 +432,15 @@ class General(Cog):
         elif "/law.html" in link:
             tree = await utils.get_content(link)
             time1 = tree.xpath('//*[@id="esim-layout"]//script[3]/text()')[0]
-            time1 = [i.split(");\n")[0] for i in time1.split("() + ")[1:]]
+            time1 = tuple(i.split(");\n")[0] for i in time1.split("() + ")[1:])
             if int(time1[0]) < 0:
                 time1 = "Voting finished"
             else:
                 time1 = f'{int(time1[0]):02d}:{int(time1[1]):02d}:{int(time1[2]):02d}'
             proposal = " ".join([x.strip() for x in tree.xpath('//table[1]//tr[2]//td[1]//div[2]//text()')]).strip()
             by = tree.xpath('//table[1]//tr[2]//td[3]//a/text()')[0]
-            yes = [x.strip() for x in tree.xpath('//table[2]//td[2]//text()') if x.strip()][0]
-            no = [x.strip() for x in tree.xpath('//table[2]//td[3]//text()') if x.strip()][0]
+            yes = next(x.strip() for x in tree.xpath('//table[2]//td[2]//text()') if x.strip())
+            no = next(x.strip() for x in tree.xpath('//table[2]//td[3]//text()') if x.strip())
             time2 = tree.xpath('//table[1]//tr[2]//td[3]//b')[0].text
             row = {"law_proposal": proposal, "proposed_by": by.strip(), "proposed": time2,
                    "remaining_time" if "Voting finished" not in time1 else "status": time1,
@@ -475,18 +474,19 @@ class General(Cog):
             embed.add_field(name="Dmg", value="\n".join([f"{v['dmg']:,}" for v in row][:5]))
 
         elif "/newCitizenStatistics.html" in link:
-            result = [[], [], []]
+            result = {"nick": [], "motivate": [], "registered": []}
             for v in await utils.get_content(get_url):
                 types = v["food"], v["gift"], v["wep"]
                 if any(types):
-                    result[0].append(f"{utils.codes(v['country'])} [{v['name']}]({base_url}profile.html?id={v['id']})")
-                    result[1].append(" ".join(["\U0001f534" if x else "\U0001f7e2" for x in types]))
-                    result[2].append(v['registered'])
+                    result["nick"].append(
+                        f"{utils.codes(v['country'])} [{v['name']}]({base_url}profile.html?id={v['id']})")
+                    result["motivate"].append(" ".join(["\U0001f534" if x else "\U0001f7e2" for x in types]))
+                    result["registered"].append(v['registered'])
 
-            if result:
-                embed.add_field(name="Nick", value="\n".join(result[0]))
-                embed.add_field(name="Motivate", value="\n".join(result[1]))
-                embed.add_field(name="Registered", value="\n".join(result[2]))
+            if any(result.values()):
+                embed.add_field(name="Nick", value="\n".join(result["nick"]))
+                embed.add_field(name="Motivate", value="\n".join(result["motivate"]))
+                embed.add_field(name="Registered", value="\n".join(result["registered"]))
 
         elif "/partyStatistics.html" in link:
             row = await utils.get_content(get_url)
@@ -552,7 +552,7 @@ class General(Cog):
             embed.add_field(name="Stock", value="\n".join([str(x["stock"]) for x in row]))
             embed.add_field(name="Price", value="\n".join([f'{x["price"]} {x["coin"]}' for x in row]))
 
-        elif "/region.html" in link:
+        elif "/region.html" in link:  # TODO: fix
             row = await utils.get_content(get_url)
             penalty = "100%"
             for v in row["active_companies_stats"]:
@@ -588,8 +588,8 @@ class General(Cog):
 
         elif "/countryEconomyStatistics.html" in link:
             row = await utils.get_content(get_url)
-            wanted_keys = ["country", "citizens_online", "minimal_salary", "new_citizens_today",
-                           "total_active_citizens", "total_coins_in_treasury"]
+            wanted_keys = {"country", "citizens_online", "minimal_salary", "new_citizens_today",
+                           "total_active_citizens", "total_coins_in_treasury"}
             row["total_coins_in_treasury"] = round(sum(row["treasury"][0].values()))
             row['country'] = f"{utils.codes(row['country'])} " + row['country']
             embed.add_field(name="Info",
@@ -598,7 +598,7 @@ class General(Cog):
 
         elif "/countryPoliticalStatistics.html" in link:
             row = await utils.get_content(get_url)
-            wanted_keys = ["coalition_members", "congress_members"]
+            wanted_keys = {"coalition_members", "congress_members"}
             if row["coalition_members"]:
                 row["coalition_members"] = ", ".join(row["coalition_members"])
             else:
@@ -609,10 +609,10 @@ class General(Cog):
                 d = row.get("minister_of_" + minister)
                 if d:
                     row["minister_of_" + minister] = f'[{d["nick"]}]({base_url}profile.html?id={d["id"]})'
-                    wanted_keys.append("minister_of_" + minister)
+                    wanted_keys.add("minister_of_" + minister)
             for event in ("mpps", "wars", "naps"):
                 row[event] = len(row[event])
-                wanted_keys.append(event)
+                wanted_keys.add(event)
             embed.add_field(name="Info",
                             value="\n".join([f"**{k.replace('_', ' ').title()}:** {v}" for k, v in row.items()
                                              if k in wanted_keys]))

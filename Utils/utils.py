@@ -8,6 +8,7 @@ from copy import deepcopy
 from csv import reader
 from datetime import date, datetime, timedelta
 from io import BytesIO, StringIO
+from itertools import islice
 from os import path
 from re import findall, finditer
 from traceback import format_exception
@@ -100,12 +101,12 @@ async def extract_url(string: str) -> list:
     return [x[0] for x in findall(regex, string.replace("*", ""))]
 
 
-async def split_list(alist: list, wanted_parts: int) -> list:
+async def split_list(alist: list or tuple, wanted_parts: int) -> tuple:
     """split list into parts"""
     length = len(alist)
-    small_lists = [alist[i * length // wanted_parts: (i + 1) * length // wanted_parts]
-                   for i in range(wanted_parts)]
-    return [x for x in small_lists if x]
+    small_lists = tuple(alist[i * length // wanted_parts: (i + 1) * length // wanted_parts]
+                        for i in range(wanted_parts))
+    return tuple(x for x in small_lists if x)
 
 
 async def chunker(seq: list, size: int) -> iter:
@@ -113,7 +114,7 @@ async def chunker(seq: list, size: int) -> iter:
     return (seq[pos:pos + size] for pos in range(0, len(seq), size))
 
 
-def draw_pil_table(my_table: list, header: list, new_lines: int = 0) -> BytesIO:
+def draw_pil_table(my_table: list or tuple, header: list or tuple, new_lines: int = 0) -> BytesIO:
     """draw table"""
     tabulate_table = tabulate(my_table, headers=header, tablefmt='grid', numalign="center", stralign="center")
     table_len = len(tabulate_table) / (len(my_table) * 2 + 3 + new_lines)
@@ -574,6 +575,7 @@ async def get_locked_content(link: str, test_login: bool = False, method: str = 
         tree = await get_content(link, method=method, session=session)
     return tree
 
+
 async def edit_message(msg: Message, content: str, attachments: list = MISSING) -> Message:
     if msg.content == content:
         return msg
@@ -584,6 +586,7 @@ async def edit_message(msg: Message, content: str, attachments: list = MISSING) 
         logger.warning(f"Failed to edit message {msg}")
         return msg
 
+
 async def update_percent(current_id: int, ids_length: int, msg: Message) -> Message:
     """update percent"""
     if ids_length < 10:
@@ -593,7 +596,7 @@ async def update_percent(current_id: int, ids_length: int, msg: Message) -> Mess
     if current_id >= ids_length - 3:
         msg = await edit_message(msg, content="Progress status: 99%", attachments=[])
     elif current_id in edit_at:
-        content = f"Progress status: {(edit_at.index(current_id) + 1) * 10}%."\
+        content = f"Progress status: {(edit_at.index(current_id) + 1) * 10}%." \
                   "\n(I will update this message every 10%)"
         msg = await edit_message(msg, content=content)
 
@@ -822,12 +825,10 @@ async def convert_embed(interaction_or_author: Union[Interaction, int], embed: E
         embed.insert_field_at(first, name="\n".join([field.name for field in embed_fields[first:first + columns]]),
                               value="\u200B",
                               inline=False)
-        my_list = []
-        for LIST in [[embed_fields[x + first].value.splitlines()[i] for x in range(columns)] for i in
-                     range(len(embed_fields[0 + first].value.splitlines()))]:
-            my_list.append(LIST)
-        for index, LIST in enumerate(await split_list(my_list, 3)):
-            embed.insert_field_at(index + first + 1, name="\u200B", value="\n".join(["\n".join(x) for x in LIST]))
+        my_list = [[embed_fields[x + first].value.splitlines()[i] for x in range(columns)] for i in
+                   range(len(embed_fields[0 + first].value.splitlines()))]
+        for index, a_tuple in enumerate(await split_list(my_list, 3)):
+            embed.insert_field_at(index + first + 1, name="\u200B", value="\n".join(["\n".join(x) for x in a_tuple]))
 
     if not embed.footer:
         embed.set_footer(text="That is an auto phone format. Type `/phone` to change this preference")
@@ -835,34 +836,28 @@ async def convert_embed(interaction_or_author: Union[Interaction, int], embed: E
     return embed
 
 
-async def send_long_embed(interaction: Interaction, embed: Embed, headers: list, result: list,
+async def send_long_embed(interaction: Interaction, embed: Embed, headers: list or tuple, data: list or tuple,
                           files: List[File] = MISSING) -> None:
     """send long embed"""
     for index, header in enumerate(headers):
-        embed.add_field(name=header, value="\n".join([str(x[index]) for x in result]))
+        embed.add_field(name=header, value="\n".join(str(x[index]) for x in data))
     embed1 = await convert_embed(interaction, deepcopy(embed))
-    result = [(embed if str(interaction.user.id) in bot.phone_users else embed1).fields[index].value.splitlines() for
-              index in range(3)]
-    result = list(zip(*result))
+    result = list(zip(*tuple(
+        (embed if str(interaction.user.id) in bot.phone_users else embed1).fields[index].value.splitlines() for
+        index in range(len(embed.fields)))))
     pages = max(sum(len(str(x[index])) for x in result) for index in range(3)) // 950 + 1
     chunks = await split_list(result, pages)
-    chunks = [(headers[i], "\n".join(str(x[i]) for x in chunk)) for chunk in chunks for i in range(3)]
+    chunks = tuple((headers[i], "\n".join(str(x[i]) for x in chunk)) for chunk in chunks for i in range(3))
     source = FieldPageSource(chunks, inline=True, per_page=3, clear_description=False, embed=embed)
     pages = Pages(source, interaction=interaction, embed=embed)
     await pages.start(files=files)
 
 
-async def csv_to_image(output: StringIO, columns: int = 10):
+async def csv_to_image(output: StringIO, columns: int = 10, rows: int = 10):
     """Convert csv file to image"""
-    headers = []
-    table = []
-    for index, row in enumerate(reader(output)):
-        if not index:
-            headers = row[:columns]
-        elif index <= 10:
-            table.append(row[:columns])
-        else:
-            break
+    file_iter = reader(output)
+    headers = tuple(next(file_iter))
+    table = tuple(row[:columns] for row in islice(file_iter, rows))
     output.seek(0)
     return await bot.loop.run_in_executor(None, draw_pil_table, table, headers)
 
@@ -1074,3 +1069,16 @@ def get_buffs_debuffs(tree: ElementTree) -> (str, str):
     debuffs = ', '.join([x.split("_")[0].lower().replace("Vacation", "Vac").replace(
         "Resistance", "Sewer") for x in buffs_debuffs if "Negative" in x.split("_")[1:]]).title()
     return buffs, debuffs
+
+
+def parse_product_icon(icon: str) -> str:
+    """An icon may be in one of the following format:
+    - //cdn.e-sim.org//img/productIcons/Gift.png
+    - //cdn.e-sim.org//img/productIcons/q5.png
+    """
+    return icon.split("img/productIcons/")[1].split(".png")[0].replace("Rewards/", "")
+
+
+def strip(data: tuple or list) -> tuple:
+    # same as tuple(x.strip() for x in data if x.strip()), but faster
+    return tuple(map(str.strip, filter(None, data)))
