@@ -294,66 +294,47 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
     async def penalty(self, interaction: Interaction, server: Transform[str, Server],
                       raw: Transform[str, Product(options)], country: Transform[str, Country] = "") -> None:
         """Shows list of region penalties for the given raw product"""
-
-        if server in ("secura", "primera", "suna"):
-            await utils.custom_followup(
-                interaction, "As far as I know, there is no regions penalty in this server", ephemeral=True)
-            return
-
         country_name, country = country, all_countries_by_name.get(country.lower())
 
-        data = []
-        for i in await utils.get_content(f'https://{server}.e-sim.org/apiMap.html'):
-            if i['rawRichness'] != "HIGH":
-                continue
-            try:
-                if not country:
-                    if i['raw'] == raw.upper():
-                        data.append(i['regionId'])
-                else:
-                    if i['occupantId'] == country:
-                        if i['raw'] == raw.upper():
-                            data.append(i['regionId'])
-            except KeyError:
-                continue
+        region_ids = [i['regionId'] for i in await utils.get_content(f'https://{server}.e-sim.org/apiMap.html')
+                      if i['rawRichness'] == "HIGH"
+                      and (not country or i['occupantId'] == country)
+                      and i.get('raw', '') == raw.upper()]
+
         msg = await utils.custom_followup(
-            interaction, "Progress status: 1%.\n(I will update you after every 10%)" if len(data) > 10 else
+            interaction, "Progress status: 1%.\n(I will update you after every 10%)" if len(region_ids) > 10 else
             "I'm on it, Sir. Be patient.", file=File(self.bot.typing_gif_path))
-        data1 = {}
-        for index, region_id in enumerate(data):
+        penalty_per_region = {}
+        for index, region_id in enumerate(region_ids):
             if await self.bot.should_cancel(interaction, msg):
                 break
-            msg = await utils.update_percent(index, len(data), msg)
+            msg = await utils.update_percent(index, len(region_ids), msg)
             link = f'https://{server}.e-sim.org/region.html?id={region_id}'
-            tree = await utils.get_content(link)
-            region = tree.xpath("//tr[2]//td[1]//span")[0].text
-            penalties = [x.replace("%", "") for x in
-                         tree.xpath('//*[@id="esim-layout"]//table[2]//tr[position()>1]//td[4]/text()')]
-            companies_type = [x.split()[1].lower() for x in
-                              tree.xpath('//*[@id="esim-layout"]//table[2]//td[1]/b/text()')]
-            penalty_in_region = 100
-            for company_type, penalties in zip(companies_type, penalties):
-                if company_type == raw.lower():
-                    penalty_in_region = penalties
-                    break
-            data1[link, region] = int(penalty_in_region)
+            api_region = await utils.get_content(link.replace("region", "apiRegionById"))
+            region_name = api_region["Region"][0]["name"]
+            owner = api_region["Region"][0]["currentOwner"]
+            penalties_per_company_type = [(x["company"].split()[1].lower(), int(x["penalty"].replace("%", "")))
+                                          for x in api_region["Industry"] if "penalty" in x and "company" in x]
+            penalty_in_region = next((penalty for company_type, penalty in penalties_per_company_type
+                                      if company_type == raw.lower()), 100)
+            penalty_per_region[(link, region_name, owner)] = penalty_in_region
             await utils.custom_delay(interaction)
 
         embed = Embed(colour=0x3D85C6, title=f"{raw}, {server}".title())
-        data1 = sorted(data1.items(), key=lambda x: x[0][1])
-        result = [f"**{num + 1}.** {value}% {utils.codes(key[1])} [{key[1][:15]}]({key[0]})" for
-                  num, [key, value] in enumerate(sorted(data1, key=lambda x: x[1], reverse=True))][:30]
+        limit = 30  # TODO: send multiple pages
+        result = [f"**{num}.** {penalty}% {utils.codes(owner)} [{region_name[:15]}]({link})" for
+                  num, ((link, region_name, owner), penalty) in enumerate(
+                sorted(penalty_per_region.items(), key=lambda x: x[1], reverse=True), start=1)][:limit]
         if not result:
             await utils.custom_followup(interaction,
                                         f"I couldn't find {raw} regions in {country_name if country else server}")
-            return
-
-        for column in await split_list(result, 3 if len(result) > 10 else 2):
-            if column:
-                embed.add_field(name="\u200B", value="\n".join(column))
-        if len(data) > 30:
-            embed.set_footer(text="30 out of " + str(len(data)))
-        await utils.custom_followup(interaction, embed=await utils.custom_author(embed))
+        else:
+            for column in await split_list(result, 3 if len(result) > 10 else 2):
+                if column:
+                    embed.add_field(name="\u200B", value="\n".join(column))
+            if len(region_ids) > limit:
+                embed.set_footer(text=f"{limit} out of {len(region_ids)}")
+            await utils.custom_followup(interaction, embed=await utils.custom_author(embed))
 
     @staticmethod
     def _get_product_sheet_link(server: str) -> str:
