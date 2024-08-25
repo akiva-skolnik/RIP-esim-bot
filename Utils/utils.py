@@ -1,4 +1,4 @@
-"""utils.py"""
+"""Utils.py."""
 import json
 import logging
 import random
@@ -40,7 +40,7 @@ logger = logging.getLogger()
 
 
 class CoolDownModified:
-    """CoolDownModified"""
+    """CoolDownModified."""
 
     def __init__(self, per, rate=1) -> None:
         self.rate = rate
@@ -53,7 +53,7 @@ class CoolDownModified:
 
 
 def remove_decimal(x: float or int) -> int or float:
-    """5 -> 5, 5.0 -> 5, 5.1 -> 5.1"""
+    """5 -> 5, 5.0 -> 5, 5.1 -> 5.1."""
     return int(x) if isinstance(x, float) and x.is_integer() else x
 
 
@@ -69,7 +69,7 @@ def get_sides(api_battles: dict, attacker_id: int = None, defender_id: int = Non
 
 
 def server_validation(server: str) -> str:
-    """server validation"""
+    """Server validation."""
     server = server.lower().strip()
     if server in all_servers:
         return server
@@ -77,7 +77,7 @@ def server_validation(server: str) -> str:
 
 
 def human_format(num: float) -> str:
-    """Number to human format"""
+    """Number to human format."""
     magnitude = 0
     while abs(num) >= 1000:
         magnitude += 1
@@ -93,7 +93,7 @@ def human_format(num: float) -> str:
 
 
 async def extract_url(string: str) -> list:
-    """extract url"""
+    """Extract url."""
     # TODO: simplify this regex
     regex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|" \
             r"(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
@@ -101,7 +101,7 @@ async def extract_url(string: str) -> list:
 
 
 async def split_list(alist: list or tuple, wanted_parts: int) -> tuple:
-    """split list into parts"""
+    """Split list into parts."""
     length = len(alist)
     small_lists = tuple(alist[i * length // wanted_parts: (i + 1) * length // wanted_parts]
                         for i in range(wanted_parts))
@@ -109,12 +109,12 @@ async def split_list(alist: list or tuple, wanted_parts: int) -> tuple:
 
 
 async def chunker(seq: list, size: int) -> iter:
-    """list to sub lists"""
+    """List to sub lists."""
     return (seq[pos:pos + size] for pos in range(0, len(seq), size))
 
 
 def draw_pil_table(my_table: list or tuple, header: list or tuple, new_lines: int = 0) -> BytesIO:
-    """draw table"""
+    """Draw table."""
     tabulate_table = tabulate(my_table, headers=header, tablefmt='grid', numalign="center", stralign="center")
     table_len = len(tabulate_table) / (len(my_table) * 2 + 3 + new_lines)
     img = Image.new('RGB', (int(60 * table_len), 300 + new_lines * 100 + len(my_table) * 200), color=(44, 47, 51))
@@ -126,7 +126,7 @@ def draw_pil_table(my_table: list or tuple, header: list or tuple, new_lines: in
 
 
 def bar(defender_dmg: int, attacker_dmg: int, defender: str = "", attacker: str = "", size: int = -1) -> str:
-    """bar"""
+    """Bar."""
     if size < 0:
         def_len = max(len(f"{defender_dmg:,}"), len(defender), len("defender"))
         att_len = max(len(f"{attacker_dmg:,}"), len(attacker), len("attacker"))
@@ -148,7 +148,7 @@ def bar(defender_dmg: int, attacker_dmg: int, defender: str = "", attacker: str 
 
 
 async def dmg_trend(hit_time: dict, server: str, battle_id: str) -> BytesIO:
-    """dmg trend"""
+    """Dmg trend."""
     fig, ax = plt.subplots()
     for side, DICT in hit_time.items():
         ax.plot(DICT["time"], DICT["dmg"], label=side)
@@ -165,7 +165,7 @@ async def dmg_trend(hit_time: dict, server: str, battle_id: str) -> BytesIO:
 
 
 async def get_auction(link: str) -> dict:
-    """get auction"""
+    """Get auction."""
     tree = await get_content(link)
     seller = tree.xpath("//div[1]//table[1]//tr[2]//td[1]//a/text()")[0]  # TODO: update
     buyer = (tree.xpath("//div[1]//table[1]//tr[2]//td[2]//a/text()") or ["None"])[0]
@@ -187,7 +187,7 @@ async def get_auction(link: str) -> dict:
 
 
 async def save_dmg_time(api_fights: str, attacker: str, defender: str) -> (dict, dict):
-    """save dmg time"""
+    """Save dmg time."""
     my_dict = {defender: 0, attacker: 0}
     hit_time = {defender: {"dmg": [], "time": []}, attacker: {"dmg": [], "time": []}}
     for hit in reversed(await get_content(api_fights)):
@@ -237,7 +237,7 @@ async def update_donors():
 
 @tasks.loop(seconds=1000)
 async def alert() -> None:
-    """alert"""
+    """Alert."""
     try:
         for name_for_db, list_of_requests in (await find_one("collection", "alert")).items():
             name_for_db = name_for_db.split()
@@ -264,7 +264,7 @@ async def alert() -> None:
 
 
 async def not_support(interaction: Interaction) -> bool:
-    """not support channel"""
+    """Not support channel."""
     if interaction.guild and interaction.guild.id == config_ids["support_server_id"]:
         await custom_followup(interaction, "You can't use this command on support channel. Go spam somewhere else!")
         return False
@@ -402,7 +402,7 @@ async def dmg_calculator(api: dict, bonuses: str = "new") -> dict:
 
 
 def csv_to_txt(content: bytes) -> BytesIO:
-    """csv to text file"""
+    """Csv to text file."""
     text = "[table]"
     indexes = defaultdict(list)
     num = -1
@@ -452,14 +452,14 @@ def csv_to_txt(content: bytes) -> BytesIO:
 
 
 def camel_case_merge(identifier: str) -> str:
-    """camel case merge"""
+    """Camel case merge."""
     matches = finditer('.+?(?:(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|$)', identifier)
     return " ".join([m.group(0) for m in matches]).title()
 
 
 async def get_content(link: str, return_type: str = "", method: str = "get", session: ClientSession = None,
                       throw: bool = False) -> dict | fromstring:
-    """get content"""
+    """Get content."""
     if not return_type:
         if "api" in link or link.startswith(api_url):
             return_type = "json"
@@ -518,7 +518,7 @@ async def get_content(link: str, return_type: str = "", method: str = "get", ses
 
 
 async def create_session(server: str = None) -> ClientSession:
-    """create session"""
+    """Create session."""
     headers = {"User-Agent": bot.config["headers"]}
     if server:
         headers["Host"] = server + ".e-sim.org"
@@ -526,14 +526,14 @@ async def create_session(server: str = None) -> ClientSession:
 
 
 async def get_session(server: str) -> ClientSession:
-    """get session"""
+    """Get session."""
     if server not in bot.locked_sessions:
         bot.locked_sessions[server] = await create_session(server)
     return bot.locked_sessions[server]
 
 
 async def get_locked_content(link: str, test_login: bool = False, method: str = "get"):
-    """get locked content"""
+    """Get locked content."""
     link = link.split("#")[0].replace("http://", "https://")  # noqa WPS221
     server = link.split("https://", 1)[1].split(".e-sim.org", 1)[0]
     nick = bot.config.get(server, bot.config['nick'])
@@ -584,7 +584,7 @@ async def edit_message(msg: Message, content: str, attachments: list = MISSING) 
 
 
 async def update_percent(current_id: int, ids_length: int, msg: Message) -> Message:
-    """update percent"""
+    """Update percent."""
     if ids_length < 10:
         return msg
     current_id += 1
@@ -600,23 +600,23 @@ async def update_percent(current_id: int, ids_length: int, msg: Message) -> Mess
 
 
 async def reset_cooldown(interaction: Interaction) -> None:
-    """reset cooldown"""
+    """Reset cooldown."""
     interaction.command.reset_cooldown(interaction)
 
 
 async def is_premium_guild(interaction: Interaction) -> bool:
-    """is premium guild"""
+    """Is premium guild."""
     return interaction.guild and interaction.guild.id in bot.premium_servers
 
 
 async def is_premium_level_0(interaction: Interaction) -> bool:  # reset cooldown
-    """for cooldown reset"""
+    """For cooldown reset."""
     return (bot.premium_users.get(str(interaction.user.id), {}).get("level", -1) >= 0 or
             await is_premium_guild(interaction))
 
 
 async def is_premium_level_1(interaction: Interaction, send_error_msg: bool = True, allow_trial: bool = True) -> bool:
-    """is premium"""
+    """Is premium."""
     # remove expired users
     expire_at = bot.premium_users.get(str(interaction.user.id), {}).get("expire_at", "")
     if expire_at and datetime.strptime(expire_at, "%d/%m/%Y") < datetime.now():
@@ -637,7 +637,7 @@ async def is_premium_level_1(interaction: Interaction, send_error_msg: bool = Tr
 
 
 async def default_nick(interaction: Interaction, server: str, nick: str = "-") -> str:
-    """default nick"""
+    """Default nick."""
     if nick == "-":
         return ""
     if nick:
@@ -650,13 +650,13 @@ async def default_nick(interaction: Interaction, server: str, nick: str = "-") -
 
 
 async def custom_delay(interaction: Interaction) -> None:
-    """custom delay"""
+    """Custom delay."""
     # TODO: remove this and instead add a dynamic delay based on server load
     await sleep(bot.custom_delay_dict.get(str(interaction.user.id), 0.4))
 
 
 async def send_error(interaction: Interaction | None, error: Exception, cmd: str = "") -> None:
-    """send error"""
+    """Send error."""
     logger.error(f"Error in {cmd}", exc_info=error)
     if interaction:
         data = interaction.data["name"] + " " + "  ".join(
@@ -680,7 +680,7 @@ async def send_error(interaction: Interaction | None, error: Exception, cmd: str
 
 
 class Confirm(ui.View):
-    """Confirm"""
+    """Confirm."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -688,21 +688,21 @@ class Confirm(ui.View):
 
     @ui.button(label='Confirm', style=ButtonStyle.green)
     async def confirm(self, interaction: Interaction, button: ui.Button) -> None:
-        """confirm"""
+        """Confirm."""
         self.value = True
         self.clear_items()
         self.stop()
 
     @ui.button(label='Cancel', style=ButtonStyle.grey)
     async def cancel(self, interaction: Interaction, button: ui.Button) -> None:
-        """cancel"""
+        """Cancel."""
         self.value = False
         self.clear_items()
         self.stop()
 
 
 class StopNext(ui.View):
-    """Stop and next"""
+    """Stop and next."""
 
     def __init__(self, interaction: Interaction) -> None:
         super().__init__()
@@ -713,7 +713,7 @@ class StopNext(ui.View):
 
     @ui.button(label='Next Page', style=ButtonStyle.blurple)
     async def next(self, interaction: Interaction, button: ui.Button) -> None:
-        """Next Page"""
+        """Next Page."""
         self.next_page = True
         button.disabled = True
         await self.interaction.edit_original_response(view=self)
@@ -722,14 +722,14 @@ class StopNext(ui.View):
 
     @ui.button(label='Stop', style=ButtonStyle.red)
     async def cancel(self, interaction: Interaction, button: ui.Button) -> None:
-        """cancel"""
+        """Cancel."""
         self.canceled = True
         self.clear_items()
         self.stop()
 
 
 class Transform(ui.View):
-    """Wait for next button"""
+    """Wait for next button."""
 
     def __init__(self) -> None:
         super().__init__()
@@ -737,7 +737,7 @@ class Transform(ui.View):
 
     @ui.button(label='Convert Ids', style=ButtonStyle.blurple)
     async def convert(self, interaction: Interaction, button: ui.Button) -> None:
-        """Convert Ids"""
+        """Convert Ids."""
         await custom_followup(interaction, "Just a few moments...", ephemeral=True)
         self.value = True
         self.clear_items()
@@ -745,7 +745,7 @@ class Transform(ui.View):
 
 
 async def custom_author(embed: Embed) -> Embed:
-    """Add link for donations"""
+    """Add link for donations."""
     if random.randint(1, 100) > 80:
         return embed
     if not embed.title and not embed.url:
@@ -760,7 +760,7 @@ async def custom_author(embed: Embed) -> Embed:
 
 
 async def convert_embed(interaction_or_author: Interaction | int, embed: Embed, is_columns: bool = True) -> Embed:
-    """convert embed to phone format + add fix and donate link"""
+    """Convert embed to phone format + add fix and donate link."""
     embed = await custom_author(embed)
     if not is_columns:
         return embed
@@ -833,7 +833,7 @@ async def convert_embed(interaction_or_author: Interaction | int, embed: Embed, 
 
 async def send_long_embed(interaction: Interaction, embed: Embed, headers: list or tuple, data: list or tuple,
                           files: list[File] = MISSING) -> None:
-    """send long embed"""
+    """Send long embed."""
     for index, header in enumerate(headers):
         embed.add_field(name=header, value="\n".join(str(x[index]) for x in data))
     converted_embed = await convert_embed(interaction, deepcopy(embed))
@@ -849,7 +849,7 @@ async def send_long_embed(interaction: Interaction, embed: Embed, headers: list 
 
 
 async def csv_to_image(output: StringIO, columns: int = 10, rows: int = 10):
-    """Convert csv file to image"""
+    """Convert csv file to image."""
     file_iter = reader(output)
     headers = tuple(next(file_iter))
     table = tuple(row[:columns] for row in islice(file_iter, rows))
@@ -858,7 +858,7 @@ async def csv_to_image(output: StringIO, columns: int = 10, rows: int = 10):
 
 
 async def last_page(link: str, func=get_content, **kwargs) -> int:
-    """Get last page"""
+    """Get last page."""
     tree = await func(link, **kwargs)
     last = get_ids_from_path(tree, "//ul[@id='pagination-digg']//li[last()-1]/a") or ['1']
     last = int(last[0])
@@ -869,12 +869,12 @@ async def last_page(link: str, func=get_content, **kwargs) -> int:
 
 
 def codes(country: str) -> str:
-    """flags codes"""
+    """Flags codes."""
     return flags_codes.get(country.lower(), '\u2620')
 
 
 def get_countries(server: str, country: int = 0, index: int = -1) -> dict | str:
-    """get countries"""
+    """Get countries."""
     if country:
         return countries_per_id.get(country, 'unknown')[0]
     per_id = {}
@@ -887,7 +887,7 @@ def get_countries(server: str, country: int = 0, index: int = -1) -> dict | str:
 
 
 def get_time(string: str or datetime, floor_to_10: bool = False) -> datetime:
-    """get time"""
+    """Get time."""
     if isinstance(string, datetime):
         dt = string
     else:
@@ -924,7 +924,7 @@ def normalize_slot(slot: str) -> str:
 
 
 def get_eqs(tree) -> iter:
-    """get eqs"""
+    """Get eqs."""
     for slot_path in tree.xpath('//*[@id="profileEquipmentNew"]//div//div//div//@title'):
         tree = fromstring(slot_path)
         try:
@@ -953,12 +953,12 @@ def normalize_parameter_string(parameter_string: str) -> str or None:
 
 
 def get_id(string: str) -> str:
-    """get id"""
+    """Get id."""
     return "".join(x for x in string.split("=")[-1].split("&")[0] if x.isdigit())
 
 
 def get_ids_from_path(tree, xpath: str) -> list:
-    """get battle_ids from path"""
+    """Get battle_ids from path."""
     ids = tree.xpath(xpath + "/@href")
     if ids and all("#" == x for x in ids):
         ids = [get_id(x.values()[-1]) for x in tree.xpath(xpath)]
@@ -973,7 +973,7 @@ def camel_case(s: str) -> str:
 
 
 async def custom_followup(interaction: Interaction, content: str = None, **kwargs) -> Message:
-    """custom_followup"""
+    """Custom_followup."""
     if not interaction.response.is_done():  # type: ignore
         msg = await interaction.response.send_message(content, **kwargs)  # type: ignore
     else:
@@ -992,7 +992,7 @@ async def custom_followup(interaction: Interaction, content: str = None, **kwarg
 
 async def get_battles(base_url: str, country_id: int = 0,
                       filtering: iter = ('Normal battle', 'Resistance war')) -> list:
-    """Get battles data"""
+    """Get battles data."""
     battles = []
     link = f'{base_url}battles.html?countryId={country_id}'
     for page in range(1, await last_page(link)):
@@ -1033,7 +1033,7 @@ async def get_battles(base_url: str, country_id: int = 0,
 
 
 async def find_one(collection: str, _id: str) -> dict:
-    """find one"""  # TODO: use msgpack
+    """Find one."""  # TODO: use msgpack
     filename = path.join(path.dirname(bot.root), f"db/{collection}_{_id}.json")
     if path.exists(filename):
         with open(filename, encoding='utf-8') as file:
@@ -1043,7 +1043,7 @@ async def find_one(collection: str, _id: str) -> dict:
 
 
 async def replace_one(collection: str, _id: str, data: dict) -> None:
-    """replace one"""
+    """Replace one."""
     filename = path.join(path.dirname(bot.root), f"db/{collection}_{_id}.json")
     with open(filename, "w", encoding='utf-8', errors='ignore') as file:
         json.dump(data, file)
@@ -1069,6 +1069,7 @@ def get_buffs_debuffs(tree: ElementTree) -> (str, str):
 
 def parse_product_icon(icon: str) -> str:
     """An icon may be in one of the following format:
+
     - //cdn.e-sim.org//img/productIcons/Gift.png
     - //cdn.e-sim.org//img/productIcons/q5.png
     """

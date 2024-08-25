@@ -1,4 +1,4 @@
-"""Stats.py"""
+"""Stats.py."""
 import os
 from collections import defaultdict
 from csv import reader, writer
@@ -21,7 +21,7 @@ from Utils.utils import CoolDownModified, dmg_calculator
 
 
 class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": False}):
-    """Commands That Last Forever"""
+    """Commands That Last Forever."""
 
     def __init__(self, bot) -> None:
         self.bot = bot
@@ -29,9 +29,9 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
     @staticmethod
     async def __get_achievements_link_and_last_page(regular_achievement_type: str, premium_achievement_type: str,
                                                     is_premium: bool, server: str) -> tuple[str, int]:
-        """__get_achievements_link_and_last_page"""
+        """__get_achievements_link_and_last_page."""
         achievements_url = f'https://{server}.e-sim.org/achievement.html?type='
-        link = f'{achievements_url}{premium_achievement_type}' if is_premium \
+        link = f'{achievements_url}{premium_achievement_type}' if is_premium\
             else f'{achievements_url}{regular_achievement_type}'
         last_page = await utils.last_page(link)
         if last_page == 1:
@@ -87,7 +87,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
     @staticmethod
     async def __send_csv_file_and_preview(interaction: Interaction, output: StringIO, headers: tuple[str, ...],
                                           server: str, link: str, sort_by: int) -> None:
-        """__send_csv_file_and_preview"""
+        """__send_csv_file_and_preview."""
         output.seek(0)
         sorted_list = sorted(reader(output), key=lambda row: int(row[sort_by]), reverse=True)
         output = StringIO()
@@ -109,7 +109,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                       your_input_is: Literal["citizen ids", "citizen names", "military unit ids", "citizenship ids",
                       "single MU id (get info about all MU members)"],
                       extra_premium_info: bool = False) -> None:
-        """Convert ids to names and vice versa"""
+        """Convert ids to names and vice versa."""
         if extra_premium_info and not await utils.is_premium_level_1(interaction, False):
             await utils.custom_followup(
                 interaction, "`extra_premium_info` is a premium parameter! If you wish to use it, "
@@ -257,7 +257,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                         battle_ids: Transform[list, Ids],
                         included_countries: str | None, battles_types: Transform[list, BattleTypes] | None,
                         fast_server: bool = None) -> None:
-        """Displays a lot of data about the given battles"""
+        """Displays a lot of data about the given battles."""
         # Calculated stats:
         # - For each player: dmg, medkits used, Clutches, BHs, Q0-Q5 weps, Best dmg in 1 battle, Best dmg in 1 round, Best hit
         # - For each date, country, MU, side and battle: total dmg, Q0-Q5 weps
@@ -331,6 +331,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
 
         def get_sum_df(df: pd.DataFrame, column: str):
             """Returns df with the following columns:
+
             index, `column`, 'damage', 'Q0 weps', 'Q1 weps', 'Q2 weps', 'Q3 weps', 'Q4 weps', 'Q5 weps'
             """
             if 'hits' not in df.columns:
@@ -713,7 +714,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
 
 
 async def update_missing_keys(link: str, headers: list) -> None:
-    """update missing keys"""
+    """Update missing keys."""
     missing = {'apiRegions': ['resource'], 'apiMap': ['battleId', 'raw'], 'apiCountries': ['president'],
                'apiMilitaryUnitMembers': ['companyId'],
                'apiFights': ['dsQuality', 'militaryUnitBonus', 'localizationBonus', 'militaryUnit']}
@@ -722,5 +723,5 @@ async def update_missing_keys(link: str, headers: list) -> None:
 
 
 async def setup(bot) -> None:
-    """Setup"""
+    """Setup."""
     await bot.add_cog(Stats(bot))

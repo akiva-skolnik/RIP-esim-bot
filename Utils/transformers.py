@@ -1,4 +1,4 @@
-"""transformers.py"""
+"""Transformers.py."""
 from difflib import SequenceMatcher
 
 from discord import Interaction
@@ -12,27 +12,27 @@ from .constants import (all_countries, all_countries_by_name, all_products,
 
 
 def fix_link(link: str) -> str:
-    """fix link"""
+    """Fix link."""
     return link.split("#")[0].replace("http://", "https://").split(  # noqa WPS221
         "&actionStatus=")[0].replace("*", "")
 
 
 def get_server(link: str) -> str:
-    """get server"""
+    """Get server."""
     return link.split("https://", 1)[1].split(".e-sim.org", 1)[0]
 
 
 def get_id(link: str, parameter: str = "id") -> int:
-    """get id"""
+    """Get id."""
     return int(link.split(parameter + "=")[1].split("&")[0])
 
 
 class Period(Transformer):
-    """Period"""
+    """Period."""
 
     async def transform(self, interaction: Interaction, period: str) -> str:
         lookup_split = period.split()
-        if not any(x in period.lower() for x in ("hour", "day", "month", "year")) or \
+        if not any(x in period.lower() for x in ("hour", "day", "month", "year")) or\
                 len(lookup_split) > 2 or (len(lookup_split) == 2 and not lookup_split[0].isdigit()):
             error_msg = f"`period` can be `X hours/days/months/years`, example: 1 month (not {period})"
             raise CheckFailure(error_msg)
@@ -40,7 +40,7 @@ class Period(Transformer):
 
 
 class Server(Transformer):
-    """Server"""
+    """Server."""
 
     async def transform(self, interaction: Interaction, server: str) -> str:
         return server
@@ -51,7 +51,7 @@ class Server(Transformer):
 
 
 class Country(Transformer):
-    """Country"""
+    """Country."""
 
     async def transform(self, interaction: Interaction, country: str) -> str:
         if country.lower() in all_countries_by_name:
@@ -65,7 +65,7 @@ class Country(Transformer):
 
 
 class BattleTypes(Transformer):
-    """BattleTypes"""
+    """BattleTypes."""
 
     async def transform(self, interaction: Interaction, battles_types: str) -> tuple[str, ...]:
         correct_battle_types = ('ATTACK', 'CIVIL_WAR', 'COUNTRY_TOURNAMENT', 'CUP_EVENT_BATTLE', 'LEAGUE',
@@ -97,7 +97,7 @@ class BattleTypes(Transformer):
 
 
 class Ids(Transformer):
-    """Ids"""
+    """Ids."""
 
     async def transform(self, interaction: Interaction, ids: str) -> tuple:
         try:
@@ -128,7 +128,7 @@ class Ids(Transformer):
 
 
 class AuctionLink(Transformer):
-    """AuctionLink"""
+    """AuctionLink."""
 
     async def transform(self, interaction: Interaction, link: str) -> dict:
         if link.startswith("http") and "auction" in link:
@@ -140,7 +140,7 @@ class AuctionLink(Transformer):
 
 
 class ProfileLink(Transformer):
-    """ProfileLink"""
+    """ProfileLink."""
 
     async def transform(self, interaction: Interaction, link: str) -> dict:
         result = {"base": "profile"}
@@ -172,7 +172,7 @@ class ProfileLink(Transformer):
 
 
 class TournamentLink(Transformer):
-    """TournamentLink"""
+    """TournamentLink."""
 
     async def transform(self, interaction: Interaction, tournament_link: str) -> str:
         link = tournament_link.split("#")[0].replace("http://", "https://")  # noqa WPS221
@@ -213,7 +213,7 @@ class BattleLink(Transformer):
 
 
 class Product(Transformer):
-    """Product"""
+    """Product."""
 
     def __init__(self, products_list: tuple = all_products):
         self.products = products_list
@@ -227,7 +227,7 @@ class Product(Transformer):
 
 
 class Slots(Transformer):
-    """Slots"""
+    """Slots."""
 
     async def transform(self, interaction: Interaction, slot: str) -> str:
         return slot.title()

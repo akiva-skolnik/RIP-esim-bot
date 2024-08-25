@@ -16,15 +16,17 @@ from . import db_utils, utils
 
 
 def normal_pdf(x, mean, std) -> float:
-    """Probability Density Function - a good binomial approximation for big numbers
+    """Probability Density Function - a good binomial approximation for big numbers.
+
     X ~ N(mu=mean=np, sigma=std=sqrt(np(1-p))
-    PDF(X) = e^(-(x-np)^2/(2np(1-p))) / sqrt(2*PI*np(1-p))"""
+    PDF(X) = e^(-(x-np)^2/(2np(1-p))) / sqrt(2*PI*np(1-p))
+    """
     return math.exp(- math.pow((x - mean) / std, 2) / 2) / (math.sqrt(2 * math.pi) * std)
 
 
 async def cup_func(bot, interaction: Interaction, db_key: str, server: str, battle_ids_range: range,
                    excluded_ids: set = None) -> None:
-    """cup function"""
+    """Cup function."""
     try:
         base_url = f"https://{server}.e-sim.org/"
         start_id, end_id = battle_ids_range.start, battle_ids_range.stop - 1
@@ -178,7 +180,7 @@ def generate_cup_plot(df: pd.DataFrame, names: dict) -> BytesIO | None:
 
 
 async def motivate_func(bot, server: str, data: dict) -> None:
-    """motivate func"""
+    """Motivate func."""
     base_url = f'https://{server}.e-sim.org/'
     old_citizen_id = 0
     while server in data:
@@ -218,7 +220,7 @@ async def motivate_func(bot, server: str, data: dict) -> None:
 
 async def ping_func(channel: TextChannel, t: float, server: str, ping_id: str, country: str,
                     role: str, author_id: int = 0) -> None:
-    """ping func"""
+    """Ping func."""
     base_url = f'https://{server}.e-sim.org/'
     find_ping = await utils.find_one("collection", "ping")
     while ping_id in find_ping:
@@ -284,10 +286,12 @@ async def ping_func(channel: TextChannel, t: float, server: str, ping_id: str, c
 
 async def watch_should_break(link: str, api_battles: dict) -> bool:
     """Returns True if link should be removed from watch dict:
+
         1. if battle is over
         2. if battle is frozen
         3. if battle is not in watch dict
-    also updates the watch dict with the current score and sides"""
+    also updates the watch dict with the current score and sides
+    """
 
     attacker, defender = utils.get_sides(api_battles)
     should_break = True
@@ -310,7 +314,7 @@ async def watch_should_break(link: str, api_battles: dict) -> bool:
 
 async def watch_func(bot, channel: TextChannel, link: str, t: float, role: str, custom: str,
                      author_id: int = 0) -> None:
-    """watch func"""
+    """Watch func."""
     for _ in range(20):  # Max rounds: 15, plus option for some freeze/delay
         api_battles = await utils.get_content(link.replace("battle", "apiBattles").replace("id", "battleId"))
         if await watch_should_break(link, api_battles):
@@ -358,7 +362,7 @@ async def watch_func(bot, channel: TextChannel, link: str, t: float, role: str, 
 
 async def watch_auction_func(channel: TextChannel, link: str, t: float, custom_msg: str,
                              author_id: int = 0) -> None:
-    """Activate watch/auction function"""
+    """Activate watch/auction function."""
     row = await utils.get_auction(link)
 
     if row["remaining_seconds"] < 0:
@@ -380,7 +384,7 @@ async def watch_auction_func(channel: TextChannel, link: str, t: float, custom_m
 
 
 async def remove_auction(link: str, channel_id: int) -> None:
-    """Removes auction"""
+    """Removes auction."""
     find_auctions = await utils.find_one("collection", "auctions") or {"auctions": []}
     for auction_dict in list(find_auctions["auctions"]):
         if auction_dict["link"] == link and auction_dict["channel_id"] == channel_id:

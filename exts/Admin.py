@@ -1,4 +1,4 @@
-"""Admin.py"""
+"""Admin.py."""
 import textwrap
 import traceback
 import logging
@@ -15,7 +15,7 @@ from Utils.constants import all_servers, config_ids
 
 
 class Admin(Cog):
-    """Admin Commands"""
+    """Admin Commands."""
 
     def __init__(self, bot) -> None:
         self.bot = bot
@@ -23,7 +23,7 @@ class Admin(Cog):
     @command()
     @guilds(utils.hidden_guild)
     async def set_logging_level(self, interaction: Interaction, level: str) -> None:
-        """Set Logging Level"""
+        """Set Logging Level."""
         logging.getLogger().setLevel(level)
         await utils.custom_followup(interaction, f"Logging level set to {level}")
 
@@ -91,7 +91,7 @@ class Admin(Cog):
     @guilds(utils.hidden_guild)
     async def execute(self, interaction: Interaction, code: str) -> None:
         # https://github.com/Rapptz/RoboDanny/blob/rewrite/cogs/admin.py#L215
-        """Executes a given code"""
+        """Executes a given code."""
         if interaction.user.id != config_ids.get("OWNER_ID"):
             return
 
@@ -146,7 +146,7 @@ class Admin(Cog):
     @command()
     @guilds(utils.hidden_guild)
     async def load(self, interaction: Interaction, ext: str) -> None:
-        """Load Extensions"""
+        """Load Extensions."""
         await self.bot.reload_extension("exts." + ext)
         await utils.custom_followup(interaction, f"{ext} loaded", ephemeral=True)
 
@@ -154,7 +154,7 @@ class Admin(Cog):
     @guilds(utils.hidden_guild)
     async def update(self, interaction: Interaction, user: User, level: int = 1,
                      reason: str = "donation") -> None:
-        """Update Donors"""
+        """Update Donors."""
         if level >= 0:
             self.bot.premium_users[str(user.id)] = {
                 "level": level, "reason": reason, "nick": user.name, "added_at": str(date.today())}
@@ -167,7 +167,7 @@ class Admin(Cog):
     @command()
     @guilds(utils.hidden_guild)
     async def sync(self, interaction: Interaction, this_guild: bool = True) -> None:
-        """Sync Commands"""
+        """Sync Commands."""
         if this_guild:
             synced = await self.bot.tree.sync(guild=interaction.guild)
         else:
@@ -176,5 +176,5 @@ class Admin(Cog):
 
 
 async def setup(bot) -> None:
-    """Setup"""
+    """Setup."""
     await bot.add_cog(Admin(bot))

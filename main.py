@@ -1,4 +1,4 @@
-"""Main Module"""
+"""Main Module."""
 import asyncio
 import importlib
 import logging
@@ -24,7 +24,7 @@ matplotlib.use('Agg')
 
 @bot.event
 async def on_error(*args, **kwargs) -> None:
-    """Error Handling"""
+    """Error Handling."""
     if len(args) > 1 and hasattr(args[1], "clean_content"):
         msg = f"[{utils.get_current_time_str()}] {args[1].clean_content}"
     else:
@@ -35,7 +35,7 @@ async def on_error(*args, **kwargs) -> None:
 
 
 async def activate_reminder() -> None:
-    """Activating Reminder Function at Restart"""
+    """Activating Reminder Function at Restart."""
     db_dict = await utils.find_one("collection", "remind")
     for reminder_id in list(db_dict):
         inner_dict = db_dict[reminder_id]
@@ -52,7 +52,7 @@ async def activate_reminder() -> None:
 
 
 async def activate_watch_and_ping() -> None:
-    """Activating Watch, Auction and Ping Function at Restart"""
+    """Activating Watch, Auction and Ping Function at Restart."""
     db_dict = await utils.find_one("collection", "auctions") or {"auctions": []}
     for inner_dict in list(db_dict["auctions"]):
         channel = bot.get_channel(inner_dict["channel_id"])
@@ -100,7 +100,7 @@ async def activate_watch_and_ping() -> None:
 
 
 async def activate_motivate() -> None:
-    """Activating Motivate Function at Restart"""
+    """Activating Motivate Function at Restart."""
     db_dict = await utils.find_one("collection", "motivate")
     for server in db_dict:
         if server in all_servers:
@@ -109,7 +109,7 @@ async def activate_motivate() -> None:
 
 
 async def start() -> None:
-    """Starter Function"""
+    """Starter Function."""
     await bot.wait_until_ready()
     print(bot.user.name)
     # update_donors.start()
@@ -138,7 +138,7 @@ async def update_from_source(interaction: Interaction) -> None:
 
 
 async def main() -> None:
-    """Main Function"""
+    """Main Function."""
     async with bot:
         bot.loop.create_task(start())
         # bot.tree.copy_global_to(guild=Object(id=937490523227312200))

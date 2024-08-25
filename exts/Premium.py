@@ -1,4 +1,4 @@
-"""Premium.py"""
+"""Premium.py."""
 from collections import defaultdict
 from csv import reader, writer
 from io import BytesIO, StringIO
@@ -14,7 +14,9 @@ from Utils.transformers import Ids, Server, Period
 
 class Premium(Cog):
     """Premium Stats Commands.
-    Get access at https://www.buymeacoffee.com/RipEsim or https://www.patreon.com/ripEsim"""
+
+    Get access at https://www.buymeacoffee.com/RipEsim or https://www.patreon.com/ripEsim
+    """
 
     def __init__(self, bot) -> None:
         self.bot = bot
@@ -489,7 +491,7 @@ class Premium(Cog):
     @command()
     @check(utils.is_premium_level_1)
     async def medals(self, interaction: Interaction, server: Transform[str, Server]) -> None:
-        """Checks how many friends and medals each player has in a given server (from the top 500)"""
+        """Checks how many friends and medals each player has in a given server (from the top 500)."""
         msg = await utils.custom_followup(interaction, "Progress status: 1%.\n(I will update you after every 10%)",
                                           file=File(self.bot.typing_gif_path))
         output = StringIO()
@@ -815,7 +817,7 @@ class Premium(Cog):
         csv_writer = writer(output)
         header = ["SC id", "SC name", "CEO", "CEO status",
                   "Total Shares", "Total Value", "Per Share", "Daily", "Share Holders", "Companies",  # main
-                  "Best Price", "Shares For Sell", "Last Share Trade", ""] + sorted(all_products, reverse=True) + \
+                  "Best Price", "Shares For Sell", "Last Share Trade", ""] + sorted(all_products, reverse=True) +\
                  ["", "Gold"] + sorted(all_cc)[1:]
         csv_writer.writerow(header)
 
@@ -1046,7 +1048,7 @@ def get_org_log_entry(tr: int, log_type: str, amounts: str, base_url: str, tree,
 
 
 def get_type(content: str) -> str:
-    """get type"""
+    """Get type."""
     if "motivation" in content:
         log_type = None
     elif "on auction" in content:
@@ -1071,5 +1073,5 @@ def get_type(content: str) -> str:
 
 
 async def setup(bot) -> None:
-    """Setup"""
+    """Setup."""
     await bot.add_cog(Premium(bot))

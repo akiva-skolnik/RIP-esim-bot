@@ -1,4 +1,4 @@
-"""Help.py"""
+"""Help.py."""
 from collections import defaultdict
 
 from discord import Embed, Interaction
@@ -54,5 +54,5 @@ class Help(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": F
 
 
 async def setup(bot) -> None:
-    """Setup"""
+    """Setup."""
     await bot.add_cog(Help(bot))

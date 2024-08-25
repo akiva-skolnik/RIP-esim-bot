@@ -1,4 +1,4 @@
-"""Eco.py"""
+"""Eco.py."""
 import statistics
 from collections import defaultdict
 from csv import writer
@@ -26,7 +26,7 @@ from Utils.utils import CoolDownModified, draw_pil_table, split_list
 
 
 class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": False}):
-    """Economy Commands"""
+    """Economy Commands."""
     options = ("iron", "grain", "oil", "stone", "wood", "diamonds")
     product_gids = {"primera": 6602346, "secura": 1142213909, "suna": 1317638633, "alpha": 1073258602,
                     'luxia': 1542255867, "xena": 681890089, "elysia": 91790250}
@@ -289,7 +289,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
     @command()
     async def penalty(self, interaction: Interaction, server: Transform[str, Server],
                       raw: Transform[str, Product(options)], country: Transform[str, Country] = "") -> None:
-        """Shows list of region penalties for the given raw product"""
+        """Shows list of region penalties for the given raw product."""
         country_name, country = country, all_countries_by_name.get(country.lower())
 
         region_ids = tuple(i['regionId'] for i in await utils.get_content(f'https://{server}.e-sim.org/apiMap.html')
@@ -340,7 +340,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
 
     @command()
     async def price_list(self, interaction: Interaction, server: Transform[str, Server]) -> None:
-        """Displays a list of the cheapest prices in the given server"""
+        """Displays a list of the cheapest prices in the given server."""
         db_dict = await utils.find_one("price", server)
         embed = Embed(colour=0x3D85C6, title=server,
                       description=f"[All products]({self._get_product_sheet_link(server)}),"
@@ -357,7 +357,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
               real_time="get the most updated data (premium)", quality="Default: Q5")
     async def price(self, interaction: Interaction, server: Transform[str, Server], quality: Range[int, 0, 5] | None,
                     item: Transform[str, Product], optimal_price: float = 0.0, real_time: bool = False) -> None:
-        """Displays the cheapest prices in the market for a given product / for all products"""
+        """Displays the cheapest prices in the market for a given product / for all products."""
         if real_time and not await utils.is_premium_level_1(interaction, False):
             await utils.custom_followup(
                 interaction, "`real_time` is a premium parameter! If you wish to use it, "
@@ -814,7 +814,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                         "Str, Hit, Less, Find, Split, Production, Consume, Merging, Restore, Increase, Evening/Noon..)")
     @rename(parameter="link_or_parameter")
     async def upgrade(self, interaction: Interaction, parameter: str, value: float = -1.0) -> None:
-        """Displays estimated parameter value after upgrade, and how many needed until the maximum (90%)"""
+        """Displays estimated parameter value after upgrade, and how many needed until the maximum (90%)."""
         upgrades_per_stat = defaultdict(int)  # needed for the embed of upgrades per stat (profile)
 
         embed = Embed(colour=0x3D85C6)
@@ -944,7 +944,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
 
 
 async def calc_upgrades(parameter: str, value: float, upgrades_per_stat: dict) -> (list, list, str):
-    """calculate upgrades"""
+    """Calculate upgrades."""
     # TODO: test
     ranges = {"max": (0, 2, 4, 6, 8, 12, 16, 20, 22),
               "core": (0, 0, 0, 0, 0, 0, 7, 8, 9),  # must be before "damage"
@@ -1000,5 +1000,5 @@ async def calc_upgrades(parameter: str, value: float, upgrades_per_stat: dict) -
 
 # TODO: bot: MyBot
 async def setup(bot) -> None:
-    """Setup"""
+    """Setup."""
     await bot.add_cog(Eco(bot))

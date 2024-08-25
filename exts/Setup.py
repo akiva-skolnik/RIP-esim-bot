@@ -1,4 +1,4 @@
-"""Setup.py"""
+"""Setup.py."""
 from discord import Interaction
 from discord.app_commands import Range, Transform, checks, command, describe
 from discord.ext.commands import Cog
@@ -9,7 +9,7 @@ from Utils.transformers import Server
 
 
 class Setup(Cog):
-    """Battle Commands"""
+    """Battle Commands."""
 
     def __init__(self, bot) -> None:
         self.bot = bot
@@ -92,5 +92,5 @@ class Setup(Cog):
 
 
 async def setup(bot) -> None:
-    """Setup"""
+    """Setup."""
     await bot.add_cog(Setup(bot))

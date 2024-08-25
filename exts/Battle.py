@@ -1,4 +1,4 @@
-"""Battle.py"""
+"""Battle.py."""
 import math
 import statistics
 import traceback
@@ -30,14 +30,14 @@ from Utils.utils import (CoolDownModified, bar,
 
 
 class Battle(Cog):
-    """Battle Commands"""
+    """Battle Commands."""
 
     def __init__(self, bot) -> None:
         self.bot = bot
 
     @command()
     async def buffs_links(self, interaction: Interaction) -> None:
-        """Displays links of the buff and time trackers"""
+        """Displays links of the buff and time trackers."""
         embed = Embed(colour=0x3D85C6)
         description = "**Buff and time trackers:**\n"
         for server, data in gids.items():
@@ -121,7 +121,7 @@ class Battle(Cog):
     @command()
     async def calc(self, interaction: Interaction, server: Transform[str, Server],
                    nick: str, bonuses: str = "") -> None:
-        """DMG calculator"""
+        """DMG calculator."""
         api = await utils.get_content(f"https://{server}.e-sim.org/apiCitizenByName.html?name={nick.lower()}")
         dmg = await dmg_calculator(api, bonuses)
 
@@ -143,7 +143,7 @@ class Battle(Cog):
     @guild_only()
     async def cup_plus(self, interaction: Interaction, tournament_link: Transform[str, TournamentLink],
                        nick: str = "") -> None:
-        """Displays the top 10 players in a cup tournament (faster for premium)"""
+        """Displays the top 10 players in a cup tournament (faster for premium)."""
         link = tournament_link
         server = link.split("https://", 1)[1].split(".e-sim.org", 1)[0]
         await utils.default_nick(interaction, server, nick)
@@ -803,7 +803,9 @@ class Battle(Cog):
     @describe(ping_id="write 0 if you wish to remove all ids in this channel")
     async def stop(self, interaction: Interaction, ping_id: int) -> None:
         """Stopping `ping` program for a given id.
-        If you meant to stop `motivate` program - use `got`"""
+
+        If you meant to stop `motivate` program - use `got`
+        """
         await utils.custom_followup(interaction, "Ok", ephemeral=True)
         find_ping = await utils.find_one("collection", "ping")
         if ping_id == 0:
@@ -872,7 +874,7 @@ class Battle(Cog):
 
     @command()
     async def watch_list(self, interaction: Interaction) -> None:
-        """Get the watch list for this channel"""
+        """Get the watch list for this channel."""
         data = []
         find_watch = await utils.find_one("collection", "watch") or {"watch": []}
         find_auctions = await utils.find_one("collection", "auctions") or {"auctions": []}
@@ -961,7 +963,7 @@ class Battle(Cog):
     @hybrid_command()
     @describe(link="The battle or auction link you want to unwatch (can also be 'all')")
     async def unwatch(self, ctx, link: str) -> None:
-        """Stop watching a battle / auction"""
+        """Stop watching a battle / auction."""
         link = link.strip("<> ")
         find_watch = await utils.find_one("collection", "watch") or {"watch": []}
         find_auctions = await utils.find_one("collection", "auctions") or {"auctions": []}
@@ -990,5 +992,5 @@ class Battle(Cog):
 
 
 async def setup(bot) -> None:
-    """Setup"""
+    """Setup."""
     await bot.add_cog(Battle(bot))

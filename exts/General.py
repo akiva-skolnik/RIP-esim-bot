@@ -1,4 +1,4 @@
-"""General.py"""
+"""General.py."""
 from asyncio import sleep
 from datetime import date, datetime, timedelta
 from io import BytesIO
@@ -19,7 +19,7 @@ from Utils.utils import CoolDownModified
 
 
 class General(Cog):
-    """General Commands"""
+    """General Commands."""
 
     def __init__(self, bot) -> None:
         self.bot = bot
@@ -85,7 +85,7 @@ class General(Cog):
     @check(utils.is_premium_level_1)
     @describe(servers="Examples: alpha, secura  or ALL for all servers.")
     async def events(self, interaction: Interaction, servers: str = "") -> None:
-        """Shows the upcoming events for the given servers"""
+        """Shows the upcoming events for the given servers."""
 
         if not servers or servers.lower() == "all":
             servers = " ".join(all_servers)
@@ -148,7 +148,7 @@ class General(Cog):
     @checks.dynamic_cooldown(CoolDownModified(5))
     @command()
     async def profile(self, interaction: Interaction, server: Transform[str, Server], nick: str) -> None:
-        """Displays data about a player"""
+        """Displays data about a player."""
 
         base_url = f"https://{server}.e-sim.org/"
         api = await utils.get_content(f'{base_url}apiCitizenByName.html?name={nick.lower()}')
@@ -320,7 +320,7 @@ class General(Cog):
     @describe(reminder_id="leave empty if you want to remove all the reminders in this channel. "
                           "0 will show you the list of your ids.")
     async def remove(self, interaction: Interaction, reminder_id: int = -1) -> None:
-        """Removing a given id from the reminder list"""
+        """Removing a given id from the reminder list."""
         find_remind = await utils.find_one("collection", "remind")
         if reminder_id < 0:
             removed = []
@@ -379,7 +379,7 @@ class General(Cog):
     @checks.dynamic_cooldown(CoolDownModified(5))
     @command()
     async def usage(self, interaction: Interaction) -> None:
-        """Displays some bot usage statistics"""
+        """Displays some bot usage statistics."""
         lookup = ['\N{FIRST PLACE MEDAL}', '\N{SECOND PLACE MEDAL}', '\N{THIRD PLACE MEDAL}'] + ['\N{SPORTS MEDAL}'] * 7
         embed = Embed(colour=0x3D85C6)
         b = await utils.find_one("collection", "commands_count")
@@ -391,7 +391,7 @@ class General(Cog):
 
     @command()
     async def link(self, interaction: Interaction, link: str) -> None:
-        """Get info about a link"""
+        """Get info about a link."""
         get_url = link.replace("http://", "https://")  # noqa WPS221
         server = get_url.split("https://")[-1].split(".e-sim.org/")[0]
         if not link.startswith(api_url):
@@ -762,14 +762,14 @@ class General(Cog):
 
     @command()
     async def e_sim_table(self, interaction: Interaction, attachment: Attachment) -> None:
-        """Converts a csv (excel) file to e-sim table format"""
+        """Converts a csv (excel) file to e-sim table format."""
         file = File(fp=utils.csv_to_txt(await attachment.read()),
                     filename=f"Esim_format_{attachment.filename.replace('csv', 'txt')}")
         await utils.custom_followup(interaction, file=file)
 
 
 async def remind_func(channel: TextChannel, when: str, reminder_id: str, msg: str) -> None:
-    """remind func"""
+    """Remind func."""
     date_format = "%Y/%m/%d %H:%M:%S"
     now = utils.get_current_time(timezone_aware=False)
     seconds = (datetime.strptime(when, date_format) - now).total_seconds()
@@ -784,7 +784,7 @@ async def remind_func(channel: TextChannel, when: str, reminder_id: str, msg: st
 
 
 def get_user_links(base_url: str, link: str, api: dict, company: str) -> dict:
-    """get user links"""
+    """Get user links."""
     return {"\U0001f575 MU": f"{base_url}militaryUnit.html?id={api['militaryUnitId']}",
             "\U0001f4dd msg": link.replace("profile", "composeMessage"),
             "\U0001f5fa Location": f"{base_url}region.html?id={api['currentLocationRegionId']}",
@@ -796,5 +796,5 @@ def get_user_links(base_url: str, link: str, api: dict, company: str) -> dict:
 
 
 async def setup(bot) -> None:
-    """Setup"""
+    """Setup."""
     await bot.add_cog(General(bot))

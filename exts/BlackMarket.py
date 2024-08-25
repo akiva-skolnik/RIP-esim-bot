@@ -1,4 +1,4 @@
-"""BlackMarket.py"""
+"""BlackMarket.py."""
 from collections import defaultdict
 from datetime import date
 from random import randint
@@ -14,7 +14,7 @@ from Utils.transformers import Product, ProfileLink, Server, Slots
 
 
 class BlackMarket(GroupCog, name="black-market"):
-    """Black Market Commands"""
+    """Black Market Commands."""
 
     def __init__(self, bot) -> None:
         self.bot = bot
@@ -163,6 +163,7 @@ class BlackMarket(GroupCog, name="black-market"):
     async def remove(self, interaction: Interaction, offer_id: int | None) -> None:
         """
         Remove your offer from the black market.
+
         Type `/black-market list` to get all your offers ids.
         """
         data = await utils.find_one("collection", __name__)
@@ -252,5 +253,5 @@ class BlackMarket(GroupCog, name="black-market"):
 
 
 async def setup(bot) -> None:
-    """Setup"""
+    """Setup."""
     await bot.add_cog(BlackMarket(bot))

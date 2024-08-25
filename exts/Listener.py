@@ -1,4 +1,4 @@
-"""Listener.py"""
+"""Listener.py."""
 import sys
 from json import decoder
 from traceback import format_exception
@@ -14,7 +14,7 @@ from Utils.constants import config_ids
 
 
 class Listener(Cog):
-    """Listener / Events"""
+    """Listener / Events."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -22,7 +22,7 @@ class Listener(Cog):
 
     @Cog.listener()
     async def on_app_command_completion(self, interaction: Interaction, command: Command):
-        """Commands Counter"""
+        """Commands Counter."""
         if "name" not in interaction.data or not command:
             return
         msg = self.__get_error_msg(interaction)
@@ -51,14 +51,14 @@ class Listener(Cog):
 
     @staticmethod
     def __get_error_msg(interaction: Interaction):
-        """Get error message"""
+        """Get error message."""
         data = interaction.data["name"] + " " + " ".join(
             f"**{x.get('name')}**: {x.get('value')}" for x in interaction.data.get('options', []))
         return f"[{utils.get_current_time_str()}] : {data}"
 
     @Cog.listener()
     async def on_app_command_error(self, interaction: Interaction, error: AppCommandError):
-        """on app command error"""
+        """On app command error."""
         error = getattr(error, 'original', error)
         msg = self.__get_error_msg(interaction)
 
@@ -111,5 +111,5 @@ class Listener(Cog):
 
 
 async def setup(bot):
-    """Setup"""
+    """Setup."""
     await bot.add_cog(Listener(bot))

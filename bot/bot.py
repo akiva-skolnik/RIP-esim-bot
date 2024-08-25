@@ -1,4 +1,4 @@
-"""Bot.py"""
+"""Bot.py."""
 import json
 import logging
 import os
@@ -14,7 +14,7 @@ root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 async def load_extensions(reload: bool = False) -> None:
-    """Loads extensions"""
+    """Loads extensions."""
     exts_path = os.path.join(root, "exts")
     for dirpath, dirnames, filenames in os.walk(exts_path):
         for file_name in filenames:
@@ -27,7 +27,7 @@ async def load_extensions(reload: bool = False) -> None:
 
 
 def find_one(collection: str, _id: str) -> dict:
-    """find one"""
+    """Find one."""
     filename = os.path.join(os.path.dirname(root), f"db/{collection}_{_id}.json")
     if os.path.exists(filename):
         with open(filename, encoding='utf-8') as file:
@@ -37,10 +37,8 @@ def find_one(collection: str, _id: str) -> dict:
 
 
 class MyTree(app_commands.CommandTree):
-    """Lock new server"""
-
     async def interaction_check(self, interaction: Interaction) -> bool:
-        """Lock new server"""
+        """Lock new server."""
         # TODO: x free commands per day & free user
         # This is done at the beginning of every interaction.
         await interaction.response.defer()  # type: ignore
@@ -72,7 +70,7 @@ class MyTree(app_commands.CommandTree):
 
 
 class MyClient(Bot):
-    """Custom Client"""
+    """Custom Client."""
 
     def __init__(self) -> None:
         super().__init__(command_prefix="/", case_insensitive=True,
@@ -112,7 +110,7 @@ class MyClient(Bot):
 
 
 async def should_cancel(interaction: Interaction, msg: Message = None) -> bool:
-    """Return whether the function should be cancelled"""
+    """Return whether the function should be cancelled."""
     if (interaction.user.id in bot.cancel_command and
             bot.cancel_command[interaction.user.id] == interaction.command.name):
         if msg is not None:
@@ -127,7 +125,7 @@ async def should_cancel(interaction: Interaction, msg: Message = None) -> bool:
 
 # TODO: make it class functions
 async def reset_cancel(interaction: Interaction) -> None:
-    """Reset the cancel option before each invoke"""
+    """Reset the cancel option before each invoke."""
     if isinstance(interaction, Interaction) and await should_cancel(interaction):
         del bot.cancel_command[interaction.user.id]
 
