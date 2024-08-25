@@ -1084,7 +1084,7 @@ def strip(data: tuple or list, apply_function: callable = None) -> tuple:
         return tuple(filter(None, map(str.strip, data)))
 
 
-def get_profile_medals(tree: fromstring) -> list[str]:
+def get_profile_medals(tree: ElementTree) -> list[str]:
     profile_medals = []
     for i in range(1, 11):
         medals_list = tree.xpath(f"//*[@id='medals']//ul//li[{i}]//div//text()")

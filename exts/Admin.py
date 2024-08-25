@@ -34,7 +34,7 @@ class Admin(Cog):
         for server in servers.split(",") if servers else all_servers:
             async with self.bot.pool.acquire() as connection:
                 async with connection.cursor() as cursor:
-                    await cursor.execute(f"DELETE FROM {server}.apiFights WHERE time < NOW() - INTERVAL 1 MONTH")
+                    await cursor.execute(f"DELETE FROM `{server}`.apiFights WHERE time < NOW() - INTERVAL 1 MONTH")
         await utils.custom_followup(interaction, "done")
 
     @command()
@@ -45,7 +45,7 @@ class Admin(Cog):
                 async with connection.cursor() as cursor:
                     await cursor.execute("CREATE DATABASE " + server)
 
-                    await cursor.execute(f'''CREATE TABLE {server}.apiBattles
+                    await cursor.execute(f'''CREATE TABLE `{server}`.apiBattles
                                           (battle_id INT UNSIGNED PRIMARY KEY,
                                           currentRound TINYINT,
                                           lastVerifiedRound TINYINT,

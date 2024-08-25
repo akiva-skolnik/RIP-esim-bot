@@ -38,7 +38,7 @@ async def cache_api_battles(interaction: Interaction, server: str, battle_ids: i
     battle_id_where = await get_battle_id_where(battle_ids, excluded_ids)
 
     # Select battles that are in the db and have finished, to be excluded from reinserting
-    query = f"SELECT battle_id FROM {server}.apiBattles " + \
+    query = f"SELECT battle_id FROM `{server}`.apiBattles " + \
             f"WHERE {battle_id_where} AND (defenderScore = 8 OR attackerScore = 8)"
 
     existing_battles = {x[0] for x in await execute_query(bot.pool, query, fetch=True)}  # x[0] = battle_id
@@ -82,7 +82,7 @@ async def insert_into_api_battles(server: str, battle_id: int) -> dict:
     filtered_api_battles = {k: api_battles[k] for k in api_battles_columns}
 
     placeholders = ', '.join(['%s'] * len(filtered_api_battles))
-    query = f"REPLACE INTO {server}.apiBattles VALUES ({placeholders})"
+    query = f"REPLACE INTO `{server}`.apiBattles VALUES ({placeholders})"
     await execute_query(bot.pool, query, tuple(filtered_api_battles.values()))
 
     return filtered_api_battles
@@ -93,7 +93,7 @@ async def select_many_api_battles(server: str, battle_ids: iter, *, columns: tup
     columns = columns or api_battles_columns
     logger.info(f"select_many_api_battles: {server=}, {len(battle_ids)=}, {custom_condition=}")
     battle_id_where = await get_battle_id_where(battle_ids, excluded_ids)
-    query = f"SELECT {', '.join(columns)} FROM {server}.apiBattles " + \
+    query = f"SELECT {','.join(columns)} FROM `{server}`.apiBattles " + \
             f"WHERE {battle_id_where} " + \
             ("" if not custom_condition else f"AND {custom_condition}")
 
@@ -106,8 +106,8 @@ async def select_many_api_battles(server: str, battle_ids: iter, *, columns: tup
 async def select_one_api_battles(server: str, battle_id: int, columns: tuple = None) -> dict:
     columns = columns or api_battles_columns
     # TODO: ensure columns contains defenderScore and attackerScore or add them
-    query = f"SELECT {', '.join(columns)} FROM {server}.apiBattles WHERE battle_id = {battle_id} LIMIT 1"
-    r = await execute_query(bot.pool, query, fetch=True)
+    query = f"SELECT {','.join(columns)} FROM `{server}`.apiBattles WHERE battle_id=%s LIMIT 1"
+    r = await execute_query(bot.pool, query, params=(battle_id, ), fetch=True)
     r = dict(zip(columns, r[0])) if r else {}
     if not r or 8 not in (r['defenderScore'], r['attackerScore']):
         r = await insert_into_api_battles(server, battle_id)
@@ -130,7 +130,7 @@ async def insert_into_api_fights(server: str, battle_id: int, round_id: int) -> 
                         hit.get('militaryUnit')) for hit in reversed(api_fights))
 
     placeholders = ', '.join(['%s'] * len(api_fights[0]))
-    query = f"INSERT IGNORE INTO {server}.apiFights VALUES ({placeholders})"
+    query = f"INSERT IGNORE INTO `{server}`.apiFights VALUES ({placeholders})"
     await execute_query(bot.pool, query, api_fights, many=True)
 
 
@@ -195,9 +195,9 @@ async def update_last_verified_round(server: str, api_battles: pd.Series) -> Non
         last_verified_round = -1
 
     if last_verified_round >= 0:
-        query = f"UPDATE {server}.apiBattles SET lastVerifiedRound = {last_verified_round} " \
-                f"WHERE battle_id = {api_battles['battle_id']}"
-        await execute_query(bot.pool, query)
+        query = f"UPDATE `{server}`.apiBattles SET lastVerifiedRound=%s WHERE battle_id=%s"
+        params = (last_verified_round, api_battles['battle_id'])
+        await execute_query(bot.pool, query, params)
 
 
 async def select_many_api_fights(server: str, battle_ids: iter, columns: tuple = None,
@@ -206,7 +206,7 @@ async def select_many_api_fights(server: str, battle_ids: iter, columns: tuple =
     columns = columns or api_fights_columns
     logger.info(f"select_many_api_fights: {server=}, {len(battle_ids)=}, {custom_condition=}")
     battle_id_where = await get_battle_id_where(battle_ids, excluded_ids)
-    query = f"SELECT {', '.join(columns)} FROM {server}.apiFights " \
+    query = f"SELECT {', '.join(columns)} FROM `{server}`.apiFights " \
             f"WHERE {battle_id_where} " + \
             ("" if not custom_condition else f"AND {custom_condition}")
 
@@ -230,7 +230,7 @@ async def get_api_fights_sum(server: str, battle_ids: iter, group_by: str = "cit
              "SUM(IF(weapon = 4, IF(berserk, 5, 1), 0)) AS Q4, "
              "SUM(IF(weapon = 5, IF(berserk, 5, 1), 0)) AS Q5, "
              "SUM(IF(berserk, 5, 1)) AS hits "
-             f"FROM {server}.apiFights "
+             f"FROM `{server}`.apiFights "
              f"WHERE {group_by} <> 0 AND {battle_id_where} "
              f"GROUP BY {group_by} "
              "ORDER BY damage DESC "  # TODO: parameter
@@ -246,9 +246,13 @@ async def get_api_fights_sum(server: str, battle_ids: iter, group_by: str = "cit
 async def select_one_api_fights(server: str, api: dict, round_id: int = 0) -> pd.DataFrame:
     # TODO: rewrite - not used yet
     battle_id = api["battle_id"]
-    query = f"SELECT * FROM {server}.apiFights WHERE battle_id = {battle_id}" + \
-            (f" AND round_id = {round_id}" if round_id else "")
-    values = await execute_query(bot.pool, query, fetch=True)
+    query = f"SELECT * FROM `{server}`.apiFights WHERE battle_id = %s "
+    params = (battle_id,)
+    if round_id:
+        query += f" AND round_id = %s"
+        params += (round_id,)
+
+    values = await execute_query(bot.pool, query, params, fetch=True)
     dfs = []
     if values:
         dfs.append(pd.DataFrame(values, columns=("index",) + api_fights_columns))
@@ -268,7 +272,7 @@ async def select_one_api_fights(server: str, api: dict, round_id: int = 0) -> pd
                       for hit in reversed(api_fights)]
         if round_id != current_round:
             placeholders = ', '.join(['%s'] * len(api_fights[0]))
-            query = f"INSERT IGNORE INTO {server}.apiFights {api_fights_columns} VALUES ({placeholders})"
+            query = f"INSERT IGNORE INTO `{server}`.apiFights {api_fights_columns} VALUES ({placeholders})"
             await execute_query(bot.pool, query, api_fights, many=True)
         dfs.append(pd.DataFrame(api_fights, columns=api_fights_columns))
     return pd.concat(dfs, ignore_index=True, copy=False) if dfs else None
