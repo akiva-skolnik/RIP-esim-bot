@@ -252,7 +252,7 @@ async def select_one_api_fights(server: str, api: dict, round_id: int = 0) -> pd
     query = f"SELECT * FROM `{server}`.apiFights WHERE battle_id = %s "
     params = (battle_id,)
     if round_id:
-        query += f" AND round_id = %s"
+        query += " AND round_id = %s"
         params += (round_id,)
 
     values = await execute_query(bot.pool, query, params, fetch=True)
