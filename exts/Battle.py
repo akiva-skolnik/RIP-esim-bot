@@ -160,9 +160,13 @@ class Battle(Cog):
             if ids:
                 find_cup[link] = [
                     {str(interaction.channel.id): {"nick": nick, "author_id": str(interaction.user.id)}}]
-                self.bot.logger.info(f"cup_plus: Starting a new cup_plus for {link}. ids range: {min(ids)}-{max(ids)}")
+                first_battle_id, last_battle_id = min(ids), max(ids)
+                battle_ids_range = range(first_battle_id, last_battle_id + 1)
+                self.bot.logger.info(f"cup_plus: Starting a new cup_plus for {link}. ids range: {battle_ids_range}")
                 await utils.replace_one("collection", interaction.command.name, find_cup)
-                await cup_func(self.bot, interaction, link, server, ids)
+                await cup_func(self.bot, interaction, link, server,
+                               battle_ids_range=battle_ids_range,
+                               excluded_ids=set(battle_ids_range) - set(ids))
             else:
                 await interaction.edit_original_response(
                     content="No IDs found. Consider using the `cup` command instead. "
@@ -196,30 +200,30 @@ class Battle(Cog):
         await utils.default_nick(interaction, server, nick)
         find_cup = await utils.find_one("collection", interaction.command.name)
         db_key = f"{server} {first_battle_id} {last_battle_id}"
-        if db_key not in find_cup and any(server in k for k in find_cup):
-            for query in find_cup:
-                if server in query and query != db_key:
-                    view = utils.Confirm()
-                    await interaction.edit_original_response(
-                        content=f"Would you like to change your request (`{db_key}`) into `{query}`?"
-                                f" It will be much faster.\n"
-                                f"(Someone else is running the command right now, and you can get their result)",
-                        view=view)
+        closest_query = None if db_key in find_cup else next((k for k in find_cup if server in k and k != db_key), None)
+        if closest_query is not None:
+            view = utils.Confirm()
+            await interaction.edit_original_response(
+                content=f"Would you like to change your request (`{db_key}`) into `{closest_query}`?"
+                        f" It will be much faster.\n"
+                        f"(Someone else is running the command right now, and you can get their result)",
+                view=view)
 
-                    await view.wait()
-                    if view.value:
-                        find_cup = await utils.find_one("collection", interaction.command.name)
-                        if query in find_cup:
-                            await interaction.edit_original_response(content="I'm on it, Sir. Thank you very much.",
-                                                                     view=view)
-                            find_cup[query].append(
-                                {str(interaction.channel.id): {"nick": nick, "author_id": str(interaction.user.id)}})
-                            await utils.replace_one("collection", interaction.command.name, find_cup)
-                            return
-                    else:
-                        await interaction.edit_original_response(content="Ok.", view=view)
-                    break
+            await view.wait()
+            if view.value:
+                find_cup = await utils.find_one("collection", interaction.command.name)
+                if closest_query in find_cup:
+                    await interaction.edit_original_response(content="I'm on it, Sir. Thank you very much.",
+                                                             view=view)
+                    find_cup[closest_query].append(
+                        {str(interaction.channel.id): {"nick": nick, "author_id": str(interaction.user.id)}})
+                    await utils.replace_one("collection", interaction.command.name, find_cup)
+                    return
+            else:
+                await interaction.edit_original_response(content="Ok.", view=view)
+
         if db_key not in find_cup or len(find_cup[db_key]) >= 10:
+            # initiate a new cup / replace the old one which probably has error
             find_cup[db_key] = [
                 {str(interaction.channel.id): {"nick": nick, "author_id": str(interaction.user.id)}}]
             await utils.replace_one("collection", interaction.command.name, find_cup)
@@ -228,8 +232,8 @@ class Battle(Cog):
             find_cup[db_key].append(
                 {str(interaction.channel.id): {"nick": nick, "author_id": str(interaction.user.id)}})
             return await utils.replace_one("collection", interaction.command.name, find_cup)
-        ids = range(first_battle_id, last_battle_id + 1)
-        await cup_func(self.bot, interaction, db_key, server, ids)
+        battle_ids_range = range(first_battle_id, last_battle_id + 1)
+        await cup_func(self.bot, interaction, db_key, server, battle_ids_range=battle_ids_range)
 
     @checks.dynamic_cooldown(CoolDownModified(15))
     @command()
@@ -720,7 +724,7 @@ class Battle(Cog):
                         table.append((name, level, dmg, location, buffs, debuffs))
             else:
                 if name in find_buff and find_buff[name][5]:
-                    buff = ":red_circle: " if not (datetime.strptime(now, date_format) - datetime.strptime(
+                    buff = ":red_circle: " if not (utils.get_current_time(timezone_aware=False) - datetime.strptime(
                         find_buff[name][5], date_format)).total_seconds() < 86400 else ":green_circle: "
                     level = buff + str(level)
                     citizenship_name = find_buff[name][1]
@@ -758,7 +762,7 @@ class Battle(Cog):
 
                     db_row = buffed_players_dict[row[0]]
                     index = None
-                    if (datetime.strptime(now, date_format) -
+                    if (utils.get_current_time(timezone_aware=False) -
                         datetime.strptime(db_row[5], date_format)).total_seconds() < 86400:
                         index = -2
                     if not db_row[5]:

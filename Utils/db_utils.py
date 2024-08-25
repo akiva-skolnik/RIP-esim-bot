@@ -32,17 +32,14 @@ async def execute_query(pool: asyncmy.Pool, query: str, params: iter = None,
                 return await cursor.fetchall()
 
 
-async def cache_api_battles(interaction: Interaction, server: str, battle_ids: iter) -> None:
+async def cache_api_battles(interaction: Interaction, server: str, battle_ids: iter, excluded_ids: set = None) -> None:
     """Verify all battles are in db, if not, insert them"""
-    start_id, end_id = min(battle_ids), max(battle_ids)
-    logger.info(f"cache_api_battles: {server=}, {start_id=}, {end_id=}, {len(battle_ids)=}")
-    excluded_ids = ",".join(str(i) for i in range(start_id, end_id + 1) if i not in battle_ids)
+    logger.info(f"cache_api_battles: {server=}, {len(battle_ids)=}, {excluded_ids=}")
+    battle_id_where = await get_battle_id_where(battle_ids, excluded_ids)
 
     # Select battles that are in the db and have finished, to be excluded from reinserting
-    query = f"SELECT battle_id FROM {server}.apiBattles " \
-            f"WHERE (battle_id BETWEEN {start_id} AND {end_id}) " + \
-            (f"AND battle_id NOT IN ({excluded_ids})" if excluded_ids else "") + \
-            " AND (defenderScore = 8 OR attackerScore = 8)"
+    query = f"SELECT battle_id FROM {server}.apiBattles " + \
+            f"WHERE {battle_id_where} AND (defenderScore = 8 OR attackerScore = 8)"
 
     existing_battles = {x[0] for x in await execute_query(bot.pool, query, fetch=True)}  # x[0] = battle_id
 
@@ -53,6 +50,26 @@ async def cache_api_battles(interaction: Interaction, server: str, battle_ids: i
             await insert_into_api_battles(server, battle_id)
             await custom_delay(interaction)
     logger.info(f"cache_api_battles: Done caching {len(battle_ids)} battles from {server=}")
+
+
+async def get_battle_id_where(battle_ids: iter, excluded_ids: set) -> str:
+    if not isinstance(battle_ids, range):
+        start_id, end_id = min(battle_ids), max(battle_ids)
+    else:
+        start_id, end_id = battle_ids.start, battle_ids.stop - 1
+
+    # Improve performance by using IN / BETWEEN depending on the number of battles
+    #   (IN is faster for small lists, BETWEEN is faster for large ranges with few exclusions)
+    if len(battle_ids) <= 10 and not excluded_ids:
+        battle_id_where = f" battle_id IN ({','.join(map(str, battle_ids))}) "
+    else:
+        if excluded_ids:
+            excluded_ids = ",".join(map(str, excluded_ids))
+        elif not isinstance(battle_ids, range):
+            excluded_ids = ",".join(str(i) for i in range(start_id, end_id + 1) if i not in battle_ids)
+        battle_id_where = f"battle_id BETWEEN {start_id} AND {end_id} " + \
+                          (f"AND battle_id NOT IN ({excluded_ids})" if excluded_ids else "")
+    return battle_id_where
 
 
 async def insert_into_api_battles(server: str, battle_id: int) -> dict:
@@ -71,15 +88,13 @@ async def insert_into_api_battles(server: str, battle_id: int) -> dict:
     return filtered_api_battles
 
 
-async def select_many_api_battles(server: str, battle_ids: iter, columns: tuple = None,
-                                  custom_condition: str = None) -> pd.DataFrame:
+async def select_many_api_battles(server: str, battle_ids: iter, *, columns: tuple = None,
+                                  custom_condition: str = None, excluded_ids: set = None) -> pd.DataFrame:
     columns = columns or api_battles_columns
-    start_id, end_id = min(battle_ids), max(battle_ids)
-    logger.info(f"select_many_api_battles: {server=}, {start_id=}, {end_id=}, {len(battle_ids)=}, {custom_condition=}")
-    excluded_ids = ",".join(str(i) for i in range(start_id, end_id + 1) if i not in battle_ids)
-    query = f"SELECT {', '.join(columns)} FROM {server}.apiBattles " \
-            f"WHERE (battle_id BETWEEN {start_id} AND {end_id}) " + \
-            (f"AND battle_id NOT IN ({excluded_ids}) " if excluded_ids else "") + \
+    logger.info(f"select_many_api_battles: {server=}, {len(battle_ids)=}, {custom_condition=}")
+    battle_id_where = await get_battle_id_where(battle_ids, excluded_ids)
+    query = f"SELECT {', '.join(columns)} FROM {server}.apiBattles " + \
+            f"WHERE {battle_id_where} " + \
             ("" if not custom_condition else f"AND {custom_condition}")
 
     api_battles = await execute_query(bot.pool, query, fetch=True)
@@ -105,7 +120,7 @@ async def insert_into_api_fights(server: str, battle_id: int, round_id: int) -> 
     if not api_fights:
         # insert dummy hit to avoid rechecking this round
         api_fights = [{'damage': 0, 'weapon': 0, 'berserk': False, 'defenderSide': False, 'citizenship': None,
-                       'citizenId': 0, 'time': datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]}]
+                       'citizenId': 0, 'time': datetime.now().strftime("%Y-%m-%d %H:%M:%S")}]
     # time can be one of: (%d-%m-%Y %H:%M:%S:%f, %Y-%m-%d %H:%M:%S:%f, %Y-%m-%d %H:%M:%S.%f, %Y-%m-%d %H:%M:%S)
     # so we should replace last : with . if the count of : is 3
     api_fights = tuple((battle_id, round_id, hit['damage'], hit['weapon'], hit['berserk'], hit['defenderSide'],
@@ -186,30 +201,27 @@ async def update_last_verified_round(server: str, api_battles: pd.Series) -> Non
 
 
 async def select_many_api_fights(server: str, battle_ids: iter, columns: tuple = None,
-                                 custom_condition: str = None) -> pd.DataFrame:
+                                 custom_condition: str = None, excluded_ids: set = None) -> pd.DataFrame:
     """Select all fight records in the given battles (can be a lot)"""
     columns = columns or api_fights_columns
-    start_id, end_id = min(battle_ids), max(battle_ids)
-    logger.info(f"select_many_api_fights: {server=}, {start_id=}, {end_id=}, {len(battle_ids)=}, {custom_condition=}")
-    excluded_ids = ",".join(str(i) for i in range(start_id, end_id + 1) if i not in battle_ids)
-
+    logger.info(f"select_many_api_fights: {server=}, {len(battle_ids)=}, {custom_condition=}")
+    battle_id_where = await get_battle_id_where(battle_ids, excluded_ids)
     query = f"SELECT {', '.join(columns)} FROM {server}.apiFights " \
-            f"WHERE (battle_id BETWEEN {start_id} AND {end_id}) AND citizenId <> 0 " + \
-            (f"AND battle_id NOT IN ({excluded_ids}) " if excluded_ids else "") + \
+            f"WHERE {battle_id_where} " + \
             ("" if not custom_condition else f"AND {custom_condition}")
 
     api_fights = await execute_query(bot.pool, query, fetch=True)
     df = pd.DataFrame(api_fights, columns=list(columns))
-    logger.info(f"select_many_api_fights: Done selecting {len(df)} hits from {server=}, {start_id=}, {end_id=}")
+    logger.info(f"select_many_api_fights: Done selecting {len(df)} hits from {server=}")
     return df
 
 
-async def get_api_fights_sum(server: str, battle_ids: iter, group_by: str = "citizenId") -> pd.DataFrame:
+async def get_api_fights_sum(server: str, battle_ids: iter, group_by: str = "citizenId", excluded_ids: set = None) -> pd.DataFrame:
     """Get the sum of damage, hits, and quality for each citizen in the given battles.
     Returns a DataFrame with columns: citizenId, damage, Q0, Q1, Q2, Q3, Q4, Q5, hits"""
-    start_id, end_id = min(battle_ids), max(battle_ids)
-    logger.info(f"get_api_fights_sum: {server=}, {start_id=}, {end_id=}, {len(battle_ids)=}, {group_by=}")
-    excluded_ids = ",".join(str(i) for i in range(start_id, end_id + 1) if i not in battle_ids)
+    logger.info(f"get_api_fights_sum: {server=}, {len(battle_ids)=}, {group_by=}")
+    battle_id_where = await get_battle_id_where(battle_ids, excluded_ids)
+
     query = (f"SELECT {group_by}, SUM(damage) AS damage, "
              "SUM(IF(weapon = 0, IF(berserk, 5, 1), 0)) AS Q0, "
              "SUM(IF(weapon = 1, IF(berserk, 5, 1), 0)) AS Q1, "
@@ -219,8 +231,7 @@ async def get_api_fights_sum(server: str, battle_ids: iter, group_by: str = "cit
              "SUM(IF(weapon = 5, IF(berserk, 5, 1), 0)) AS Q5, "
              "SUM(IF(berserk, 5, 1)) AS hits "
              f"FROM {server}.apiFights "
-             f"WHERE (battle_id BETWEEN {start_id} AND {end_id}) AND {group_by} <> 0 " +
-             (f"AND battle_id NOT IN ({excluded_ids}) " if excluded_ids else "") +
+             f"WHERE {group_by} <> 0 AND {battle_id_where} "
              f"GROUP BY {group_by} "
              "ORDER BY damage DESC "  # TODO: parameter
              )
@@ -228,7 +239,7 @@ async def get_api_fights_sum(server: str, battle_ids: iter, group_by: str = "cit
     api_fights = await execute_query(bot.pool, query, fetch=True)
     columns = (group_by, "damage", "Q0", "Q1", "Q2", "Q3", "Q4", "Q5", "hits")
     df = pd.DataFrame(api_fights, columns=columns, index=[x[0] for x in api_fights])
-    logger.info(f"get_api_fights_sum: Done selecting {len(df)} citizens from {server=}, {start_id=}, {end_id=}")
+    logger.info(f"get_api_fights_sum: Done selecting {len(df)} citizens from {server=}")
     return df
 
 
