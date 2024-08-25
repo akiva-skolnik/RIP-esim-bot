@@ -1,6 +1,5 @@
 """Listener.py"""
 import sys
-from datetime import datetime
 from json import decoder
 from traceback import format_exception
 
@@ -9,10 +8,9 @@ from discord import Embed, Interaction, errors
 from discord.app_commands import (AppCommandError, CheckFailure, Command,
                                   CommandOnCooldown)
 from discord.ext.commands import Cog
-from pytz import timezone
 
 from Utils import utils
-from Utils.constants import config_ids, date_format
+from Utils.constants import config_ids
 
 
 class Listener(Cog):
@@ -56,7 +54,7 @@ class Listener(Cog):
         """Get error message"""
         data = interaction.data["name"] + " " + " ".join(
             f"**{x.get('name')}**: {x.get('value')}" for x in interaction.data.get('options', []))
-        return f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)}] : {data}"
+        return f"[{utils.get_current_time_str()}] : {data}"
 
     @Cog.listener()
     async def on_app_command_error(self, interaction: Interaction, error: AppCommandError):

@@ -8,7 +8,6 @@ from discord import Attachment, Embed, File, Interaction, TextChannel
 from discord.app_commands import (Transform, check, checks, command, describe,
                                   guild_only)
 from discord.ext.commands import Cog
-from pytz import timezone
 from sympy import sympify
 from wolframalpha import Client
 
@@ -32,7 +31,7 @@ class General(Cog):
     async def bug(self, interaction: Interaction, your_bug_report: str) -> None:
         """Sends a bug report."""
 
-        msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)}] " \
+        msg = f"[{utils.get_current_time_str()}] " \
               f"**{interaction.user.name}** has sent the following bug report: \n{your_bug_report}"
         channel = self.bot.get_channel(config_ids["bugs_channel_id"])
         await channel.send(msg)
@@ -96,7 +95,7 @@ class General(Cog):
                 continue
             server = utils.server_validation(server)
             base_url = f"https://{server}.e-sim.org/"
-            now = datetime.now().astimezone(timezone('Europe/Berlin')).replace(tzinfo=None)
+            now = utils.get_current_time(timezone_aware=False)
             try:
                 tree = await utils.get_locked_content(f'{base_url}tournamentEvents.html')
             except Exception as error:
@@ -177,13 +176,12 @@ class General(Cog):
         avg_per_day = 0
 
         if server in gids:
-            find_buffs = await utils.find_one("buffs", server)
-            if api["login"] in find_buffs and find_buffs[api["login"]][5]:
-                db_row = find_buffs[api["login"]]
+            buffed_players_dict = await utils.find_one("buffs", server)
+            if api["login"] in buffed_players_dict and buffed_players_dict[api["login"]][5]:
+                db_row = buffed_players_dict[api["login"]]
                 buffs_link = f"https://docs.google.com/spreadsheets/d/{gids[server][0]}/edit#gid={gids[server][2]}"
-                now = datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)
-                if (datetime.strptime(now, date_format) - datetime.strptime(db_row[5],
-                                                                            date_format)).total_seconds() < 86400:
+                now = utils.get_current_time(timezone_aware=False)
+                if (now - datetime.strptime(db_row[5], date_format)).total_seconds() < 86400:
                     buffs += f" [(*Time left:* {db_row[7].strip()})]({buffs_link})"
                 else:
                     debuffs += f" [(*Time left:* {db_row[7].strip()})]({buffs_link})"
@@ -287,16 +285,17 @@ class General(Cog):
         """Remind a specific message in the given time."""
 
         date_format = "%Y/%m/%d %H:%M:%S"
-        now = datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)
+        now = utils.get_current_time(timezone_aware=False)
+        now_str = utils.get_current_time_str(timezone_aware=False)
         when = when.replace("-", "/")
         if when.count(":") == 1:
             when += ":00"
         if "/" not in when:
-            when = now.split()[0] + " " + when
+            when = now_str.split()[0] + " " + when
         elif when.count("/") != 2:
-            when = now.split("/")[0] + "/" + when
+            when = now_str.split("/")[0] + "/" + when
         try:
-            seconds = (datetime.strptime(when, date_format) - datetime.strptime(now, date_format)).total_seconds()
+            seconds = (datetime.strptime(when, date_format) - now).total_seconds()
         except Exception:
             await utils.custom_followup(
                 interaction, "Wrong format. Try to follow the instructions this time.", ephemeral=True)
@@ -369,7 +368,7 @@ class General(Cog):
     async def feedback(self, interaction: Interaction, your_feedback: str) -> None:
         """Send a feedback about the bot."""
 
-        msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)}] " \
+        msg = f"[{utils.get_current_time_str()}] " \
               f"**{interaction.user.name}** has sent the following feedback: \n{your_feedback}"
         channel = self.bot.get_channel(config_ids["feedback_channel_id"])
         await channel.send(msg)
@@ -772,8 +771,8 @@ class General(Cog):
 async def remind_func(channel: TextChannel, when: str, reminder_id: str, msg: str) -> None:
     """remind func"""
     date_format = "%Y/%m/%d %H:%M:%S"
-    now = datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)
-    seconds = (datetime.strptime(when, date_format) - datetime.strptime(now, date_format)).total_seconds()
+    now = utils.get_current_time(timezone_aware=False)
+    seconds = (datetime.strptime(when, date_format) - now).total_seconds()
     await sleep(seconds)
     find_remind = await utils.find_one("collection", "remind")
     if reminder_id not in find_remind:

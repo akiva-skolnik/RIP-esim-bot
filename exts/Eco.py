@@ -17,7 +17,6 @@ from discord.ext.commands import BadArgument, Cog
 from lxml import html
 from matplotlib import pyplot as plt
 from matplotlib.ticker import FixedLocator, MaxNLocator
-from pytz import timezone
 
 from Utils import utils
 from Utils.constants import (all_countries, all_countries_by_name,
@@ -399,9 +398,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 else:
                     embed.add_field(name="Error", value="No offers found in the market.")
                 last = db_dict["Product"][0][-1].replace("Last update: ", "").replace(" (game time).", "")
-                now = datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)
-                seconds_from_update = (datetime.strptime(now, date_format) -
-                                       datetime.strptime(last, date_format)).total_seconds()
+                now = utils.get_current_time(timezone_aware=False)
+                seconds_from_update = (now - datetime.strptime(last, date_format)).total_seconds()
                 if seconds_from_update > 3600:
                     warnings_channel = self.bot.get_channel(config_ids["warnings_channel_id"])
                     await warnings_channel.send(f'Prices for {server} updated {seconds_from_update} seconds ago.')
@@ -503,7 +501,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                     for k, v in db_dict.items()}
 
                 if best_price:
-                    prices_per_day[datetime.now().astimezone(timezone('Europe/Berlin'))] = best_price
+                    prices_per_day[utils.get_current_time()] = best_price
 
                 med = statistics.median(prices_per_day.values())
                 std = statistics.stdev(prices_per_day.values())

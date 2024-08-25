@@ -17,7 +17,6 @@ from discord.app_commands import (Transform, check, checks, command, describe,
                                   guild_only)
 from discord.ext.commands import Cog, Context, hybrid_command
 from matplotlib import pyplot as plt
-from pytz import timezone
 
 from Utils import utils
 from Utils.constants import (all_countries, all_countries_by_name, all_servers,
@@ -27,8 +26,8 @@ from Utils.transformers import (AuctionLink, BattleLink, Country, Server,
                                 TournamentLink)
 from Utils.utils import (CoolDownModified, bar,
                          dmg_calculator, draw_pil_table, not_support)
-from Utils.watch_utils import (cup_func, motivate_func, normal_pdf, ping_func,
-                               watch_auction_func, watch_func)
+from Utils.battle_utils import (cup_func, motivate_func, normal_pdf, ping_func,
+                                watch_auction_func, watch_func)
 
 
 class Battle(Cog):
@@ -58,32 +57,33 @@ class Battle(Cog):
             await utils.custom_followup(interaction, "You can not use this server in this command", ephemeral=True)
             return
         if military_unit_id:
-            members = await utils.get_content(
+            mu_members = await utils.get_content(
                 f'https://{server}.e-sim.org/apiMilitaryUnitMembers.html?id={military_unit_id}')
-            members = tuple(row["login"] for row in members)
+            mu_members = tuple(row["login"] for row in mu_members)
             mu_name = f"MU id {military_unit_id}"
         else:
-            members = ()
+            mu_members = ()
             mu_name = ""
 
         result = []
-        find_buffs = await utils.find_one("buffs", server)
-        now = datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)
+        buffed_players_dict = await utils.find_one("buffs", server)
+        now = utils.get_current_time_str()
         total_buff = 0
         total_debuff = 0
-        for current_nick, row in find_buffs.items():
+        for current_nick, row in buffed_players_dict.items():
             if current_nick == "Nick" or "Last update" in current_nick:
                 continue
             link, citizenship, dmg, last, premium, buffed, _, till_change, _, _, _, _ = row[:12]
             if not buffed or (any((country, military_unit_id, nick)) and not any(
-                    ((citizenship.lower() == country.lower()), current_nick in members,
+                    ((citizenship.lower() == country.lower()), current_nick in mu_members,
                      nick.lower() == current_nick.lower()))):
                 continue
 
             country_nick = f" {utils.codes(citizenship) if not country else ''} [{current_nick[:12]}]({link})"
             hyperlink = (":star:" if premium else ":lock:") + country_nick
-            if (datetime.strptime(now, date_format) - datetime.strptime(
-                    buffed, date_format)).total_seconds() < 24 * 60 * 60:
+
+            if (utils.get_current_time(timezone_aware=False) -
+                datetime.strptime(buffed, date_format)).total_seconds() < 24 * 60 * 60:  # A buff last for 24 hours
                 buff = ":green_circle: "
                 total_buff += 1
             else:
@@ -111,7 +111,7 @@ class Battle(Cog):
         embed.set_footer(text="\U00002b50 / \U0001f512 = Premium / Non Premium\n"
                               "\U0001f7e2 / \U0001f534 = Buff / Debuff\n"
                               f"\U0001f505 / \U0001f506 = Below / Above median total dmg ({round(median_dmg):,})\n"
-                              f"Last update: {find_buffs['Last update:'][0]}")
+                              f"Last update: {buffed_players_dict['Last update:'][0]}")
         headers = ("Nick, Citizenship" if not country else "Nick", "Last Seen (game time)", "Till Debuff (over)")
         await utils.send_long_embed(interaction, embed, headers, result)
 
@@ -690,7 +690,7 @@ class Battle(Cog):
         api_map.clear()
         table = []
         find_buff = await utils.find_one("buffs", server)
-        now = datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)
+        now = utils.get_current_time_str()
         header = ()
         for row in await utils.get_content(f"{base_url}apiOnlinePlayers.html?countryId={country}"):
             row = loads(row)
@@ -751,12 +751,12 @@ class Battle(Cog):
         else:
             new_lines = 0
             if server in gids:
-                find_buffs = await utils.find_one("buffs", server)
+                buffed_players_dict = await utils.find_one("buffs", server)
                 for row in table:
-                    if row[0] not in find_buffs or not find_buffs[row[0]][5]:
+                    if row[0] not in buffed_players_dict or not buffed_players_dict[row[0]][5]:
                         continue
 
-                    db_row = find_buffs[row[0]]
+                    db_row = buffed_players_dict[row[0]]
                     index = None
                     if (datetime.strptime(now, date_format) -
                         datetime.strptime(db_row[5], date_format)).total_seconds() < 86400:

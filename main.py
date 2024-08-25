@@ -4,7 +4,6 @@ import importlib
 import logging
 import os
 import subprocess
-from datetime import datetime
 from sys import modules
 from traceback import format_exc
 
@@ -12,10 +11,9 @@ import matplotlib
 from discord import Interaction
 from discord.app_commands import guilds
 from discord.utils import setup_logging
-from pytz import timezone
 
 from Utils import utils
-from Utils.constants import all_servers, config_ids, date_format
+from Utils.constants import all_servers, config_ids
 from bot.bot import bot, load_extensions
 from exts.Battle import (motivate_func, ping_func, watch_auction_func,
                          watch_func)
@@ -28,8 +26,7 @@ matplotlib.use('Agg')
 async def on_error(*args, **kwargs) -> None:
     """Error Handling"""
     if len(args) > 1 and hasattr(args[1], "clean_content"):
-        now = datetime.now().astimezone(timezone('Europe/Berlin'))
-        msg = f"[{now.strftime(date_format)}] {args[1].clean_content}"
+        msg = f"[{utils.get_current_time_str()}] {args[1].clean_content}"
     else:
         msg = " "
     msg += kwargs.get('msg', '')

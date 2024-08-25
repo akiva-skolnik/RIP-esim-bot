@@ -652,10 +652,8 @@ async def default_nick(interaction: Interaction, server: str, nick: str = "-") -
 
 async def custom_delay(interaction: Interaction) -> None:
     """custom delay"""
-    if str(interaction.user.id) not in bot.custom_delay_dict:
-        await sleep(0.4)
-    else:
-        await sleep(bot.custom_delay_dict[str(interaction.user.id)])
+    # TODO: remove this and instead add a dynamic delay based on server load
+    await sleep(bot.custom_delay_dict.get(str(interaction.user.id), 0.4))
 
 
 async def send_error(interaction: Optional[Interaction], error: Exception, cmd: str = "") -> None:
@@ -666,7 +664,7 @@ async def send_error(interaction: Optional[Interaction], error: Exception, cmd: 
             f"**{x.get('name')}**: {x.get('value')}" for x in interaction.data.get('options', []))
     else:
         data = cmd
-    msg = f"[{datetime.now().astimezone(timezone('Europe/Berlin')).strftime(date_format)}] : {data}"
+    msg = f"[{get_current_time_str()}] : {data}"
     error_channel = bot.get_channel(config_ids["error_channel_id"])
     try:
         await error_channel.send(
@@ -1097,3 +1095,14 @@ def get_profile_medals(tree: fromstring) -> list[str]:
         else:
             profile_medals.append("0")
     return profile_medals
+
+
+def get_current_time_str(timezone_aware: bool = True) -> str:
+    return get_current_time(timezone_aware=timezone_aware).strftime(date_format)
+
+
+def get_current_time(timezone_aware: bool = True) -> datetime:
+    now = datetime.now().astimezone(timezone('Europe/Berlin'))
+    if not timezone_aware:
+        now = now.replace(tzinfo=None)
+    return now
