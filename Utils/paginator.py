@@ -1,6 +1,6 @@
 """paginator.py"""
 # Source: https://github.com/Rapptz/RoboDanny/blob/rewrite/cogs/utils/paginator.py
-from typing import Any, Dict, Optional
+from typing import Any
 
 import discord
 from discord.ext import menus
@@ -10,7 +10,7 @@ class NumberedPageModal(discord.ui.Modal, title='Go to page'):
     """NumberedPageModal"""
     page = discord.ui.TextInput(label='Page', placeholder='Enter a number', min_length=1)
 
-    def __init__(self, max_pages: Optional[int]) -> None:
+    def __init__(self, max_pages: int | None) -> None:
         super().__init__()
         self.interaction = None
         if max_pages is not None:
@@ -67,7 +67,7 @@ class Pages(discord.ui.View):
                 self.add_item(self.numbered_page)
             self.add_item(self.stop_pages)
 
-    async def _get_kwargs_from_page(self, page: int) -> Dict[str, Any]:
+    async def _get_kwargs_from_page(self, page: int) -> dict[str, Any]:
         value = await discord.utils.maybe_coroutine(self.source.format_page, self, page)
         if isinstance(value, dict):
             return value
@@ -142,7 +142,7 @@ class Pages(discord.ui.View):
         if self.message:
             await self.message.edit(view=None)
 
-    async def start(self, *, content: Optional[str] = None, ephemeral: bool = False, files=discord.utils.MISSING):
+    async def start(self, *, content: str | None = None, ephemeral: bool = False, files=discord.utils.MISSING):
         """start"""
         await self.source._prepare_once()
         page = await self.source.get_page(0)

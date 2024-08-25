@@ -1,6 +1,5 @@
 """transformers.py"""
 from difflib import SequenceMatcher
-from typing import List
 
 from discord import Interaction
 from discord.app_commands import (CheckFailure, Choice, Transformer,
@@ -47,7 +46,7 @@ class Server(Transformer):
         return server
 
     @property
-    def choices(self) -> List[Choice]:
+    def choices(self) -> list[Choice]:
         return [Choice(name=x, value=x) for x in all_servers]
 
 
@@ -223,7 +222,7 @@ class Product(Transformer):
         return product.upper()
 
     @property
-    def choices(self) -> List[Choice]:
+    def choices(self) -> list[Choice]:
         return [Choice(name=x, value=x.upper()) for x in all_products]
 
 
@@ -234,7 +233,7 @@ class Slots(Transformer):
         return slot.title()
 
     @property
-    def choices(self) -> List[Choice]:
+    def choices(self) -> list[Choice]:
         slots = ("helmet", "vision", "armor", "pants", "shoes", "lucky charm", "weapon upgrade", "offhand")
         # TODO: can we return tuple?
         return [Choice(name=x.title(), value=x.title()) for x in slots]

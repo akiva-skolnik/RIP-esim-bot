@@ -2,7 +2,7 @@
 from collections import defaultdict
 from datetime import date
 from random import randint
-from typing import Literal, Optional
+from typing import Literal
 
 from discord import Embed, Interaction, User
 from discord.app_commands import Range, Transform, checks, command, describe
@@ -25,7 +25,7 @@ class BlackMarket(GroupCog, name="black-market"):
     @describe(server="Ignore if you wish to see all offers from all servers.",
               product="you should provide product or eq link (but not both). Ignore both if you wish to see all offers",
               equipment="you should provide product or eq link (but not both). Ignore both if you wish to see all offers")
-    async def list(self, interaction: Interaction, server: Optional[Transform[str, Server]],
+    async def list(self, interaction: Interaction, server: Transform[str, Server] | None,
                    item_quality: Range[int, 0, 8] = 5, product: Transform[str, Product] = "",
                    equipment: Transform[str, Slots] = "") -> None:
         """Display a list of offers for specific products or equipment per server."""
@@ -39,7 +39,8 @@ class BlackMarket(GroupCog, name="black-market"):
                 if offer_dict["item"] not in (y["item"] for y in by_servers[offer_dict["server"]]):
                     by_servers[offer_dict["server"]].append(offer_dict)
             if not by_servers:
-                await utils.custom_followup(interaction, f"No offers found for {server or 'all servers'}!", ephemeral=True)
+                await utils.custom_followup(interaction, f"No offers found for {server or 'all servers'}!",
+                                            ephemeral=True)
                 return
             embed = Embed(colour=0x3D85C6, title="Current selling offers")
             for server, offers in by_servers.items():
@@ -94,8 +95,8 @@ class BlackMarket(GroupCog, name="black-market"):
               stock_or_eq_link="if you provided a product, you must provide the stock, "
                                "and if an eq, you must provide its link.")
     async def add(self, interaction: Interaction, action: Literal["buy", "sell"],
-                  your_profile_link: Transform[dict, ProfileLink], item_quality: Optional[Range[int, 0, 8]],
-                  product: Optional[Transform[str, Product]], equipment: Optional[Transform[str, Slots]],
+                  your_profile_link: Transform[dict, ProfileLink], item_quality: Range[int, 0, 8] | None,
+                  product: Transform[str, Product] | None, equipment: Transform[str, Slots] | None,
                   price: float, stock_or_eq_link: str) -> None:
         """Add a buy/sell offer to the black market."""
 
@@ -139,7 +140,7 @@ class BlackMarket(GroupCog, name="black-market"):
 
     @checks.dynamic_cooldown(utils.CoolDownModified(5))
     @command()
-    async def update(self, interaction: Interaction, offer_id: int, price: float, stock: Optional[int]) -> None:
+    async def update(self, interaction: Interaction, offer_id: int, price: float, stock: int | None) -> None:
         """Updates an offer in the black market."""
         offer_id = str(offer_id)
         data = await utils.find_one("collection", __name__)
@@ -159,7 +160,7 @@ class BlackMarket(GroupCog, name="black-market"):
     @checks.dynamic_cooldown(utils.CoolDownModified(5))
     @command()
     @describe(offer_id="IMPORTANT: if not given, it will delete all your offers")
-    async def remove(self, interaction: Interaction, offer_id: Optional[int]) -> None:
+    async def remove(self, interaction: Interaction, offer_id: int | None) -> None:
         """
         Remove your offer from the black market.
         Type `/black-market list` to get all your offers ids.
@@ -187,8 +188,8 @@ class BlackMarket(GroupCog, name="black-market"):
     @command()
     @describe(server="Ignore if you want to see offers from all servers",
               user="Tag the user you want the data on, or ignore if you want to see your offers")
-    async def list_per_user(self, interaction: Interaction, server: Optional[Transform[str, Server]],
-                            user: Optional[User]) -> None:
+    async def list_per_user(self, interaction: Interaction, server: Transform[str, Server] | None,
+                            user: User | None) -> None:
         """Displays a list of items for a given user in the black market."""
         user = user or interaction.user
         data = await utils.find_one("collection", __name__)

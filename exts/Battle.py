@@ -10,7 +10,6 @@ from datetime import datetime, timedelta
 from io import BytesIO, StringIO
 from json import loads
 from random import randint
-from typing import Optional
 
 from discord import Embed, File, Interaction, Role
 from discord.app_commands import (Transform, check, checks, command, describe,
@@ -19,6 +18,8 @@ from discord.ext.commands import Cog, Context, hybrid_command
 from matplotlib import pyplot as plt
 
 from Utils import utils
+from Utils.battle_utils import (cup_func, motivate_func, normal_pdf, ping_func,
+                                watch_auction_func, watch_func)
 from Utils.constants import (all_countries, all_countries_by_name, all_servers,
                              date_format, gids)
 from Utils.dmg_func import dmg_func
@@ -26,8 +27,6 @@ from Utils.transformers import (AuctionLink, BattleLink, Country, Server,
                                 TournamentLink)
 from Utils.utils import (CoolDownModified, bar,
                          dmg_calculator, draw_pil_table, not_support)
-from Utils.battle_utils import (cup_func, motivate_func, normal_pdf, ping_func,
-                                watch_auction_func, watch_func)
 
 
 class Battle(Cog):
@@ -520,7 +519,8 @@ class Battle(Cog):
             await utils.replace_one("collection", "motivate", db_dict)
 
         else:
-            await interaction.edit_original_response(content=f"No motivate program was running in this channel for {servers=}.")
+            await interaction.edit_original_response(
+                content=f"No motivate program was running in this channel for {servers=}.")
 
     @command(name="motivate-scanner")
     @check(utils.is_premium_level_1)
@@ -630,8 +630,8 @@ class Battle(Cog):
     @command()
     @describe(country='buffs per country (optional)',
               extra_premium_info='get more info and wait a bit longer (premium)')
-    async def online(self, interaction: Interaction, server: Optional[Transform[str, Server]],
-                     battle_link: Optional[Transform[dict, BattleLink]],
+    async def online(self, interaction: Interaction, server: Transform[str, Server] | None,
+                     battle_link: Transform[dict, BattleLink] | None,
                      country: Transform[str, Country] = "", military_unit_id: int = 0,
                      extra_premium_info: bool = False) -> None:
         """
@@ -779,7 +779,7 @@ class Battle(Cog):
               country="filter battles by country")
     @guild_only()
     @check(not_support)
-    async def ping(self, interaction: Interaction, server: Transform[str, Server], role: Optional[Role],
+    async def ping(self, interaction: Interaction, server: Transform[str, Server], role: Role | None,
                    t: float = 5.0, country: Transform[str, Country] = "") -> None:
         """Informs the user about each round that comes to an end."""
 

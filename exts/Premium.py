@@ -2,7 +2,6 @@
 from collections import defaultdict
 from csv import reader, writer
 from io import BytesIO, StringIO
-from typing import Optional
 
 from discord import File, Interaction, errors
 from discord.app_commands import Transform, check, command, describe
@@ -24,7 +23,7 @@ class Premium(Cog):
     @check(utils.is_premium_level_1)
     @describe(include_comments="true is slower and false gives more data",
               period="should be similar to e-sim format (<x> hours/days/months/years)")
-    async def articles(self, interaction: Interaction, server: Transform[str, Server], include_comments: Optional[bool],
+    async def articles(self, interaction: Interaction, server: Transform[str, Server], include_comments: bool | None,
                        period: Period) -> None:
         """Displays articles stats."""
         my_dict = {"articles": 0, "replies (by author)": 0, "votes": 0, "replies (to author)": 0}
@@ -43,7 +42,7 @@ class Premium(Cog):
         first = article_id
         logged_out = True
         max_articles = 1000
-        for i in range(max_articles+1):
+        for i in range(max_articles + 1):
             if await self.bot.should_cancel(interaction):
                 break
             article_id -= 1
@@ -176,7 +175,8 @@ class Premium(Cog):
         await utils.custom_followup(interaction,
                                     f"{deleted} articles deleted in this period.\n"
                                     f"{preview_articles} articles in preview mode.\n"
-                                    f"You can calculate more stats in Excel, such as avg votes per article etc.", files=files,
+                                    f"You can calculate more stats in Excel, such as avg votes per article etc.",
+                                    files=files,
                                     mention_author=first - article_id > 100)
 
     @command()
@@ -256,7 +256,7 @@ class Premium(Cog):
     # @check(utils.is_premium_level_1)
     # @describe(fund_raising_link="if you have a working link, pls provide it (faster result), otherwise I will do my best.")
     async def bb(self, interaction: Interaction, server: Transform[str, Server],
-                 fund_raising_link: Optional[str]) -> None:
+                 fund_raising_link: str | None) -> None:
         """Displays baby boom (fund-raising) stats for a given server."""
         if fund_raising_link and "fundRaising" not in fund_raising_link:
             await utils.custom_followup(interaction, "This is not a fundRaising link.", ephemeral=True)
@@ -410,7 +410,7 @@ class Premium(Cog):
     @command()
     @check(utils.is_premium_level_1)
     @describe(month="Example: 12-2012, default to the last one")
-    async def congress(self, interaction: Interaction, server: Transform[str, Server], month: Optional[str]) -> None:
+    async def congress(self, interaction: Interaction, server: Transform[str, Server], month: str | None) -> None:
         """Displays result from congress elections."""
         try:
             if month:
@@ -450,7 +450,7 @@ class Premium(Cog):
     @command()
     @check(utils.is_premium_level_1)
     @describe(month="Example: 12-2012, default to the last one")
-    async def cp(self, interaction: Interaction, server: Transform[str, Server], month: Optional[str]) -> None:
+    async def cp(self, interaction: Interaction, server: Transform[str, Server], month: str | None) -> None:
         """Displays results from presidential elections."""
         try:
             if month:
@@ -505,10 +505,10 @@ class Premium(Cog):
                     break_main = True
                     break
                 count += 1
-                msg = await utils.update_percent(count, pages*20, msg)
+                msg = await utils.update_percent(count, pages * 20, msg)
                 tree = await utils.get_content(f'https://{server}.e-sim.org/profile.html?id={citizen_id}')
                 friends = next((x.replace("Friends", "").replace("(", "").replace(")", "").strip() for x in
-                            tree.xpath('//*[@class="rank"]/text()') if "Friends" in x), "0")
+                                tree.xpath('//*[@class="rank"]/text()') if "Friends" in x), "0")
                 nick = tree.xpath("//span[@class='big-login']")[0].text
                 try:
                     citizenship = tree.xpath("//div[@class='profile-data']//div[8]//span[1]//span[1]")[0].text
@@ -756,7 +756,8 @@ class Premium(Cog):
                 await utils.custom_delay(interaction)
                 tree = await utils.get_content(f'{base_url}stockCompanyProducts.html?id={sc_id}')
                 products_storage = {}
-                amount = utils.strip(tree.xpath('//*[@id="esim-layout"]//center//div//div//div[1]/text()'), apply_function=int)
+                amount = utils.strip(tree.xpath('//*[@id="esim-layout"]//center//div//div//div[1]/text()'),
+                                     apply_function=int)
                 products = [utils.parse_product_icon(x)
                             for x in tree.xpath('//*[@id="esim-layout"]//center//div//div//div[2]//img[1]/@src')]
 
@@ -772,7 +773,8 @@ class Premium(Cog):
                     products_storage[product] = amount
 
                 # Offers
-                amount = utils.strip(tree.xpath('//*[@id="esim-layout"]//div[2]//table//tr//td[3]/text()')[1:], apply_function=int)
+                amount = utils.strip(tree.xpath('//*[@id="esim-layout"]//div[2]//table//tr//td[3]/text()')[1:],
+                                     apply_function=int)
                 products = [utils.parse_product_icon(x)
                             for x in tree.xpath('//*[@id="esim-layout"]//div[2]//table//tr//td[1]//img[1]/@src')]
                 for i, product in enumerate(products):
@@ -839,7 +841,7 @@ class Premium(Cog):
     @describe(include_comments="true is slower and false gives more data",
               period="should be similar to e-sim format (X hours/days/months/years)")
     async def shouts(self, interaction: Interaction, server: Transform[str, Server],
-                     include_comments: Optional[bool], period: Period) -> None:
+                     include_comments: bool | None, period: Period) -> None:
         """Displays shouts stats."""
         msg = await utils.custom_followup(interaction,
                                           "I'm on it, Sir. Be patient. (I have no idea how long it will take, "

@@ -6,7 +6,7 @@ from datetime import date, timedelta
 from io import BytesIO, StringIO
 from json import loads
 from time import time
-from typing import Literal, Optional
+from typing import Literal
 
 import numpy as np
 import pandas as pd
@@ -104,8 +104,8 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
     @describe(ids_in_file="csv file at cells A1, A2, A3...",
               ids="separated by a comma (,)",
               extra_premium_info="True (premium) will take twice as long but will return much more data")
-    async def convert(self, interaction: Interaction, server: Transform[str, Server], ids_in_file: Optional[Attachment],
-                      ids: Optional[str],
+    async def convert(self, interaction: Interaction, server: Transform[str, Server], ids_in_file: Attachment | None,
+                      ids: str | None,
                       your_input_is: Literal["citizen ids", "citizen names", "military unit ids", "citizenship ids",
                       "single MU id (get info about all MU members)"],
                       extra_premium_info: bool = False) -> None:
@@ -255,7 +255,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
     # @check(utils.is_premium_level_1)
     async def dmg_stats(self, interaction: Interaction, server: Transform[str, Server],
                         battle_ids: Transform[list, Ids],
-                        included_countries: Optional[str], battles_types: Optional[Transform[list, BattleTypes]],
+                        included_countries: str | None, battles_types: Transform[list, BattleTypes] | None,
                         fast_server: bool = None) -> None:
         """Displays a lot of data about the given battles"""
         # Calculated stats:

@@ -12,7 +12,6 @@ from itertools import islice
 from os import path
 from re import findall, finditer
 from traceback import format_exception
-from typing import List, Optional, Union
 from xml.etree import ElementTree
 
 from PIL import Image, ImageDraw, ImageFont
@@ -47,7 +46,7 @@ class CoolDownModified:
         self.rate = rate
         self.per = per
 
-    async def __call__(self, message) -> Optional[Cooldown]:
+    async def __call__(self, message) -> Cooldown | None:
         if await is_premium_level_0(message):
             return None  # remove cooldown
         return Cooldown(self.rate, self.per)
@@ -459,7 +458,7 @@ def camel_case_merge(identifier: str) -> str:
 
 
 async def get_content(link: str, return_type: str = "", method: str = "get", session: ClientSession = None,
-                      throw: bool = False) -> Union[dict, fromstring]:
+                      throw: bool = False) -> dict | fromstring:
     """get content"""
     if not return_type:
         if "api" in link or link.startswith(api_url):
@@ -656,7 +655,7 @@ async def custom_delay(interaction: Interaction) -> None:
     await sleep(bot.custom_delay_dict.get(str(interaction.user.id), 0.4))
 
 
-async def send_error(interaction: Optional[Interaction], error: Exception, cmd: str = "") -> None:
+async def send_error(interaction: Interaction | None, error: Exception, cmd: str = "") -> None:
     """send error"""
     logger.error(f"Error in {cmd}", exc_info=error)
     if interaction:
@@ -760,7 +759,7 @@ async def custom_author(embed: Embed) -> Embed:
     return embed
 
 
-async def convert_embed(interaction_or_author: Union[Interaction, int], embed: Embed, is_columns: bool = True) -> Embed:
+async def convert_embed(interaction_or_author: Interaction | int, embed: Embed, is_columns: bool = True) -> Embed:
     """convert embed to phone format + add fix and donate link"""
     embed = await custom_author(embed)
     if not is_columns:
@@ -833,7 +832,7 @@ async def convert_embed(interaction_or_author: Union[Interaction, int], embed: E
 
 
 async def send_long_embed(interaction: Interaction, embed: Embed, headers: list or tuple, data: list or tuple,
-                          files: List[File] = MISSING) -> None:
+                          files: list[File] = MISSING) -> None:
     """send long embed"""
     for index, header in enumerate(headers):
         embed.add_field(name=header, value="\n".join(str(x[index]) for x in data))
@@ -874,7 +873,7 @@ def codes(country: str) -> str:
     return flags_codes.get(country.lower(), '\u2620')
 
 
-def get_countries(server: str, country: int = 0, index: int = -1) -> Union[dict, str]:
+def get_countries(server: str, country: int = 0, index: int = -1) -> dict | str:
     """get countries"""
     if country:
         return countries_per_id.get(country, 'unknown')[0]

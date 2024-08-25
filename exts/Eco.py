@@ -5,7 +5,6 @@ from csv import writer
 from datetime import datetime, timedelta
 from io import BytesIO, StringIO
 from itertools import islice
-from typing import Optional
 
 import matplotlib.axes
 import matplotlib.lines
@@ -38,7 +37,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
     @checks.dynamic_cooldown(CoolDownModified(5))
     @command()
     @describe(workers="workers * eco skill (example: 1 x 2.5 + 3 x 4.6)")
-    async def company(self, interaction: Interaction, quality: Optional[Range[int, 0, 5]],
+    async def company(self, interaction: Interaction, quality: Range[int, 0, 5] | None,
                       company_type: Transform[str, Product],
                       country_control_capital: bool, high_resource: bool, speed_server: bool, workers: str) -> None:
         """Company production calculator."""
@@ -356,7 +355,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
     @command()
     @describe(optimal_price="I will let you know once there's an offer below that price",
               real_time="get the most updated data (premium)", quality="Default: Q5")
-    async def price(self, interaction: Interaction, server: Transform[str, Server], quality: Optional[Range[int, 0, 5]],
+    async def price(self, interaction: Interaction, server: Transform[str, Server], quality: Range[int, 0, 5] | None,
                     item: Transform[str, Product], optimal_price: float = 0.0, real_time: bool = False) -> None:
         """Displays the cheapest prices in the market for a given product / for all products"""
         if real_time and not await utils.is_premium_level_1(interaction, False):
@@ -731,7 +730,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         shares = tuple(int(x) for x in tree.xpath("//td[2]//div[2]//table[1]//tr[position()>1]//td[1]//b//text()"))
         # Remove "Show" row. It won't work if there's only 1 minor share, but it's really rare.
         shares = [shares[0]] + [shares[i] for i in range(1, len(shares)) if shares[i] <= shares[i - 1]]
-        holders = utils.strip(tree.xpath("//td[2]//div[2]//table[1]//tr[position()>1]//td[2]//a[@class='profileLink']/text()"))
+        holders = utils.strip(
+            tree.xpath("//td[2]//div[2]//table[1]//tr[position()>1]//td[2]//a[@class='profileLink']/text()"))
         for share, holder in zip(shares, holders):
             balance[holder]["owned shares"] += share * per_share
 

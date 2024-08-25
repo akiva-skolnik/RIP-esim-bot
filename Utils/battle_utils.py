@@ -4,7 +4,6 @@ from asyncio import sleep
 from collections import defaultdict
 from io import BytesIO
 from random import randint
-from typing import Optional
 
 import pandas as pd
 from discord import Embed, File, Interaction, TextChannel
@@ -114,7 +113,7 @@ async def cup_func(bot, interaction: Interaction, db_key: str, server: str, batt
     bot.logger.info(f"cup_func end: {server=}, {db_key=}")
 
 
-def generate_cup_plot(df: pd.DataFrame, names: dict) -> Optional[BytesIO]:
+def generate_cup_plot(df: pd.DataFrame, names: dict) -> BytesIO | None:
     names = {k: v.replace("_", "") for k, v in names.items()}  # matplotlib ignores names that starts with _
     # Calculate total_damage for each row
     df['total_damage'] = df.groupby('citizenId')['damage'].cumsum()
@@ -195,7 +194,7 @@ async def motivate_func(bot, server: str, data: dict) -> None:
                 embed = Embed(colour=0x3D85C6, title="Citizens Registered In The Last 5 Minutes",
                               url=f'{base_url}newCitizens.html?countryId=0')
                 embed.add_field(name="Motivate Link", value="\n".join(
-                    [f'{base_url}motivateCitizen.html?id={i+1}' for i in range(old_citizen_id, citizen_id)]))
+                    [f'{base_url}motivateCitizen.html?id={i + 1}' for i in range(old_citizen_id, citizen_id)]))
                 embed.set_footer(text=f"If you want to stop it, type /got servers: {server}")
                 for channel_id in list(data[server]):
                     try:
