@@ -67,7 +67,7 @@ class Battle(Cog):
 
         result = []
         buffed_players_dict = await utils.find_one("buffs", server)
-        now = utils.get_current_time_str()
+        now = utils.get_current_time(timezone_aware=False)
         total_buff = 0
         total_debuff = 0
         for current_nick, row in buffed_players_dict.items():
@@ -82,8 +82,8 @@ class Battle(Cog):
             country_nick = f" {utils.codes(citizenship) if not country else ''} [{current_nick[:12]}]({link})"
             hyperlink = (":star:" if premium else ":lock:") + country_nick
 
-            if (utils.get_current_time(timezone_aware=False) -
-                datetime.strptime(buffed, date_format)).total_seconds() < 24 * 60 * 60:  # A buff last for 24 hours
+            # A buff last for 24 hours
+            if (now - datetime.strptime(buffed, date_format)).total_seconds() < 24 * 60 * 60:
                 buff = ":green_circle: "
                 total_buff += 1
             else:
@@ -694,7 +694,7 @@ class Battle(Cog):
         api_map.clear()
         table = []
         find_buff = await utils.find_one("buffs", server)
-        now = utils.get_current_time_str()
+        now = utils.get_current_time(timezone_aware=False)
         header = ()
         for row in await utils.get_content(f"{base_url}apiOnlinePlayers.html?countryId={country}"):
             row = loads(row)
@@ -724,7 +724,7 @@ class Battle(Cog):
                         table.append((name, level, dmg, location, buffs, debuffs))
             else:
                 if name in find_buff and find_buff[name][5]:
-                    buff = ":red_circle: " if not (utils.get_current_time(timezone_aware=False) - datetime.strptime(
+                    buff = ":red_circle: " if not (now - datetime.strptime(
                         find_buff[name][5], date_format)).total_seconds() < 86400 else ":green_circle: "
                     level = buff + str(level)
                     citizenship_name = find_buff[name][1]
