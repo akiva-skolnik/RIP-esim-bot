@@ -327,8 +327,7 @@ class Premium(Cog):
             except Exception:
                 break
             bb_id -= 1
-            nicks = (x.strip() for x in
-                     tree.xpath('//*[@class="testDivblue fund-table"]//*[@class="profileLink"]/text()'))
+            nicks = utils.strip(tree.xpath('//*[@class="testDivblue fund-table"]//*[@class="profileLink"]/text()'))
             amounts = (float(x.replace("-", "").replace("€", "").strip()) for x in
                        tree.xpath('//*[@class="testDivblue fund-table"]//ul//li//text()') if "€" in x)
             for nick, amount in zip(nicks, amounts):
@@ -508,8 +507,8 @@ class Premium(Cog):
                 count += 1
                 msg = await utils.update_percent(count, pages*20, msg)
                 tree = await utils.get_content(f'https://{server}.e-sim.org/profile.html?id={citizen_id}')
-                friends = ([x.replace("Friends", "").replace("(", "").replace(")", "").strip() for x in
-                            tree.xpath('//*[@class="rank"]/text()') if "Friends" in x] or ["0"])[0]
+                friends = next((x.replace("Friends", "").replace("(", "").replace(")", "").strip() for x in
+                            tree.xpath('//*[@class="rank"]/text()') if "Friends" in x), "0")
                 nick = tree.xpath("//span[@class='big-login']")[0].text
                 try:
                     citizenship = tree.xpath("//div[@class='profile-data']//div[8]//span[1]//span[1]")[0].text
@@ -757,7 +756,7 @@ class Premium(Cog):
                 await utils.custom_delay(interaction)
                 tree = await utils.get_content(f'{base_url}stockCompanyProducts.html?id={sc_id}')
                 products_storage = {}
-                amount = (int(x.strip()) for x in tree.xpath('//*[@id="esim-layout"]//center//div//div//div[1]/text()'))
+                amount = utils.strip(tree.xpath('//*[@id="esim-layout"]//center//div//div//div[1]/text()'), apply_function=int)
                 products = [utils.parse_product_icon(x)
                             for x in tree.xpath('//*[@id="esim-layout"]//center//div//div//div[2]//img[1]/@src')]
 
@@ -773,8 +772,7 @@ class Premium(Cog):
                     products_storage[product] = amount
 
                 # Offers
-                amount = (int(x.strip()) for x in
-                          tree.xpath('//*[@id="esim-layout"]//div[2]//table//tr//td[3]/text()')[1:])
+                amount = utils.strip(tree.xpath('//*[@id="esim-layout"]//div[2]//table//tr//td[3]/text()')[1:], apply_function=int)
                 products = [utils.parse_product_icon(x)
                             for x in tree.xpath('//*[@id="esim-layout"]//div[2]//table//tr//td[1]//img[1]/@src')]
                 for i, product in enumerate(products):
@@ -867,7 +865,7 @@ class Premium(Cog):
                 break
             tree = await utils.get_locked_content(f"{base_url}shouts.html?page={page}")
             posted = (x.replace("posted ", "").lower() for x in tree.xpath("//*[@class='shoutAuthor']/b/text()"))
-            author = (x.strip() for x in tree.xpath("//*[@class='shoutAuthor']/a/text()"))
+            author = utils.strip(tree.xpath("//*[@class='shoutAuthor']/a/text()"))
             citizenship = (x.split("xflagsSmall xflagsSmall-")[-1].replace("-", " ") for x in
                            tree.xpath("//*[@class='shoutAuthor']/span/@class"))
             ids = map(int, tree.xpath("//*[@class='shoutEditButtons']//form//input[1]/@value"))
@@ -885,7 +883,7 @@ class Premium(Cog):
                 authors_per_month[key]["votes (to author shouts)"] += votes
                 if replies and include_comments:
                     tree1 = await utils.get_content(f"{base_url}shoutDetails.html?id={shout_id}", method="post")
-                    author1 = (x.strip() for x in tree1.xpath("//*[@class='shoutAuthor']/a/text()"))
+                    author1 = utils.strip(tree1.xpath("//*[@class='shoutAuthor']/a/text()"))
                     citizenship1 = (x.split("xflagsSmall xflagsSmall-")[-1].replace("-", " ") for x in
                                     tree1.xpath("//*[@class='shoutAuthor']/span/@class"))
                     posted1 = (x.replace("posted ", "") for x in tree.xpath("//*[@class='shoutAuthor']/b/text()"))

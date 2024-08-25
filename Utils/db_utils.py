@@ -110,8 +110,8 @@ async def insert_into_api_fights(server: str, battle_id: int, round_id: int) -> 
     # so we should replace last : with . if the count of : is 3
     api_fights = tuple((battle_id, round_id, hit['damage'], hit['weapon'], hit['berserk'], hit['defenderSide'],
                         hit['citizenship'], hit['citizenId'],
-                        ".".join(hit["time"].strip().rsplit(":", 1)) if hit["time"].count(":") == 3 else hit[
-                            "time"].strip(),
+                        ".".join(hit["time"].strip().rsplit(":", 1))
+                         if hit["time"].count(":") == 3 else hit["time"].strip(),
                         hit.get('militaryUnit')) for hit in reversed(api_fights))
 
     placeholders = ', '.join(['%s'] * len(api_fights[0]))

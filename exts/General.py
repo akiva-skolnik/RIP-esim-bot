@@ -419,7 +419,7 @@ class General(Cog):
             tree = await utils.get_content(link)
             posted = " ".join(tree.xpath('//*[@class="mobile_article_preview_width_fix"]/text()')[0].split()[1:-1])
             title = tree.xpath('//*[@class="articleTitle"]/text()')[0]
-            subs, votes = (int(x.strip()) for x in tree.xpath('//*[@class="bigArticleTab"]/text()'))
+            subs, votes = utils.strip(tree.xpath('//*[@class="bigArticleTab"]/text()'), apply_function=int)
             author_name, newspaper_name = tree.xpath('//*[@class="mobileNewspaperStatus"]/a/text()')
             author_id = utils.get_ids_from_path(tree, '//*[@class="mobileNewspaperStatus"]/a')[0]
             newspaper_id = utils.get_ids_from_path(tree, '//*[@class="mobileNewspaperStatus"]/a')[1]
@@ -437,7 +437,7 @@ class General(Cog):
                 time1 = "Voting finished"
             else:
                 time1 = f'{int(time1[0]):02d}:{int(time1[1]):02d}:{int(time1[2]):02d}'
-            proposal = " ".join([x.strip() for x in tree.xpath('//table[1]//tr[2]//td[1]//div[2]//text()')]).strip()
+            proposal = " ".join(utils.strip(tree.xpath('//table[1]//tr[2]//td[1]//div[2]//text()'))).strip()
             by = tree.xpath('//table[1]//tr[2]//td[3]//a/text()')[0]
             yes = next(x.strip() for x in tree.xpath('//table[2]//td[2]//text()') if x.strip())
             no = next(x.strip() for x in tree.xpath('//table[2]//td[3]//text()') if x.strip())

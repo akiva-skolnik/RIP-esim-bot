@@ -118,7 +118,7 @@ class Ids(Transformer):
             elif len(ids_list) == 1:
                 ids = range(int(ids_list[0]), int(ids_list[0]) + 1)
             else:
-                ids = tuple(int(x.strip()) for x in ids_list)
+                ids = utils.strip(ids_list, apply_function=int)
 
             if len(ids) > 500 and not await utils.is_premium_level_1(interaction, False, False):
                 raise CheckFailure("It's too much... sorry. "

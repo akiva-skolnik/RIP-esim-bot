@@ -416,10 +416,10 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 tree = await utils.get_content(
                     f'{base_url}productMarketOffers?type={item}&countryId=-1&quality={quality}&page={page}')
                 raw_prices = tree.xpath("//*[@class='productMarketOffer']//b/text()")
-                ccs = (x.strip().lower() for x in tree.xpath("//*[@class='price']/div/text()") if x.strip())
-                stock = (int(x) for x in tree.xpath("//*[@class='quantity']//text()") if x.strip())
-                for cc, raw_price, stock in zip(ccs, raw_prices, stock):
-                    country_id = currency_names[cc]
+                ccs = utils.strip(tree.xpath("//*[@class='price']/div/text()"))
+                stocks = utils.strip(tree.xpath("//*[@class='quantity']//text()"), apply_function=int)
+                for cc, raw_price, stock in zip(ccs, raw_prices, stocks):
+                    country_id = currency_names[cc.lower()]
                     if country_id in offers_per_country:
                         continue  # TODO: should we allow multiple offers per country?
                     if country_id in ratios_per_country:
@@ -553,7 +553,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
 
         if "/stockCompany.html" in link:
             tree = await utils.get_locked_content(link)
-            types = tuple(x.strip() for x in tree.xpath('//tr//td[1]//div[4]//tr[position()>1]//td[2]/text()'))
+            types = utils.strip(tree.xpath('//tr//td[1]//div[4]//tr[position()>1]//td[2]/text()'))
             companies = utils.get_ids_from_path(tree, '//tr//td[1]//div[4]//tr[position()>1]//td[1]/a')
 
         elif "/militaryUnitCompanies.html" in link or "/companies.html" in link:
@@ -710,7 +710,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             msg = await utils.update_percent(page, last_page + last_page2, msg)
             tree = await utils.get_content(link + f'&page={page}')
             golds = (float(x) for x in tree.xpath("//tr[position()>1]//td[2]//b[1]//text()"))
-            player_names = (x.strip() for x in tree.xpath("//tr[position()>1]//td[2]//a[@class='profileLink']/text()"))
+            player_names = utils.strip(tree.xpath("//tr[position()>1]//td[2]//a[@class='profileLink']/text()"))
             for gold, player in zip(golds, player_names):
                 balance[player]["dividends"] += gold
             await utils.custom_delay(interaction)
@@ -718,10 +718,10 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         for page in range(1, last_page2):
             msg = await utils.update_percent(last_page + page, last_page + last_page2, msg)
             tree = await utils.get_content(link2 + f'&page={page}')
-            sellers = (x.strip() for x in tree.xpath("//tr[position()>1]//td[4]//a/text()"))
-            buyers = (x.strip() for x in tree.xpath("//tr[position()>1]//td[5]//a/text()"))
-            golds = (float(x) for x in tree.xpath("//tr[position()>1]//td[3]//b//text()"))
-            amounts = (int(x) for x in tree.xpath("//tr[position()>1]//td[2]//b//text()"))
+            sellers = utils.strip(tree.xpath("//tr[position()>1]//td[4]//a/text()"))
+            buyers = utils.strip(tree.xpath("//tr[position()>1]//td[5]//a/text()"))
+            golds = utils.strip(tree.xpath("//tr[position()>1]//td[3]//b//text()"), apply_function=float)
+            amounts = utils.strip(tree.xpath("//tr[position()>1]//td[2]//b//text()"), apply_function=int)
             for seller, buyer, gold, amount in zip(sellers, buyers, golds, amounts):
                 balance[seller]["shares sold"] += amount * gold
                 balance[buyer]["shares purchased"] += amount * gold
@@ -733,8 +733,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         shares = tuple(int(x) for x in tree.xpath("//td[2]//div[2]//table[1]//tr[position()>1]//td[1]//b//text()"))
         # Remove "Show" row. It won't work if there's only 1 minor share, but it's really rare.
         shares = [shares[0]] + [shares[i] for i in range(1, len(shares)) if shares[i] <= shares[i - 1]]
-        holders = (x.strip() for x in
-                   tree.xpath("//td[2]//div[2]//table[1]//tr[position()>1]//td[2]//a[@class='profileLink']/text()"))
+        holders = utils.strip(tree.xpath("//td[2]//div[2]//table[1]//tr[position()>1]//td[2]//a[@class='profileLink']/text()"))
         for share, holder in zip(shares, holders):
             balance[holder]["owned shares"] += share * per_share
 

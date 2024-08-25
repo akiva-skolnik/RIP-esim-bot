@@ -169,24 +169,22 @@ async def get_auction(link: str) -> dict:
     """get auction"""
     tree = await get_content(link)
     seller = tree.xpath("//div[1]//table[1]//tr[2]//td[1]//a/text()")[0]  # TODO: update
-    buyer = tree.xpath("//div[1]//table[1]//tr[2]//td[2]//a/text()") or ["None"]
+    buyer = (tree.xpath("//div[1]//table[1]//tr[2]//td[2]//a/text()") or ["None"])[0]
     item = tree.xpath("//*[@id='esim-layout']//div[1]//tr[2]//td[3]/b/text()")
     if not item:
-        item = [x.strip() for x in tree.xpath("//*[@id='esim-layout']//div[1]//tr[2]//td[3]/text()") if
-                x.strip()]
+        item = strip(tree.xpath("//*[@id='esim-layout']//div[1]//tr[2]//td[3]/text()"))
     price = tree.xpath("//div[1]//table[1]//tr[2]//td[4]//b//text()")[0]
     bidders = int(tree.xpath('//*[@id="esim-layout"]//div[1]//table//tr[2]//td[5]/b')[0].text)
     time1 = tree.xpath('//*[@id="esim-layout"]//div[1]//table//tr[2]//td[6]/span/text()')
     if not time1:
-        time1 = [x.strip() for x in tree.xpath('//*[@id="esim-layout"]//div[1]//table//tr[2]//td[6]/text()') if
-                 x.strip()]
+        time1 = strip(tree.xpath('//*[@id="esim-layout"]//div[1]//table//tr[2]//td[6]/text()'))[0]
         remaining_seconds = -1
     else:
-        time1 = [int(x) for x in time1[0].split(":")]
+        time1 = tuple(int(x) for x in time1[0].split(":"))
         remaining_seconds = time1[0] * 60 * 60 + time1[1] * 60 + time1[2]
-        time1 = [f'{time1[0]:02d}:{time1[1]:02d}:{time1[2]:02d}']
-    return {"seller": seller.strip(), "buyer": buyer[0].strip(), "item": item[0],
-            "price": price, "time": time1[0], "bidders": bidders, "remaining_seconds": remaining_seconds}
+        time1 = f'{time1[0]:02d}:{time1[1]:02d}:{time1[2]:02d}'
+    return {"seller": seller.strip(), "buyer": buyer.strip(), "item": item[0],
+            "price": price, "time": time1, "bidders": bidders, "remaining_seconds": remaining_seconds}
 
 
 async def save_dmg_time(api_fights: str, attacker: str, defender: str) -> (dict, dict):
@@ -318,8 +316,7 @@ async def dmg_calculator(api: dict, bonuses: str = "new") -> dict:
 
     counted_bonuses = {"stats": {}, "bonuses": {}}
 
-    bonuses = bonuses.replace(",", " ").lower().split()
-    bonuses = [x.strip() for x in bonuses]  # Delete spaces.
+    bonuses = strip(bonuses.replace(",", " ").lower().split())
 
     if "new" in bonuses:
         # Change strength from eqs, according to the change in total strength.
@@ -897,16 +894,17 @@ def get_time(string: str or datetime, floor_to_10: bool = False) -> datetime:
     if isinstance(string, datetime):
         dt = string
     else:
+        string = string.strip()
         try:
             try:
-                dt = datetime.strptime(string.strip(), '%d-%m-%Y %H:%M:%S:%f')
+                dt = datetime.strptime(string, '%d-%m-%Y %H:%M:%S:%f')
             except ValueError:
-                dt = datetime.strptime(string.strip(), '%Y-%m-%d %H:%M:%S:%f')
+                dt = datetime.strptime(string, '%Y-%m-%d %H:%M:%S:%f')
         except ValueError:
             try:
-                dt = datetime.strptime(string.strip(), '%Y-%m-%d %H:%M:%S')
+                dt = datetime.strptime(string, '%Y-%m-%d %H:%M:%S')
             except ValueError:
-                dt = datetime.strptime(string.strip(), '%Y-%m-%d %H:%M:%S.%f')
+                dt = datetime.strptime(string, '%Y-%m-%d %H:%M:%S.%f')
     if floor_to_10:
         dt = dt - timedelta(minutes=dt.minute % 10, seconds=dt.second, microseconds=dt.microsecond)
     return dt
@@ -1080,9 +1078,12 @@ def parse_product_icon(icon: str) -> str:
     return icon.split("img/productIcons/")[1].split(".png")[0].replace("Rewards/", "")
 
 
-def strip(data: tuple or list) -> tuple:
-    # same as tuple(x.strip() for x in data if x.strip()), but faster
-    return tuple(filter(None, map(str.strip, data)))
+def strip(data: tuple or list, apply_function: callable = None) -> tuple:
+    # same as tuple(func(x.strip()) for x in data if x.strip()), but faster
+    if apply_function:
+        return tuple(map(apply_function, filter(None, map(str.strip, data))))
+    else:
+        return tuple(filter(None, map(str.strip, data)))
 
 
 def get_profile_medals(tree: fromstring) -> list[str]:
