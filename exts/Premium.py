@@ -42,16 +42,17 @@ class Premium(Cog):
         article_id = int(utils.get_ids_from_path(tree, "//*[@class='articleTitle']")[0]) + 1
         first = article_id
         logged_out = True
-        for _ in range(5000):
+        max_articles = 1000
+        for i in range(max_articles+1):
             if await self.bot.should_cancel(interaction):
                 break
             article_id -= 1
-            if (first - article_id) % 50 == 0:
+            if i % 50 == 0:
                 try:
                     msg = await msg.edit(content=f"Checked {first - article_id} articles")
                 except errors.NotFound:
                     pass
-            if first - article_id >= 1000:
+            if i == max_articles:
                 await utils.custom_followup(interaction, f"Checked first {first - article_id} articles")
                 break
             try:
@@ -173,9 +174,9 @@ class Premium(Cog):
             File(fp=BytesIO(output.getvalue().encode()), filename=f"articles_per_month_and_country_{server}.csv"))
 
         await utils.custom_followup(interaction,
-                                    f"{deleted} articles doesn't exist (probably deleted).\n"
+                                    f"{deleted} articles deleted in this period.\n"
                                     f"{preview_articles} articles in preview mode.\n"
-                                    f"You can add more stats, such as avg votes per article etc.", files=files,
+                                    f"You can calculate more stats in Excel, such as avg votes per article etc.", files=files,
                                     mention_author=first - article_id > 100)
 
     @command()
@@ -436,6 +437,8 @@ class Premium(Cog):
                     f"&date={month}" if month else ""))
             votes = tree.xpath("//tr[position()>1]//td[5]//text()")
             candidates = tree.xpath("//tr//td[2]//a/text()")
+            if votes and votes[0] == "No presentation":
+                votes = ["0"] * len(candidates)
             candidates = (f'{candidate.strip()} ({vote.strip()})\\n' for candidate, vote in zip(candidates, votes))
             csv_writer.writerow((str(index + 1), country.title(), "".join(candidates)[:-2]))
             await utils.custom_delay(interaction)
@@ -487,14 +490,15 @@ class Premium(Cog):
     @command()
     @check(utils.is_premium_level_1)
     async def medals(self, interaction: Interaction, server: Transform[str, Server]) -> None:
-        """Checks how many friends and medals each player has in a given server (from the top 1000)"""
+        """Checks how many friends and medals each player has in a given server (from the top 500)"""
         msg = await utils.custom_followup(interaction, "Progress status: 1%.\n(I will update you after every 10%)",
                                           file=File(self.bot.typing_gif_path))
         output = StringIO()
         csv_writer = writer(output)
         count = 0
         break_main = False
-        for page in range(1, 51):
+        pages = 25  # 20 citizens per page
+        for page in range(1, pages + 1):
             for citizen_id in utils.get_ids_from_path(await utils.get_content(
                     f'https://{server}.e-sim.org/citizenStatistics.html?statisticType=DAMAGE&countryId=0&page={page}'),
                                                       "//td/a"):
@@ -502,7 +506,7 @@ class Premium(Cog):
                     break_main = True
                     break
                 count += 1
-                msg = await utils.update_percent(count, 1000, msg)
+                msg = await utils.update_percent(count, pages*20, msg)
                 tree = await utils.get_content(f'https://{server}.e-sim.org/profile.html?id={citizen_id}')
                 friends = ([x.replace("Friends", "").replace("(", "").replace(")", "").strip() for x in
                             tree.xpath('//*[@class="rank"]/text()') if "Friends" in x] or ["0"])[0]
@@ -511,27 +515,21 @@ class Premium(Cog):
                     citizenship = tree.xpath("//div[@class='profile-data']//div[8]//span[1]//span[1]")[0].text
                 except IndexError:
                     break
-                profile_medals = []
-                for i in range(1, 11):
-                    medals_list = tree.xpath(f"//*[@id='medals']//ul//li[{i}]//div//text()")
-                    if medals_list:
-                        profile_medals.extend([x.replace("x", "") for x in medals_list])
-                    elif "emptyMedal" not in tree.xpath(f"//*[@id='medals']//ul//li[{i}]/img/@src")[0]:
-                        profile_medals.append("1")
-                    else:
-                        profile_medals.append("0")
+                profile_medals = utils.get_profile_medals(tree)
                 csv_writer.writerow([nick, citizenship, friends] + profile_medals)
                 await utils.custom_delay(interaction)
             if break_main:
                 break
 
+        if not count:
+            raise Exception("No citizens found.")
         output.seek(0)
         sorted_list = sorted(reader(output), key=lambda row: int(row[-4]), reverse=True)
         output = StringIO()
         csv_writer = writer(output)
         csv_writer.writerow(["#", "Nick", "Citizenship", "Friends", "Congress medals", "CP", "Train",
                              "Inviter", "Subs", "Work", "BHs", "RW", "Tester", "Tournament"])
-        csv_writer.writerows([[index + 1] + row for index, row in enumerate(sorted_list)])
+        csv_writer.writerows([[index] + row for index, row in enumerate(sorted_list, 1)])
         output.seek(0)
         await utils.custom_followup(
             interaction, files=[File(fp=await utils.csv_to_image(output), filename=f"Preview_{server}.png"),
@@ -540,8 +538,9 @@ class Premium(Cog):
 
     @command()
     @check(utils.is_premium_level_1)
+    @describe(org_name="Example: Poland Org")
     async def org_logs(self, interaction: Interaction, server: Transform[str, Server],
-                       first_day: int, last_day: int, org: str) -> None:
+                       first_day: int, last_day: int, org_name: str) -> None:
         """Analyzing org logs."""
         headers = {"DONATE": ["Type", "Date", "Donor", "", "Amount", "Type", "", "Receiver"],
                    "MONETARY_MARKET": ["Type", "Date", "Buyer", "", "Total amount", "CC bought", "", "Total paid",
@@ -555,12 +554,12 @@ class Premium(Cog):
                    "unknown": ["Type", "Date", "Buyer / Donor", "Seller / Receiver", "Log"],
                    "COMPANY": ["Type", "Date", "Buyer / Donor", "Seller / Receiver", "Action", "Gold"]}
         base_url = f"https://{server}.e-sim.org/"
-        if not org.lower().endswith(" org"):
-            org += " org"
-        org = (await utils.get_content(f'{base_url}apiCitizenByName.html?name={org.lower()}'))["login"]
+        if not org_name.lower().endswith(" org"):
+            org_name += " org"
+        org_name = (await utils.get_content(f'{base_url}apiCitizenByName.html?name={org_name.lower()}'))["login"]
         output = StringIO()
         csv_writer = writer(output)
-        link = f"{base_url}orgTransactions.html?citizenName={org}&dayFrom={first_day}&dayTo={last_day}"
+        link = f"{base_url}orgTransactions.html?citizenName={org_name}&dayFrom={first_day}&dayTo={last_day}"
         last_page = await utils.last_page(link, utils.get_locked_content)
         msg = await utils.custom_followup(interaction,
                                           "Progress status: 1%.\n(I will update you after every 10%)" if last_page > 10
@@ -616,8 +615,8 @@ class Premium(Cog):
             log_type = row[0]
             if log_type in ("MONETARY_MARKET", "PRODUCT"):
                 row = (row[0], row[1], row[2], "has bought total of", row[4], row[5], "and he paid for it total of",
-                       row[6] if log_type == "MONETARY_MARKET" else float(row[6]) * float(row[4]), row[7], "to", row[3],
-                       f"Ratio: 1 {row[5]} =", row[8], row[7])
+                       row[6] if log_type == "MONETARY_MARKET" else round(float(row[6]) * float(row[4]), 2),
+                       row[7], "to", row[3], f"Ratio: 1 {row[5]} =", row[8], row[7])
             elif log_type == "DEBT":
                 row[3], row[6] = row[6], row[3]
                 row.insert(7, row[6])
@@ -653,17 +652,17 @@ class Premium(Cog):
         for row in csv_reader_list:
             log_type = row[0]
             if log_type == "DONATE":
-                donate[(row[2], row[-1], row[5])] += float(row[4])
+                donate[(row[2], row[-1], row[5])] += round(float(row[4]), 2)
             elif log_type == "MONETARY_MARKET":
-                monetary_market[(row[2], row[10], row[5], row[8])][0] += float(row[4])
-                monetary_market[(row[2], row[10], row[5], row[8])][1] += float(row[7])
+                monetary_market[(row[2], row[10], row[5], row[8])][0] += round(float(row[4]), 2)
+                monetary_market[(row[2], row[10], row[5], row[8])][1] += round(float(row[7]), 2)
             elif log_type == "PRODUCT":
-                product[(row[2], row[10], row[5], row[8])][0] += float(row[4])
-                product[(row[2], row[10], row[5], row[8])][1] += float(row[7])
+                product[(row[2], row[10], row[5], row[8])][0] += round(float(row[4]), 2)
+                product[(row[2], row[10], row[5], row[8])][1] += round(float(row[7]), 2)
             elif log_type == "GOLD_FROM_REF":
-                gold_from_ref[(row[2], row[6])] += float(row[4])
+                gold_from_ref[(row[2], row[6])] += round(float(row[4]), 2)
             elif log_type == "DEBT":
-                debt[(row[2], row[3], row[5], row[7])] += float(row[4])
+                debt[(row[2], row[3], row[5], row[7])] += round(float(row[4]), 2)
             else:
                 if row[0] != temp_log_type:
                     csv_writer.writerow(["-"] * len(headers[row[0]]))
@@ -694,7 +693,7 @@ class Premium(Cog):
             for k, v in monetary_market.items():
                 csv_writer.writerow(
                     [k[0], "has bought total of", v[0], k[2], "and he paid for it total of", v[1], k[3], "to", k[1],
-                     f"Ratio: 1 {k[2]} =", v[1] / v[0], k[3]])
+                     f"Ratio: 1 {k[2]} =", round(v[1] / v[0], 2), k[3]])
             del monetary_market
         if product:
             csv_writer.writerow(["-"] * len(headers["PRODUCT"][2:]))
@@ -702,7 +701,7 @@ class Premium(Cog):
             for k, v in product.items():
                 csv_writer.writerow(
                     [k[0], "has bought total of", v[0], k[2], "and he paid for it total of", v[1], k[3], "to", k[1],
-                     f"Ratio: 1 {k[2]} =", v[1] / v[0], k[3]])
+                     f"Ratio: 1 {k[2]} =", round(v[1] / v[0], 2), k[3]])
             del product
         output1.seek(0)
         await utils.custom_followup(interaction, mention_author=page > 50, files=[
@@ -840,7 +839,7 @@ class Premium(Cog):
     @command()
     @check(utils.is_premium_level_1)
     @describe(include_comments="true is slower and false gives more data",
-              period="should be similar to e-sim format (<x> hours/days/months/years)")
+              period="should be similar to e-sim format (X hours/days/months/years)")
     async def shouts(self, interaction: Interaction, server: Transform[str, Server],
                      include_comments: Optional[bool], period: Period) -> None:
         """Displays shouts stats."""
@@ -854,17 +853,16 @@ class Premium(Cog):
             del my_dict["replies (by author)"]
         authors_per_month = defaultdict(lambda: my_dict.copy())
         break_main_loop = False
-        page = 0
-        for _ in range(3000):
+        max_pages = 300 if not include_comments else 50
+        for page in range(1, max_pages + 1):
             if await self.bot.should_cancel(interaction):
                 break
-            page += 1
             if page % 10 == 0:
                 try:
                     msg = await msg.edit(content=f"Checked {page} shouts pages")
                 except errors.NotFound:
                     pass
-            if page > 500 or (include_comments and page > 100):
+            if page == max_pages:
                 await utils.custom_followup(interaction, f"Checked first {page} shouts pages")
                 break
             tree = await utils.get_locked_content(f"{base_url}shouts.html?page={page}")
@@ -880,7 +878,7 @@ class Premium(Cog):
                 if period.lower() in posted:
                     break_main_loop = True
                     break
-                if "month" not in posted and "year" not in posted:
+                if "months" in period and "month" not in posted and "year" not in posted:
                     posted = "0 months ago"
                 key = author, citizenship, posted
                 authors_per_month[key]["shouts"] += 1
@@ -892,7 +890,7 @@ class Premium(Cog):
                                     tree1.xpath("//*[@class='shoutAuthor']/span/@class"))
                     posted1 = (x.replace("posted ", "") for x in tree.xpath("//*[@class='shoutAuthor']/b/text()"))
                     for author1, citizenship1, posted1 in zip(author1, citizenship1, posted1):
-                        if "month" not in posted1 and "year" not in posted1:
+                        if "months" in period and "month" not in posted1 and "year" not in posted1:
                             posted1 = "0 months ago"
                         authors_per_month[author, citizenship, posted1]["replies (to author)"] += replies
                         authors_per_month[author1, citizenship1, posted1]["replies (by author)"] += 1

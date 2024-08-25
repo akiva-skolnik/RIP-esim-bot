@@ -314,6 +314,7 @@ async def motivate_func(bot, server: str, data: dict) -> None:
     base_url = f'https://{server}.e-sim.org/'
     old_citizen_id = 0
     while server in data:
+        updated = False
         try:
             tree = await utils.get_content(f'{base_url}newCitizens.html?countryId=0')
             try:
@@ -325,20 +326,23 @@ async def motivate_func(bot, server: str, data: dict) -> None:
                 embed = Embed(colour=0x3D85C6, title="Citizens Registered In The Last 5 Minutes",
                               url=f'{base_url}newCitizens.html?countryId=0')
                 embed.add_field(name="Motivate Link", value="\n".join(
-                    [f'{base_url}motivateCitizen.html?id={i}' for i in range(old_citizen_id + 1, citizen_id + 1)]))
-                embed.set_footer(text=f"If you want to stop it, type .got {server}")
+                    [f'{base_url}motivateCitizen.html?id={i+1}' for i in range(old_citizen_id, citizen_id)]))
+                embed.set_footer(text=f"If you want to stop it, type /got servers: {server}")
                 for channel_id in list(data[server]):
                     try:
                         channel = bot.get_channel(int(channel_id))
                         await channel.send(embed=await utils.custom_author(embed))
-                    except Exception:
+                    except Exception as e:
+                        bot.logger.error(f"Error in motivate_func, failed to send msg to {channel_id=}: {e}")
+                        updated = True
                         data[server].remove(channel_id)
                     await sleep(0.4)
             old_citizen_id = citizen_id
-            await utils.replace_one("collection", "motivate", data)
+            if updated:
+                await utils.replace_one("collection", "motivate", data)
             del data, tree
-        except Exception:
-            print(datetime.now().astimezone(timezone('Europe/Berlin')))
+        except Exception as e:
+            bot.logger.error(f"Error in motivate_func: {e}")
             traceback.print_exc()
         await sleep(randint(500, 700))
         data = await utils.find_one("collection", "motivate")

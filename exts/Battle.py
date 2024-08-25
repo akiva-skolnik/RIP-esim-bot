@@ -437,7 +437,6 @@ class Battle(Cog):
     @check(not_support)
     async def motivate(self, interaction: Interaction, server: Transform[str, Server]) -> None:
         """Checks every ~10 minutes if there is a new citizen to motivate in the given server."""
-        await utils.custom_followup(interaction, "Ok")
         base_url = f'https://{server}.e-sim.org/'
 
         try:
@@ -490,7 +489,6 @@ class Battle(Cog):
     @describe(servers="Default to all servers")
     async def got(self, interaction: Interaction, servers: str = "") -> None:
         """Stops motivate program."""
-        await utils.custom_followup(interaction, "Ok")
         if not servers or servers.lower() == "all":
             servers = " ".join(all_servers)
         db_dict = await utils.find_one("collection", "motivate")
@@ -518,7 +516,7 @@ class Battle(Cog):
             await utils.replace_one("collection", "motivate", db_dict)
 
         else:
-            await interaction.edit_original_response(content="I didn't had to change anything.")
+            await interaction.edit_original_response(content=f"No motivate program was running in this channel for {servers=}.")
 
     @command(name="motivate-scanner")
     @check(utils.is_premium_level_1)

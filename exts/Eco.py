@@ -639,6 +639,9 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             for index, x in enumerate(v):
                 per_day[headers[index]]["worth"] += val * x
 
+        if not per_day:
+            await utils.custom_followup(interaction, "No data found", ephemeral=True)
+            return
         csv_writer.writerow([""])
         csv_writer.writerow(["Cost per day (gold)", ""] + [str(round(val["cost"], 2)) for val in per_day.values()])
         csv_writer.writerow(["Worth per day (gold)", ""] + [str(round(val["worth"], 2)) for val in per_day.values()])
@@ -743,7 +746,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         for index, (k, v) in enumerate(sorted(balance.items(), key=lambda x: x[1]["profit"], reverse=True)):
             if not index:
                 csv_writer.writerow(["#", "Nick"] + [x.title() for x in v.keys()])
-            csv_writer.writerow([index + 1, k] + list(v.values()))
+            csv_writer.writerow([index + 1, k] + [round(x, 2) for x in v.values()])
 
         output.seek(0)
         await utils.custom_followup(interaction, mention_author=(last_page + last_page2) > 50, files=[

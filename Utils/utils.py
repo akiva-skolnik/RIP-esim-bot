@@ -1083,3 +1083,16 @@ def parse_product_icon(icon: str) -> str:
 def strip(data: tuple or list) -> tuple:
     # same as tuple(x.strip() for x in data if x.strip()), but faster
     return tuple(filter(None, map(str.strip, data)))
+
+
+def get_profile_medals(tree: fromstring) -> list[str]:
+    profile_medals = []
+    for i in range(1, 11):
+        medals_list = tree.xpath(f"//*[@id='medals']//ul//li[{i}]//div//text()")
+        if medals_list:
+            profile_medals.extend([x.replace("x", "") for x in medals_list])
+        elif "emptyMedal" not in tree.xpath(f"//*[@id='medals']//ul//li[{i}]/img/@src")[0]:
+            profile_medals.append("1")
+        else:
+            profile_medals.append("0")
+    return profile_medals

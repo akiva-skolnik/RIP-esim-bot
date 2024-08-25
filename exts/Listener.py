@@ -45,9 +45,9 @@ class Listener(Cog):
 
         # update commands count
         commands_count = await utils.find_one("collection", "commands_count")
-        if str(command.name) not in commands_count:
-            commands_count[str(command.name)] = 0
-        commands_count[str(command.name)] += 1
+        if command.name not in commands_count:
+            commands_count[command.name] = 0
+        commands_count[command.name] += 1
 
         await utils.replace_one("collection", "commands_count", commands_count)
 

@@ -353,7 +353,7 @@ class General(Cog):
                 await utils.custom_followup(
                     interaction, "There is nothing to remove. For adding reminders, use `/remind`", ephemeral=True)
 
-        elif reminder_id in [x.split()[1] for x in find_remind]:
+        elif str(reminder_id) in (x.split()[1] for x in find_remind):
             if f"{interaction.channel.id} {reminder_id}" in find_remind:
                 del find_remind[f"{interaction.channel.id} {reminder_id}"]
                 await utils.replace_one("collection", "remind", find_remind)

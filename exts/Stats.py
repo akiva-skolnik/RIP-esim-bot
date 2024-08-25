@@ -73,9 +73,9 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                     break
                 count += 1
                 msg = await utils.update_percent(count, (last_page - 2) * 24 + len(ids), msg)
-                tree1 = await utils.get_content(f"{base_url}profile.html?id={user_id}")
-                bh_medals = tree1.xpath("//*[@id='medals']//ul//li[7]//div")[0].text.replace("x", "")
-                cs = tree1.xpath("//div[@class='profile-data']//div[8]//span[1]//span[1]")
+                profile_tree = await utils.get_content(f"{base_url}profile.html?id={user_id}")
+                bh_medals = profile_tree.xpath("//*[@id='medals']//ul//li[7]//div")[0].text.replace("x", "")
+                cs = profile_tree.xpath("//div[@class='profile-data']//div[8]//span[1]//span[1]")
                 csv_writer.writerow([nick.strip(), cs[0].text if cs else "Unknown", bh_medals])
                 await utils.custom_delay(interaction)
             if break_main:
@@ -219,16 +219,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                 eqs = [quality.replace("equipmentBack q", "")
                        for quality in tree.xpath("//div[1]//div[2]//div[5]//tr//td[2]//div[1]//div[1]//@class")
                        if "equipmentBack" in quality]
-                # TODO: move to func
-                profile_medals = []
-                for i in range(1, 11):
-                    a = tree.xpath(f"//*[@id='medals']//ul//li[{i}]//div//text()")
-                    if a:
-                        profile_medals.append(*[x.replace("x", "") for x in a])
-                    elif "emptyMedal" not in tree.xpath(f"//*[@id='medals']//ul//li[{i}]/img/@src")[0]:
-                        profile_medals.append("1")
-                    else:
-                        profile_medals.append("0")
+                profile_medals = utils.get_profile_medals(tree)
                 strength = api['strength']
                 dmg = await dmg_calculator(api=api)
                 stats = {"crit": 12.5, "avoid": 5, "miss": 12.5, "damage": 0, "max": 0}
