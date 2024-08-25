@@ -239,7 +239,7 @@ class General(Cog):
         if military_unit_id:
             members = await utils.get_content(
                 f'{base_url}apiMilitaryUnitMembers.html?id={military_unit_id}')
-            members = set(str(row["id"]) for row in members)
+            members = {str(row["id"]) for row in members}
         else:
             members = set()
 

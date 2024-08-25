@@ -323,7 +323,7 @@ class Battle(Cog):
             except Exception:
                 nick = ""
 
-        final = defaultdict(lambda: defaultdict(lambda: tuple()))
+        final = defaultdict(lambda: defaultdict(tuple))
         qualities = set()
         all_total_tops = {index: sum(x['tops'][index] for x in tops_per_player.values()) for index in range(3)}
         fig, ax = plt.subplots()
@@ -405,7 +405,7 @@ class Battle(Cog):
                     # convert the x to log scale
                     ax.set_xscale('log')
 
-                    ticks = sorted(set(round(x) for x in mean_values if x > 20).union(range(1, min(10, max_k + 1))))
+                    ticks = sorted({round(x) for x in mean_values if x > 20}.union(range(1, min(10, max_k + 1))))
 
                     ax.set_xticks(ticks)
                     # Shift back the data to the original
@@ -684,10 +684,10 @@ class Battle(Cog):
                 await utils.custom_followup(interaction,
                                             "I'm sorry, but I could not find any neighbours of this battle.")
                 return
-            defender = set(
-                i for z in api_map for i in neighbours_id if z['occupantId'] == api_battles['defenderId']).union(
+            defender = {
+                i for z in api_map for i in neighbours_id if z['occupantId'] == api_battles['defenderId']}.union(
                 {api_battles['regionId']})
-            attacker = set(i for z in api_map for i in neighbours_id if z['occupantId'] == api_battles['attackerId'])
+            attacker = {i for z in api_map for i in neighbours_id if z['occupantId'] == api_battles['attackerId']}
             neighbours = defender if api_battles['type'] == "RESISTANCE" else defender.union(attacker)
         else:
             neighbours = set()

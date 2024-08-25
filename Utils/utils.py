@@ -405,12 +405,12 @@ async def dmg_calculator(api: dict, bonuses: str = "new") -> dict:
 def csv_to_txt(content: bytes) -> BytesIO:
     """csv to text file"""
     text = "[table]"
-    indexes = defaultdict(lambda: [])
+    indexes = defaultdict(list)
     num = -1
     for row in reader(StringIO(content.decode()), delimiter=","):
         row_len = len(row)
         if all(x == "-" for x in row) or all(not x for x in row):
-            indexes = defaultdict(lambda: [])
+            indexes = defaultdict(list)
             num = -1
             text += "[/table]\n[table]"
             continue
@@ -1037,7 +1037,7 @@ async def find_one(collection: str, _id: str) -> dict:
     """find one"""  # TODO: use msgpack
     filename = path.join(path.dirname(bot.root), f"db/{collection}_{_id}.json")
     if path.exists(filename):
-        with open(filename, "r", encoding='utf-8') as file:
+        with open(filename, encoding='utf-8') as file:
             return json.load(file)
     else:
         return {}

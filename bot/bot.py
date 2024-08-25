@@ -30,7 +30,7 @@ def find_one(collection: str, _id: str) -> dict:
     """find one"""
     filename = os.path.join(os.path.dirname(root), f"db/{collection}_{_id}.json")
     if os.path.exists(filename):
-        with open(filename, "r", encoding='utf-8') as file:
+        with open(filename, encoding='utf-8') as file:
             return json.load(file)
     else:
         return {}
@@ -81,7 +81,7 @@ class MyClient(Bot):
         self.root = root
         self.typing_gif_path = os.path.join(self.root, "files/typing.gif")
         config_path = os.path.join(self.root, "config.json")
-        with open(config_path, 'r', encoding="utf-8") as file:
+        with open(config_path, encoding="utf-8") as file:
             self.config = json.load(file)
             # {"db_url": "", "TOKEN": ""}
         self.before_invoke(reset_cancel)

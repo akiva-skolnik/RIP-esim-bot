@@ -582,7 +582,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
         if lucky:
             headers += ("Q1 LC", "Q2 LC", "Q3 LC", "Q4 LC", "Q5 LC", "Q6 LC")
         my_dict = {}
-        with open(filename, 'r') as csvfile:
+        with open(filename) as csvfile:
             for row in reader(csvfile):
                 nick = (row[0], row[1])
                 if nick not in my_dict:

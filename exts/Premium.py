@@ -167,7 +167,7 @@ class Premium(Cog):
         for index, (k, v) in enumerate(sorted(countries.items(), key=lambda x: x[1]['articles'], reverse=True)):
             if not index:
                 csv_writer.writerow(["#", "Country"] + [x.title() for x in v.keys()])
-            csv_writer.writerow(([index + 1, k] + list(v.values())))
+            csv_writer.writerow([index + 1, k] + list(v.values()))
         csv_writer.writerow(["Sum", len(countries)] + list(sum_dict.values()))
         output.seek(0)
         files.append(
@@ -717,7 +717,7 @@ class Premium(Cog):
         base_url = f"https://{server}.e-sim.org/"
         all_cc = set()
         all_products = set()
-        final = defaultdict(lambda: defaultdict(lambda: {}))
+        final = defaultdict(lambda: defaultdict(dict))
         msg = await utils.custom_followup(interaction,
                                           "Progress status: 1%.\n(I will update you after every 10%)" if len(
                                               stock_companies) > 10 else "I'm on it, Sir. Be patient.",
