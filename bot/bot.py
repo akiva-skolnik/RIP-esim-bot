@@ -116,8 +116,9 @@ class MyClient(Bot):
             self.pool.close()
         await super().close()
 
-    def __del__(self):
-        self.loop.run_until_complete(self.close())
+    async def __aexit__(self, *excinfo):
+        print("Closing bot with excinfo:", excinfo)
+        await self.close()
 
 
 async def should_cancel(interaction: Interaction, msg: Message = None) -> bool:

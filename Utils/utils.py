@@ -12,7 +12,6 @@ from itertools import islice
 from os import path
 from re import finditer
 from traceback import format_exception
-from xml.etree import ElementTree
 
 from PIL import Image, ImageDraw, ImageFont
 from aiohttp import ClientSession, ClientTimeout
@@ -21,7 +20,7 @@ from discord.app_commands import CheckFailure
 from discord.ext import tasks
 from discord.ext.commands import BadArgument, Cooldown
 from discord.utils import MISSING
-from lxml.html import fromstring
+from lxml.html import fromstring, HtmlElement
 from matplotlib import pyplot as plt
 from matplotlib.dates import DateFormatter
 from matplotlib.ticker import FixedLocator
@@ -319,7 +318,7 @@ def camel_case_merge(identifier: str) -> str:
 
 
 async def get_content(link: str, return_type: str = "", method: str = "get", session: ClientSession = None,
-                      throw: bool = False) -> dict | fromstring:
+                      throw: bool = False) -> dict | HtmlElement:
     """Get content."""
     if not return_type:
         if "api" in link or link.startswith(api_url):
@@ -718,7 +717,7 @@ def normalize_slot(slot: str) -> str:
         "weapon upgrade", "WU").replace("  ", " ").title().strip()
 
 
-def get_eqs(tree: ElementTree) -> iter:
+def get_eqs(tree: HtmlElement) -> iter:
     """Get eqs."""
     for slot_path in tree.xpath('//*[@id="profileEquipmentNew"]//div//div//div//@title'):
         tree = fromstring(slot_path)
@@ -752,7 +751,7 @@ def get_id(string: str) -> str:
     return "".join(x for x in string.split("=")[-1].split("&")[0] if x.isdigit())
 
 
-def get_ids_from_path(tree: ElementTree, xpath: str) -> list:
+def get_ids_from_path(tree: HtmlElement, xpath: str) -> list:
     """Get battle_ids from path."""
     ids = tree.xpath(xpath + "/@href")
     if ids and all("#" == x for x in ids):
@@ -849,7 +848,7 @@ async def remove_old_donors():
     await replace_one("collection", "donors", bot.premium_users)
 
 
-def get_buffs_debuffs(tree: ElementTree) -> (str, str):
+def get_buffs_debuffs(tree: HtmlElement) -> (str, str):
     buffs_debuffs = [camel_case_merge(x.split("/specialItems/")[-1].split(".png")[0]).replace("Elixir", "")
                      for x in tree.xpath(
             '//*[@class="profile-row" and (strong="Debuffs" or strong="Buffs")]//img/@src') if "img/specialItems/" in x]
@@ -879,7 +878,7 @@ def strip(data: tuple or list, apply_function: callable = None) -> tuple:
         return tuple(filter(None, map(str.strip, data)))
 
 
-def get_profile_medals(tree: ElementTree) -> list[str]:
+def get_profile_medals(tree: HtmlElement) -> list[str]:
     profile_medals = []
     for i in range(1, 11):
         medals_list = tree.xpath(f"//*[@id='medals']//ul//li[{i}]//div//text()")
