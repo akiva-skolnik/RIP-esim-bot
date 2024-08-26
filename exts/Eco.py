@@ -98,8 +98,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                             value=f"**Raw materials consumed:** {round(sum(worker), 2)}", inline=False)
         else:
             embed.add_field(name=f"**Productivity:** {round(sum(worker), 2)}", value="\u200B", inline=False)
-        embed.add_field(name="**Number of workers:**", value="\n".join([str(v) for v in workers_per_skill_dict.values()]))
-        embed.add_field(name="**Eco skill (each):**", value="\n".join([str(k) for k in workers_per_skill_dict]))
+        embed.add_field(name="**Number of workers:**", value="\n".join(map(str, workers_per_skill_dict.values())))
+        embed.add_field(name="**Eco skill (each):**", value="\n".join(map(str, workers_per_skill_dict)))
         await utils.custom_followup(interaction, embed=await utils.convert_embed(interaction, embed))
 
     @checks.dynamic_cooldown(CoolDownModified(30))
@@ -398,9 +398,9 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 embed.set_footer(text=db_dict["Product"][0][-1])
                 if results:
                     embed.add_field(name="**Link**", value="\n".join(
-                        [f"{utils.get_flag_code(row[2])} [{row[2]}]({row[3]}) ([MM]({row[4]}))" for row in results]))
-                    embed.add_field(name="**Price**", value="\n".join([f"{row[0]}g" for row in results]))
-                    embed.add_field(name="**Stock**", value="\n".join([f"{row[1]:,}" for row in results]))
+                        f"{utils.get_flag_code(row[2])} [{row[2]}]({row[3]}) ([MM]({row[4]}))" for row in results))
+                    embed.add_field(name="**Price**", value="\n".join(f"{row[0]}g" for row in results))
+                    embed.add_field(name="**Stock**", value="\n".join(f"{row[1]:,}" for row in results))
                     best_price = results[0][0]
                 else:
                     embed.add_field(name="Error", value="No offers found in the market.")
@@ -602,7 +602,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             if not headers:
                 headers = tree.xpath('//*[@id="productivityTable"]//tr[1]//td[position()>2]//text()')
             df = pd.read_html(html.tostring(tree))[0]
-            raw = " ".join([x for x in company_type.split() if "Q" not in x])
+            raw = " ".join(x for x in company_type.split() if "Q" not in x)
             not_raw = raw not in ("Iron", "Diamonds", "Grain", "Oil", "Stone", "Wood")
             for row in df.iloc[1:, 2:].to_dict(orient="index").values():
                 for key, value in row.items():
@@ -808,9 +808,9 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 "seller": seller.strip(), "seller_id": seller_id, "amount": amount, "ratio": ratio}
                 for seller, seller_id, amount, ratio in zip(sellers, seller_ids, amounts, ratios)), limit)
             embed.add_field(name="Seller", value="\n".join(
-                [f'[{x["seller"]}](https://{server}.e-sim.org/profile.html?id={x["seller_id"]})' for x in data]))
-            embed.add_field(name="Stock", value="\n".join([x["amount"] for x in data]))
-            embed.add_field(name="Price", value="\n".join([x["ratio"] for x in data]))
+                f'[{x["seller"]}](https://{server}.e-sim.org/profile.html?id={x["seller_id"]})' for x in data))
+            embed.add_field(name="Stock", value="\n".join(x["amount"] for x in data))
+            embed.add_field(name="Price", value="\n".join(x["ratio"] for x in data))
             embed.set_footer(text=buy)
         except Exception:
             pass
@@ -906,7 +906,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                     labels.append(name)
                     embed.add_field(name="\u200B", value=f"**{parameter.title()}**", inline=False)
                     embed.add_field(name="Upgrades Count",
-                                    value="\n".join([f"**Upgrade {num + 1}:**" for num in range(len(data))]))
+                                    value="\n".join(f"**Upgrade {num + 1}:**" for num in range(len(data))))
                     embed.add_field(name="Expected Value", value="\n".join(data))
                     embed.add_field(name="Percentages", value="\n".join(f'{item * 100:.2f}%' for item in percentages))
                 else:
@@ -928,7 +928,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 ax.legend([parameter])
                 embed.title = f"__**Q{quality} {parameter.title()}**__"
                 embed.add_field(name="Upgrades Count",
-                                value="\n".join([f"**Upgrade {num + 1}:**" for num in range(len(data))]))
+                                value="\n".join(f"**Upgrade {num + 1}:**" for num in range(len(data))))
                 embed.add_field(name="Expected Value", value="\n".join(data))
                 embed.add_field(name="Percentages", value="\n".join(f'{item * 100:.2f}%' for item in percentages))
                 embed.set_footer(text="Try also /upgrade <Profile Link>")

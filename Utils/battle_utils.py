@@ -69,8 +69,8 @@ async def cup_func(bot, interaction: Interaction, db_key: str, server: str, batt
         output_buffer = generate_cup_plot(hit_time_df, top5)
         embed = Embed(colour=0x3D85C6, title=f"{server}, {start_id}-{end_id}")
         embed.add_field(name="**CS, Nick**", value="\n".join(final.keys()))
-        embed.add_field(name="**Damage**", value="\n".join([f'{v["damage"]:,}' for v in final.values()]))
-        embed.add_field(name="**Hits**", value="\n".join([f'{v["hits"]:,}' for v in final.values()]))
+        embed.add_field(name="**Damage**", value="\n".join(f'{v["damage"]:,}' for v in final.values()))
+        embed.add_field(name="**Hits**", value="\n".join(f'{v["hits"]:,}' for v in final.values()))
         db_dict = await utils.find_one("collection", interaction.command.name) or {}
         for cup_dict in db_dict.get(db_key, {}):
             for channel_id, data in cup_dict.items():
@@ -196,7 +196,7 @@ async def motivate_func(bot, server: str, data: dict) -> None:
                 embed = Embed(colour=0x3D85C6, title="Citizens Registered In The Last 5 Minutes",
                               url=f'{base_url}newCitizens.html?countryId=0')
                 embed.add_field(name="Motivate Link", value="\n".join(
-                    [f'{base_url}motivateCitizen.html?id={i + 1}' for i in range(old_citizen_id, citizen_id)]))
+                    f'{base_url}motivateCitizen.html?id={i + 1}' for i in range(old_citizen_id, citizen_id)))
                 embed.set_footer(text=f"If you want to stop it, type /got servers: {server}")
                 for channel_id in list(data[server]):
                     try:
@@ -375,10 +375,10 @@ async def watch_auction_func(channel: TextChannel, link: str, t: float, custom_m
         embed = Embed(colour=0x3D85C6, title=link,
                       description=f"**__Parameters__:**\n**T**: {t}\n\n**Custom msg**: " + (
                           f"{custom_msg}" if custom_msg else "None"))
-        embed.add_field(name="Info", value="\n".join([f"**{k.title()}:** {v}" for k, v in row.items()]))
+        embed.add_field(name="Info", value="\n".join(f"**{k.title()}:** {v}" for k, v in row.items()))
 
         embed = Embed(colour=0x3D85C6, title=link)
-        embed.add_field(name="Info", value="\n".join([f"**{k.title()}:** {v}" for k, v in row.items()]))
+        embed.add_field(name="Info", value="\n".join(f"**{k.title()}:** {v}" for k, v in row.items()))
         await channel.send(custom_msg, embed=await utils.convert_embed(author_id, embed))
     return await remove_auction(link, channel.id)
 

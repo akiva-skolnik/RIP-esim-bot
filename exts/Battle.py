@@ -18,6 +18,7 @@ from discord.ext.commands import Cog, Context, hybrid_command
 from matplotlib import pyplot as plt
 
 from Utils import utils, UiButtons
+from Utils.DmgCalculator import dmg_calculator
 from Utils.battle_utils import (cup_func, motivate_func, normal_pdf, ping_func,
                                 watch_auction_func, watch_func)
 from Utils.constants import (all_countries, all_countries_by_name, all_servers,
@@ -26,7 +27,6 @@ from Utils.dmg_func import dmg_func
 from Utils.transformers import (AuctionLink, BattleLink, Country, Server,
                                 TournamentLink)
 from Utils.utils import CoolDownModified, bar, draw_pil_table, not_support
-from Utils.DmgCalculator import dmg_calculator
 
 
 class Battle(Cog):
@@ -132,8 +132,8 @@ class Battle(Cog):
         embed.add_field(name="Without Avoid", value=f"{dmg['clutch']:,}")
         embed.add_field(name="Number of hits", value=f"{dmg['hits']}")
         embed.add_field(name="\u200B", value="\u200B", inline=False)
-        embed.add_field(name="Stats", value="\n".join([f"**{k}:** {v}".title() for k, v in dmg['stats'].items() if v]))
-        embed.add_field(name="Bonuses", value="\n".join([f"**{k}:** {v}".title() for k, v in dmg['bonuses'].items()]))
+        embed.add_field(name="Stats", value="\n".join(f"**{k}:** {v}".title() for k, v in dmg['stats'].items() if v))
+        embed.add_field(name="Bonuses", value="\n".join(f"**{k}:** {v}".title() for k, v in dmg['bonuses'].items()))
         await utils.custom_followup(interaction, embed=await utils.convert_embed(interaction, embed, is_columns=False))
 
     @command()
@@ -310,8 +310,8 @@ class Battle(Cog):
                                  (int(hits_with_bonus / 150) + 1) * 150 - int(hits_with_bonus))
         drops_per_q["upg. + shuffle"] = (hits // 1500, next_upgrade)
         embed.add_field(name="**Item : Drops**",
-                        value="\n".join([f"**{k} :** {v[0]:,}" for k, v in drops_per_q.items()]))
-        embed.add_field(name="**Hits For Next**", value="\n".join([f"{int(v[1]):,}" for v in drops_per_q.values()]))
+                        value="\n".join(f"**{k} :** {v[0]:,}" for k, v in drops_per_q.items()))
+        embed.add_field(name="**Hits For Next**", value="\n".join(f"{int(v[1]):,}" for v in drops_per_q.values()))
         given_user_id = None
         if nick:
             try:
@@ -416,11 +416,11 @@ class Battle(Cog):
                 file = File(fp=output_buffer, filename=f"{interaction.id}.png")
                 embed.set_thumbnail(url=f"attachment://{interaction.id}.png")
                 embed.add_field(name="**Expected Drops: Chances**", value="\n".join(
-                    [f"**{chances[Q][0]} : ** {chances[Q][1]}" for Q in drops_per_q.keys()]))
+                    f"**{chances[Q][0]} : ** {chances[Q][1]}" for Q in drops_per_q.keys()))
                 embed.add_field(name="Top", value="\n".join(
-                    [f"**{x}**" for x in ["BH", "Top 3", "Top 10", "Hits"]]))
+                    f"**{x}**" for x in ("BH", "Top 3", "Top 10", "Hits")))
                 embed.add_field(name="Total Tops",
-                                value="\n".join([str(x) for x in all_total_tops.values()] + [f"{hits:,}"]))
+                                value="\n".join(list(map(str, all_total_tops.values())) + [f"{hits:,}"]))
                 embed.add_field(name="Your Tops",
                                 value="\n".join([f"{x:,}" for x in tops_per_player[given_user_id]['tops']]
                                                 + [f'{tops_per_player[given_user_id]["hits"]:,}']))
@@ -562,9 +562,9 @@ class Battle(Cog):
             if (index + 1) % 10 == 0 or today - birthday > 3:
                 if results:
                     embed.clear_fields()
-                    embed.add_field(name="Nick", value="\n".join([x[0] for x in results]))
-                    embed.add_field(name="Citizenship", value="\n".join([x[1] for x in results]))
-                    embed.add_field(name=":gun: :bread: :gift:", value="\n".join([x[2] for x in results]))
+                    embed.add_field(name="Nick", value="\n".join(x[0] for x in results))
+                    embed.add_field(name="Citizenship", value="\n".join(x[1] for x in results))
+                    embed.add_field(name=":gun: :bread: :gift:", value="\n".join(x[2] for x in results))
                     results.clear()
                     view = UiButtons.StopNext(interaction)
                     await interaction.edit_original_response(content=f"I have scanned {index + 1} players so far.",
@@ -575,8 +575,8 @@ class Battle(Cog):
                     await view.wait()
                     if not view.next_page or view.canceled:
                         break
-                else:
-                    await interaction.edit_original_response(content=f"Scanned {index + 1} players so far.")
+            else:
+                await interaction.edit_original_response(content=f"Scanned {index + 1} players so far.")
 
         if view:
             view.clear_items()
@@ -678,8 +678,9 @@ class Battle(Cog):
                                                          "resistance or attack battles.")
                 return
             api_regions_link = link.split("?")[0].replace("battle", "apiRegions")
-            region_neighbour_ids = next((set(z['neighbours']) for z in await utils.get_content(api_regions_link)
-                                         if z["id"] == api_battles['regionId']), set())
+            region_neighbour_ids = next(
+                (set(region['neighbours']) for region in await utils.get_content(api_regions_link)
+                 if region["id"] == api_battles['regionId']), set())
 
             defender_regions, attacker_regions = utils.get_bonus_regions(api_map, api_battles, region_neighbour_ids)
             valid_neighbour_ids = attacker_regions if api_battles['type'] == "RESISTANCE" \

@@ -32,7 +32,7 @@ class Period(Transformer):
 
     async def transform(self, interaction: Interaction, period: str) -> str:
         lookup_split = period.split()
-        if not any(x in period.lower() for x in ("hour", "day", "month", "year")) or\
+        if not any(x in period.lower() for x in ("hour", "day", "month", "year")) or \
                 len(lookup_split) > 2 or (len(lookup_split) == 2 and not lookup_split[0].isdigit()):
             error_msg = f"`period` can be `X hours/days/months/years`, example: 1 month (not {period})"
             raise CheckFailure(error_msg)
@@ -92,7 +92,7 @@ class BattleTypes(Transformer):
         for x in battle_types:
             if x not in correct_battle_types:
                 raise CheckFailure(f"No such type (`{x}`). Pls choose from this list:\n" + ", ".join(
-                    [f"`{i}`" for i in correct_battle_types]))
+                    f"`{i}`" for i in correct_battle_types))
         return battle_types or ('ATTACK', 'RESISTANCE')
 
 

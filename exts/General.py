@@ -216,11 +216,11 @@ class General(Cog):
                     stats[p] = 0
                 stats[p] += (val if p != "miss" else -val)
         embed.add_field(name="**Stats**", value="\n".join(
-            [f"**{k}:** " + (f"{round(v, 2):,}" if not isinstance(v, str) else v) for k, v in stats.items()]))
+            f"**{k}:** " + (f"{round(v, 2):,}" if not isinstance(v, str) else v) for k, v in stats.items()))
         embed.add_field(name="**Equipments**", value="\n".join(eqs) or "- no eqs found -")
 
         embed.add_field(name="Links", value="\n".join(
-            [f"[{k}]({v})" for k, v in get_user_links(base_url, link, api, company).items() if v]))
+            f"[{k}]({v})" for k, v in get_user_links(base_url, link, api, company).items() if v))
         avatar_url = tree.xpath('//*[@class="bigAvatar epidemic"]/@src')[0].strip()
         files = []
         if "http" in avatar_url:
@@ -406,13 +406,13 @@ class General(Cog):
             row = await utils.get_content(get_url)
             wanted_keys = {"description", "achieved_by", "category"}
             embed.add_field(name="Info",
-                            value="\n".join([f"**{k.replace('_', ' ').title()}:** {v}"
-                                             for k, v in row.items() if k in wanted_keys]))
+                            value="\n".join(f"**{k.replace('_', ' ').title()}:** {v}"
+                                            for k, v in row.items() if k in wanted_keys))
 
         # auction, article and law are the most common, therefore I prefer to skip the api.
         elif "/auction.html" in link:
             data = await utils.get_auction(link)
-            embed.add_field(name="Info", value="\n".join([f"**{k.title()}:** {v}" for k, v in sorted(data.items())]))
+            embed.add_field(name="Info", value="\n".join(f"**{k.title()}:** {v}" for k, v in sorted(data.items())))
 
         elif "/article.html" in link:
             tree = await utils.get_content(link)
@@ -426,7 +426,7 @@ class General(Cog):
                    "votes": votes,
                    "newspaper": f"[{newspaper_name}]({base_url}newspaper.html?id={newspaper_id})", "subs": subs}
             embed.add_field(name=f"**Title:** {title}",
-                            value="\n".join([f"**{k.title()}:** {v}" for k, v in sorted(row.items())]))
+                            value="\n".join(f"**{k.title()}:** {v}" for k, v in sorted(row.items())))
 
         elif "/law.html" in link:
             tree = await utils.get_content(link)
@@ -444,19 +444,20 @@ class General(Cog):
             row = {"law_proposal": proposal, "proposed_by": by.strip(), "proposed": time2,
                    "remaining_time" if "Voting finished" not in time1 else "status": time1,
                    "result": f'{yes} Yes, {no} No'}
-            embed.add_field(name="Info", value="\n".join([f"**{k.replace('_', ' ').title()}:** {v}"
-                                                          for k, v in sorted(row.items())]))
+            embed.add_field(name="Info", value="\n".join(f"**{k.replace('_', ' ').title()}:** {v}"
+                                                         for k, v in sorted(row.items())))
 
         elif "/party.html" in link or "/showShout.html" in link:
             row = await utils.get_content(get_url)
             if "party" in link:
                 del row["members_list"]
                 row["country"] = f"{utils.get_flag_code(row['country'])} " + row["country"]
-            embed.add_field(name="Info", value="\n".join([f"**{k.replace('_', ' ').title()}:** {v}"
-                                                          for k, v in sorted(row.items())]))
+            embed.add_field(name="Info", value="\n".join(f"**{k.replace('_', ' ').title()}:** {v}"
+                                                         for k, v in sorted(row.items())))
 
         elif "/citizenStatistics.html" in link:
             row = await utils.get_content(get_url)
+            # TODO: isslice
             embed.add_field(name="#", value="\n".join([f"**{k}**" for k in range(1, len(row["citizens"]) + 1)][:5]))
             embed.add_field(name="Nick", value="\n".join(
                 [f"{utils.get_flag_code(v['country'])} [{v['nick']}]({base_url}profile.html?id={v['id']}),"
@@ -479,7 +480,7 @@ class General(Cog):
                 if any(types):
                     result["nick"].append(
                         f"{utils.get_flag_code(v['country'])} [{v['name']}]({base_url}profile.html?id={v['id']})")
-                    result["motivate"].append(" ".join(["\U0001f534" if x else "\U0001f7e2" for x in types]))
+                    result["motivate"].append(" ".join("\U0001f534" if x else "\U0001f7e2" for x in types))
                     result["registered"].append(v['registered'])
 
             if any(result.values()):
@@ -514,7 +515,7 @@ class General(Cog):
             embed.add_field(name="Bar", value="\n".join(
                 [(utils.bar(v['defender']['bar'], v['attacker']['bar'], size=6)).splitlines()[0]
                  for v in row['battles']][:5]))
-            embed.set_footer(text="Battles: " + ", ".join([str(x['battle_id']) for x in row['battles']]))
+            embed.set_footer(text="Battles: " + ", ".join(str(x['battle_id']) for x in row['battles']))
 
         elif "/battlesByWar.html" in link:
             row = await utils.get_content(get_url)
@@ -525,7 +526,7 @@ class General(Cog):
                  f"({base_url}battle.html?id={v['id']})"
                  f" ({v['defender_score']}:{v['attacker_score']})" for v in row['battles']][:5]))
             embed.add_field(name="Dmg", value="\n".join([f"{v['dmg']:,}" for v in row['battles']][:5]))
-            embed.set_footer(text="Battles: " + ", ".join([str(x['battle_id']) for x in row['battles']]))
+            embed.set_footer(text="Battles: " + ", ".join(str(x['battle_id']) for x in row['battles']))
 
         elif "/companiesForSale.html" in link:
             row = await utils.get_content(get_url)
@@ -547,9 +548,9 @@ class General(Cog):
         elif "/productMarket.html" in link:
             row = await utils.get_content(get_url)
             row = row["offers"][:5]
-            embed.add_field(name="Product", value="\n".join([x["product"] for x in row]))
-            embed.add_field(name="Stock", value="\n".join([str(x["stock"]) for x in row]))
-            embed.add_field(name="Price", value="\n".join([f'{x["price"]} {x["coin"]}' for x in row]))
+            embed.add_field(name="Product", value="\n".join(x["product"] for x in row))
+            embed.add_field(name="Stock", value="\n".join(str(x["stock"]) for x in row))
+            embed.add_field(name="Price", value="\n".join(f'{x["price"]} {x["coin"]}' for x in row))
 
         elif "/region.html" in link:  # TODO: fix
             row = await utils.get_content(get_url)
@@ -561,9 +562,9 @@ class General(Cog):
             row["buildings"] = len(row["buildings"])
             for key in ("current_owner", "rightful_owner"):
                 row[key] = f"{utils.get_flag_code(row[key])} " + row[key]
-            embed.add_field(name="Info", value="\n".join([
+            embed.add_field(name="Info", value="\n".join(
                 f"**{k.replace('_', ' ').title()}:** {v}" for k, v in row.items() if (
-                        not isinstance(v, (dict, list)) and v != "No resources")]))
+                        not isinstance(v, (dict, list)) and v != "No resources")))
 
         elif "/stockCompanyStatistics.html" in link:
             row = await utils.get_content(get_url)
@@ -592,8 +593,8 @@ class General(Cog):
             row["total_coins_in_treasury"] = round(sum(row["treasury"][0].values()))
             row['country'] = f"{utils.get_flag_code(row['country'])} " + row['country']
             embed.add_field(name="Info",
-                            value="\n".join([f"**{k.replace('_', ' ').title()}:** {v}" for k, v in row.items()
-                                             if k in wanted_keys]))
+                            value="\n".join(f"**{k.replace('_', ' ').title()}:** {v}" for k, v in row.items()
+                                            if k in wanted_keys))
 
         elif "/countryPoliticalStatistics.html" in link:
             row = await utils.get_content(get_url)
@@ -613,8 +614,8 @@ class General(Cog):
                 row[event] = len(row[event])
                 wanted_keys.add(event)
             embed.add_field(name="Info",
-                            value="\n".join([f"**{k.replace('_', ' ').title()}:** {v}" for k, v in row.items()
-                                             if k in wanted_keys]))
+                            value="\n".join(f"**{k.replace('_', ' ').title()}:** {v}" for k, v in row.items()
+                                            if k in wanted_keys))
 
         elif "/events.html" in link:
             row = await utils.get_content(get_url)
@@ -650,7 +651,7 @@ class General(Cog):
                    "Citizenship": all_countries[api1['countryId']], "Type": api1['militaryUnitType'],
                    "Value": api2['value']}
             row['Citizenship'] = f"{utils.get_flag_code(row['Citizenship'])}" + row['Citizenship']
-            embed.add_field(name="Info", value="\n".join([f"**{k}:** {v}" for k, v in row.items()]))
+            embed.add_field(name="Info", value="\n".join(f"**{k}:** {v}" for k, v in row.items()))
             row = {f"Battle Order: {all_countries[api2['todayBattleAttacker']]} VS "
                    f"{all_countries[api2['todayBattleDefender']]}": f"{base_url}battle.html?id={api2['todayBattleId']}",
                    "Recruitment": link.replace("militaryUnit", "militaryUnitRecrutation"),
@@ -659,7 +660,7 @@ class General(Cog):
                    "MU Companies": link.replace("militaryUnit", "militaryUnitCompanies"),
                    "Members info": link.replace("militaryUnit", "militaryUnitMembers"),
                    "Leader": f"{base_url}profile.html?id={api2['leaderId']}"}
-            embed.add_field(name="Links", value="\n".join([f"[{k.title()}]({v})" for k, v in row.items()]))
+            embed.add_field(name="Links", value="\n".join(f"[{k.title()}]({v})" for k, v in row.items()))
 
         elif "/newspaper.html" in link:
             row = await utils.get_content(get_url)
@@ -679,28 +680,28 @@ class General(Cog):
         elif "/stockCompany.html" in link:
             row = await utils.get_content(get_url)
             embed.add_field(name="Info", value="\n".join(
-                [f"**{k.replace('_', ' ').title()}:** {v}" for k, v in row.items() if not isinstance(v, list)]))
+                f"**{k.replace('_', ' ').title()}:** {v}" for k, v in row.items() if not isinstance(v, list)))
 
         elif "/stockCompanyMoney.html" in link:
             raw_data = await utils.get_content(get_url)
             raw_data = raw_data["storage"]
             row = {"Gold": raw_data["Gold"],
                    "Total coins": round(sum(x for x in raw_data.values() if not isinstance(x, list)))}
-            embed.add_field(name="Info", value="\n".join([f"**{k.title()}:** {v:,}" for k, v in row.items()]))
+            embed.add_field(name="Info", value="\n".join(f"**{k.title()}:** {v:,}" for k, v in row.items()))
 
         elif "/stockCompanyProducts.html" in link:
             row = await utils.get_content(get_url)
             row = utils.split_list(row["storage"], 3)
             for LIST in row:
                 embed.add_field(name="\u200B",
-                                value="\n".join([f"**{x['product'].title()}:** {x['amount']:,}" for x in LIST]))
+                                value="\n".join(f"**{x['product'].title()}:** {x['amount']:,}" for x in LIST))
 
         elif "/battleDrops.html" in link:
             row = await utils.get_content(get_url)
             for LIST in utils.split_list(row["drops"], 3):
-                embed.add_field(name="Item: Nick", value="\n".join([
+                embed.add_field(name="Item: Nick", value="\n".join(
                     (f"**Q{x['quality']} {x['item'].title()}:**" if 'quality' in x else f"**{x['item'].title()}:**") +
-                    f" [{x['nick']}]({base_url}profile.html?id={x['citizen_id']})" for x in LIST]))
+                    f" [{x['nick']}]({base_url}profile.html?id={x['citizen_id']})" for x in LIST))
 
         elif "/newMap.html" in link:
             await utils.custom_followup(

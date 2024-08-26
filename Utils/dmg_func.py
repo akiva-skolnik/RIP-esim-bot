@@ -223,9 +223,9 @@ async def dmg_func(bot, interaction: Interaction, battle_link: Transform[dict, B
     embed = Embed(colour=0x3D85C6)
     embed.set_thumbnail(url=f"attachment://{interaction.id}.png")
 
-    embed.add_field(name="**#**", value="\n".join([str(i) for i in list(range(1, len(new_dict) + 1))]))
-    embed.add_field(name=f"**{embed_name}**", value="\n".join([str(k) for k, v in new_dict.items()]))
-    embed.add_field(name="**DMG**", value="\n".join([f"{v:,}" for k, v in new_dict.items()]))
+    embed.add_field(name="**#**", value="\n".join(map(str, range(1, len(new_dict) + 1))))
+    embed.add_field(name=f"**{embed_name}**", value="\n".join(str(k) for k, v in new_dict.items()))
+    embed.add_field(name="**DMG**", value="\n".join(f"{v:,}" for k, v in new_dict.items()))
     keys = {'Military Unit Id': {'api_url': 'apiMilitaryUnitById', 'api_key': 'name', 'cs_key': 'countryId',
                                  'final_link': 'militaryUnit'},
             'Citizen Id': {'api_url': 'apiCitizenById', 'api_key': 'login', 'cs_key': 'citizenshipId',

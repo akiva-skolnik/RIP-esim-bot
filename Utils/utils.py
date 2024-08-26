@@ -315,7 +315,7 @@ def csv_to_txt(content: bytes) -> BytesIO:
 def camel_case_merge(identifier: str) -> str:
     """Camel case merge."""
     matches = finditer('.+?(?:(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|$)', identifier)
-    return " ".join([m.group(0) for m in matches]).title()
+    return " ".join(m.group(0) for m in matches).title()
 
 
 async def get_content(link: str, return_type: str = "", method: str = "get", session: ClientSession = None,
@@ -613,13 +613,12 @@ async def convert_embed(interaction_or_author: Interaction | int, embed: Embed, 
         columns += 1
         for index in reversed(range(first, first + columns)):
             embed.remove_field(index)
-        embed.insert_field_at(first, name="\n".join([field.name for field in embed_fields[first:first + columns]]),
-                              value="\u200B",
-                              inline=False)
+        embed.insert_field_at(first, name="\n".join(field.name for field in embed_fields[first:first + columns]),
+                              value="\u200B", inline=False)
         my_list = tuple(tuple(embed_fields[x + first].value.splitlines()[i] for x in range(columns)) for i in
                         range(len(embed_fields[0 + first].value.splitlines())))
         for index, a_tuple in enumerate(split_list(my_list, 3)):
-            embed.insert_field_at(index + first + 1, name="\u200B", value="\n".join(["\n".join(x) for x in a_tuple]))
+            embed.insert_field_at(index + first + 1, name="\u200B", value="\n".join("\n".join(x) for x in a_tuple))
 
     if not embed.footer:
         embed.set_footer(text="That is an auto phone format. Type `/phone` to change this preference")
@@ -854,12 +853,12 @@ def get_buffs_debuffs(tree: ElementTree) -> (str, str):
     buffs_debuffs = [camel_case_merge(x.split("/specialItems/")[-1].split(".png")[0]).replace("Elixir", "")
                      for x in tree.xpath(
             '//*[@class="profile-row" and (strong="Debuffs" or strong="Buffs")]//img/@src') if "img/specialItems/" in x]
-    buffs = ', '.join([x.split("_")[0].replace("Vacations", "Vac").replace(
+    buffs = ', '.join(x.split("_")[0].replace("Vacations", "Vac").replace(
         "Resistance", "Sewer").replace("Pain Dealer", "PD ").replace(
         "Bonus Damage", "") + ("% Bonus" if "Bonus Damage" in x.split("_")[0] else "")
-                       for x in buffs_debuffs if "Positive" in x.split("_")[1:]]).title()
-    debuffs = ', '.join([x.split("_")[0].lower().replace("Vacation", "Vac").replace(
-        "Resistance", "Sewer") for x in buffs_debuffs if "Negative" in x.split("_")[1:]]).title()
+                      for x in buffs_debuffs if "Positive" in x.split("_")[1:]).title()
+    debuffs = ', '.join(x.split("_")[0].lower().replace("Vacation", "Vac").replace(
+        "Resistance", "Sewer") for x in buffs_debuffs if "Negative" in x.split("_")[1:]).title()
     return buffs, debuffs
 
 
