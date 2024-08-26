@@ -142,6 +142,47 @@ class Admin(Cog):
 
     @command()
     @guilds(utils.hidden_guild)
+    async def shell(self, interaction: Interaction, code: str, additional_input: str = None) -> None:
+        """Run a shell command."""
+        if interaction.user.id != config_ids.get("OWNER_ID"):
+            return
+
+        import subprocess, asyncio
+        try:
+            process = await asyncio.create_subprocess_shell(
+                code, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdout, stderr = await process.communicate(input=additional_input.encode() if additional_input else None)
+        except NotImplementedError:
+            process = subprocess.Popen(code, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            stdout, stderr = await self.bot.loop.run_in_executor(None, process.communicate)
+        output = ""
+        if stdout:
+            output += f"stdout:\n{stdout.decode()}\n"
+        if stderr:
+            output += f"stderr:\n{stderr.decode()}"
+        await utils.custom_followup(interaction, f"```{output[:1950]}```")
+
+    @command()
+    @guilds(utils.hidden_guild)
+    async def execute_sql(self, interaction: Interaction, code: str) -> None:
+        """Executes a given SQL code."""
+        if interaction.user.id != config_ids.get("OWNER_ID"):
+            return
+
+        async with self.bot.pool.acquire() as connection:
+            async with connection.cursor() as cursor:
+                try:
+                    await cursor.execute(code)
+                    if cursor.description:
+                        result = await cursor.fetchall()
+                        await utils.custom_followup(interaction, f"```{result[:1950]}```")
+                    else:
+                        await utils.custom_followup(interaction, "Done.")
+                except Exception as error:
+                    await utils.custom_followup(interaction, f"```{error[:1950]}```")
+
+    @command()
+    @guilds(utils.hidden_guild)
     async def load(self, interaction: Interaction, ext: str) -> None:
         """Load Extensions."""
         await self.bot.reload_extension("exts." + ext)
