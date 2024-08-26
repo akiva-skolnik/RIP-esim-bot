@@ -5,7 +5,6 @@ from collections import defaultdict
 from csv import writer
 from datetime import datetime, timedelta
 from io import BytesIO, StringIO
-from itertools import islice
 
 import matplotlib.axes
 import matplotlib.lines
@@ -45,18 +44,20 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
 
         if not quality:
             quality = 5
+        # workers = "2.5 + 3 x 4.6" => ['2.5', '3 x 4.6']
         workers = workers.replace("`", "").replace("*", "x").replace(",", "+").lower().split("+")
-        workers_per_skill_dict = {}
-        for workers_per_skill in workers:  # ['2.5', '3 x 4.6']
+        workers_per_skill_dict = {}  # {2.5: 1, 4.6: 3}
+        for workers_per_skill in workers:
             if "x" not in workers_per_skill:
                 n_workers = 1
                 skill = workers_per_skill
             else:
                 n_workers, skill = workers_per_skill.split("x")
             workers_per_skill_dict[float(skill)] = int(n_workers)
-        workers_count = workers_per_skill_dict.values()
 
-        ecos = itertools.chain.from_iterable(itertools.repeat(k, v) for k, v in workers_per_skill_dict.items())
+        # ['2.5', '3 x 4.6'] -> [2.5, 4.6, 4.6, 4.6]
+        ecos = itertools.chain.from_iterable(itertools.repeat(skill, n_workers)
+                                             for skill, n_workers in workers_per_skill_dict.items())
 
         raw = company_type.lower() in all_products[:6]
         high_raw = high_product = False
@@ -65,26 +66,29 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 high_raw = True
             else:
                 high_product = True
+
         worker = []
-        for worker_count, ES in zip(range(1, sum(workers_count) + 1), ecos):
-            E = float(ES)  # Economy skill level
+        for workers_count, E in zip(range(1, sum(workers_per_skill_dict.values()) + 1), ecos):
+            # E = Economy skill level
             # N = Number of employees already worked that day in the company.
-            if worker_count < 10:
-                N = 15 - (worker_count - 1) / 2
-            elif worker_count < 20:
-                N = 13 - (3 * worker_count) / 10
-            elif worker_count < 30:
-                N = 11 - worker_count / 5
+            if workers_count < 10:
+                N = 15 - (workers_count - 1) / 2
+            elif workers_count < 20:
+                N = 13 - (3 * workers_count) / 10
+            elif workers_count < 30:
+                N = 11 - workers_count / 5
             else:
                 N = 5
             R = 4 * (quality / 20 + 1 / 5) if high_raw else 3 * (quality / 20 + 1 / 5) if raw else 1  # Raw effects
             M = 1.25 if high_product else 1  # Manufactured effects
             C = 0.75 if not country_control_capital else 1  # Capital malus
             S = 3 if speed_server else 1  # Speed server bonus production
-            P = (4 + E) * N * C * R * M * S
+            P = (4 + E) * N * C * R * M * S  # Productivity
             worker.append(P)
-        high = ("high", True) if high_product or high_raw else ("high", False)
-        parameters = (i[0] for i in (("capital", country_control_capital), high, ("speed", speed_server)) if i[1])
+        params = (("capital", country_control_capital),
+                  ("high", high_product or high_raw),
+                  ("speed", speed_server))
+        parameters = (i[0] for i in params if i[1])
 
         embed = Embed(colour=0x3D85C6, title=f"Q{quality} {company_type.title()}, {', '.join(parameters)}".title())
         if not raw:
@@ -325,7 +329,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         result_iter = (f"**{num}.** {penalty}% {utils.get_flag_code(owner)} [{region_name[:15]}]({link})" for
                        num, ((link, region_name, owner), penalty) in enumerate(
             sorted(penalty_per_region.items(), key=lambda x: x[1], reverse=True), start=1))
-        result = tuple(islice(result_iter, limit))
+        result = tuple(itertools.islice(result_iter, limit))
         if not result:
             await utils.custom_followup(interaction,
                                         f"I couldn't find {raw} regions in {country_name if country else server}")
@@ -800,8 +804,9 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             amounts = tree.xpath("//*[@class='amount']//b/text()")
             ratios = tree.xpath("//*[@class='ratio']//b/text()")
             limit = 5
-            data = islice(({"seller": seller.strip(), "seller_id": seller_id, "amount": amount, "ratio": ratio}
-                           for seller, seller_id, amount, ratio in zip(sellers, seller_ids, amounts, ratios)), limit)
+            data = itertools.islice(({
+                "seller": seller.strip(), "seller_id": seller_id, "amount": amount, "ratio": ratio}
+                for seller, seller_id, amount, ratio in zip(sellers, seller_ids, amounts, ratios)), limit)
             embed.add_field(name="Seller", value="\n".join(
                 [f'[{x["seller"]}](https://{server}.e-sim.org/profile.html?id={x["seller_id"]})' for x in data]))
             embed.add_field(name="Stock", value="\n".join([x["amount"] for x in data]))
@@ -827,8 +832,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         if "/profile.html?id=" in parameter:
             server_nick = await ProfileLink().transform(interaction, parameter)
             server = server_nick['server']
-            base_link = "apiCitizenByName.html?name=" if isinstance(server_nick["nick_or_id"],
-                                                                    str) else "apiCitizenById.html?id="
+            base_link = "apiCitizenByName.html?name=" if isinstance(
+                server_nick["nick_or_id"], str) else "apiCitizenById.html?id="
             api = await utils.get_content(
                 f"https://{server_nick['server']}.e-sim.org/{base_link}{str(server_nick['nick_or_id']).lower()}")
 
