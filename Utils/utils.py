@@ -902,3 +902,19 @@ def get_current_time(timezone_aware: bool = True) -> datetime:
     if not timezone_aware:
         now = now.replace(tzinfo=None)
     return now
+
+
+def get_bonus_regions(api_map: list[dict], api_battles: dict, region_neighbour_ids: set[int]) -> (set[int], set[int]):
+    """defender_regions are the regions that are neighbours of the regionId
+        and have the same occupantId as the defenderId"""
+    assert api_battles['type'] in ("RESISTANCE", "ATTACK")
+    is_attack = api_battles['type'] == "ATTACK"
+    defender_regions = {api_battles['regionId']}
+    attacker_regions = set() if is_attack else {api_battles['regionId']}
+    for region_entry in api_map:
+        if region_entry["regionId"] in region_neighbour_ids:
+            if is_attack and region_entry['occupantId'] == api_battles['defenderId']:
+                defender_regions.add(region_entry["regionId"])
+            elif region_entry['occupantId'] == api_battles['attackerId']:
+                attacker_regions.add(region_entry["regionId"])
+    return defender_regions, attacker_regions

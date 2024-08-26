@@ -677,20 +677,15 @@ class Battle(Cog):
                 await utils.custom_followup(interaction, "I'm sorry, but I can only show online citizens in "
                                                          "resistance or attack battles.")
                 return
-            try:
-                neighbours_id = next(z['neighbours'] for z in await utils.get_content(link.split("?")[0].replace(
-                    "battle", "apiRegions")) if z["id"] == api_battles['regionId'])
-            except StopIteration:
-                await utils.custom_followup(interaction,
-                                            "I'm sorry, but I could not find any neighbours of this battle.")
-                return
-            defender = {
-                i for z in api_map for i in neighbours_id if z['occupantId'] == api_battles['defenderId']}.union(
-                {api_battles['regionId']})
-            attacker = {i for z in api_map for i in neighbours_id if z['occupantId'] == api_battles['attackerId']}
-            neighbours = defender if api_battles['type'] == "RESISTANCE" else defender.union(attacker)
+            api_regions_link = link.split("?")[0].replace("battle", "apiRegions")
+            region_neighbour_ids = next((set(z['neighbours']) for z in await utils.get_content(api_regions_link)
+                                         if z["id"] == api_battles['regionId']), set())
+
+            defender_regions, attacker_regions = utils.get_bonus_regions(api_map, api_battles, region_neighbour_ids)
+            valid_neighbour_ids = attacker_regions if api_battles['type'] == "RESISTANCE" \
+                else defender_regions.union(attacker_regions)
         else:
-            neighbours = set()
+            valid_neighbour_ids = set()
         api_map.clear()
         table = []
         find_buff = await utils.find_one("buffs", server)
@@ -700,7 +695,7 @@ class Battle(Cog):
             row = loads(row)
             name = row['login']
             location_id = row['localization']
-            if (members and name not in members) or (check_battle and location_id not in neighbours):
+            if (members and name not in members) or (check_battle and location_id not in valid_neighbour_ids):
                 continue
             citizenship = row['citizenship']
             level = row['level']
