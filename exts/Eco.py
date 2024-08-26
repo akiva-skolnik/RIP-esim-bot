@@ -1,4 +1,5 @@
 """Eco.py."""
+import itertools
 import statistics
 from collections import defaultdict
 from csv import writer
@@ -45,14 +46,17 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         if not quality:
             quality = 5
         workers = workers.replace("`", "").replace("*", "x").replace(",", "+").lower().split("+")
-        workers_dict = {}
-        for x in workers:
-            if "x" not in x:
-                x = "1x" + x
-            n_workers, skill = x.split("x")
-            workers_dict[float(skill)] = int(n_workers)
-        workers_count = workers_dict.values()
-        ecos = (j for i in ((k,) * v for k, v in workers_dict.items()) for j in i)
+        workers_per_skill_dict = {}
+        for workers_per_skill in workers:  # ['2.5', '3 x 4.6']
+            if "x" not in workers_per_skill:
+                n_workers = 1
+                skill = workers_per_skill
+            else:
+                n_workers, skill = workers_per_skill.split("x")
+            workers_per_skill_dict[float(skill)] = int(n_workers)
+        workers_count = workers_per_skill_dict.values()
+
+        ecos = itertools.chain.from_iterable(itertools.repeat(k, v) for k, v in workers_per_skill_dict.items())
 
         raw = company_type.lower() in all_products[:6]
         high_raw = high_product = False
@@ -90,8 +94,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                             value=f"**Raw materials consumed:** {round(sum(worker), 2)}", inline=False)
         else:
             embed.add_field(name=f"**Productivity:** {round(sum(worker), 2)}", value="\u200B", inline=False)
-        embed.add_field(name="**Number of workers:**", value="\n".join([str(v) for v in workers_dict.values()]))
-        embed.add_field(name="**Eco skill (each):**", value="\n".join([str(k) for k in workers_dict]))
+        embed.add_field(name="**Number of workers:**", value="\n".join([str(v) for v in workers_per_skill_dict.values()]))
+        embed.add_field(name="**Eco skill (each):**", value="\n".join([str(k) for k in workers_per_skill_dict]))
         await utils.custom_followup(interaction, embed=await utils.convert_embed(interaction, embed))
 
     @checks.dynamic_cooldown(CoolDownModified(30))
@@ -125,7 +129,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         embed = Embed(colour=0x3D85C6, title=f"Job offers at {server}, skill {skill}")
         data = sorted(data.items(), key=lambda item: item[1], reverse=True)[:10]
         embed.add_field(name="Link", value="\n".join(
-            f"{utils.codes(v[1])} [{v[1].title()}]({k})" for k, v in data))
+            f"{utils.get_flag_code(v[1])} [{v[1].title()}]({k})" for k, v in data))
         embed.add_field(name="Gold", value="\n".join(f"{v[0]}g" for k, v in data))
         embed.add_field(name="MM rate", value="\n".join(v[2] for k, v in data))
         embed.set_thumbnail(url=self.bot.user.avatar.url)
@@ -213,7 +217,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                                  region["rawRichness"].title().replace("None", ""),
                                  region.get("resource", "").title()])
             if _region_id in first_region_of_each_country:
-                result.append((count, f"{utils.codes(country_name)} " + country_name, estimate_time))
+                result.append((count, f"{utils.get_flag_code(country_name)} " + country_name, estimate_time))
                 count += 1
 
         embed = Embed(colour=0x3D85C6, title="NPC Estimate work time per country",
@@ -318,7 +322,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
 
         embed = Embed(colour=0x3D85C6, title=f"{raw}, {server}".title())
         limit = 30  # TODO: send multiple pages
-        result_iter = (f"**{num}.** {penalty}% {utils.codes(owner)} [{region_name[:15]}]({link})" for
+        result_iter = (f"**{num}.** {penalty}% {utils.get_flag_code(owner)} [{region_name[:15]}]({link})" for
                        num, ((link, region_name, owner), penalty) in enumerate(
             sorted(penalty_per_region.items(), key=lambda x: x[1], reverse=True), start=1))
         result = tuple(islice(result_iter, limit))
@@ -326,7 +330,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             await utils.custom_followup(interaction,
                                         f"I couldn't find {raw} regions in {country_name if country else server}")
         else:
-            for column in await split_list(result, 3 if len(result) > 10 else 2):
+            for column in split_list(result, 3 if len(result) > 10 else 2):
                 if column:
                     embed.add_field(name="\u200B", value="\n".join(column))
             if len(region_ids) > limit:
@@ -346,7 +350,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                       description=f"[All products]({self._get_product_sheet_link(server)}),"
                                   f" [API For developers]({api_url}/https:/{server}.e-sim.org/prices.html)")
         headers = ("Cheapest Item", "Price", "Stock")
-        results = tuple((f"**{item}**: {utils.codes(row[0][2])} {row[0][2]}", f"{row[0][0]}g", f"{row[0][1]:,}")
+        results = tuple((f"**{item}**: {utils.get_flag_code(row[0][2])} {row[0][2]}", f"{row[0][0]}g", f"{row[0][1]:,}")
                         for item, row in db_dict.items() if item != "Product")
         embed.set_footer(text=db_dict["Product"][0][-1])
         await utils.send_long_embed(interaction, embed, headers, results)
@@ -390,7 +394,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 embed.set_footer(text=db_dict["Product"][0][-1])
                 if results:
                     embed.add_field(name="**Link**", value="\n".join(
-                        [f"{utils.codes(row[2])} [{row[2]}]({row[3]}) ([MM]({row[4]}))" for row in results]))
+                        [f"{utils.get_flag_code(row[2])} [{row[2]}]({row[3]}) ([MM]({row[4]}))" for row in results]))
                     embed.add_field(name="**Price**", value="\n".join([f"{row[0]}g" for row in results]))
                     embed.add_field(name="**Stock**", value="\n".join([f"{row[1]:,}" for row in results]))
                     best_price = results[0][0]
@@ -460,7 +464,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 await utils.replace_one("price", server, db_dict)
 
                 embed.add_field(name="**Link**", value="\n".join(
-                    [f"{utils.codes(DICT['country'])} [{DICT['country']}]({base_url}productMarket.html?"
+                    [f"{utils.get_flag_code(DICT['country'])} [{DICT['country']}]({base_url}productMarket.html?"
                      f"resource={item}&countryId={country_id}&quality={quality}) "
                      f"([MM]({base_url}monetaryMarket.html?buyerCurrencyId={country_id}))"
                      for country_id, DICT in offers_per_country.items()][:5]))
@@ -706,10 +710,10 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 break
             msg = await utils.update_percent(page, last_page + last_page2, msg)
             tree = await utils.get_content(link + f'&page={page}')
-            golds = (float(x) for x in tree.xpath("//tr[position()>1]//td[2]//b[1]//text()"))
+            golds = tree.xpath("//tr[position()>1]//td[2]//b[1]//text()")
             player_names = utils.strip(tree.xpath("//tr[position()>1]//td[2]//a[@class='profileLink']/text()"))
             for gold, player in zip(golds, player_names):
-                balance[player]["dividends"] += gold
+                balance[player]["dividends"] += float(gold)
             await utils.custom_delay(interaction)
 
         for page in range(1, last_page2):
@@ -727,7 +731,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         tree = await utils.get_content(f'{base_url}stockCompany.html?id={stock_company_id}')
 
         per_share = float(tree.xpath('//*[@class="muColEl"]//b/text()')[2])
-        shares = tuple(int(x) for x in tree.xpath("//td[2]//div[2]//table[1]//tr[position()>1]//td[1]//b//text()"))
+        shares = tuple(map(int, tree.xpath("//td[2]//div[2]//table[1]//tr[position()>1]//td[1]//b//text()")))
         # Remove "Show" row. It won't work if there's only 1 minor share, but it's really rare.
         shares = [shares[0]] + [shares[i] for i in range(1, len(shares)) if shares[i] <= shares[i - 1]]
         holders = utils.strip(
@@ -828,7 +832,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             api = await utils.get_content(
                 f"https://{server_nick['server']}.e-sim.org/{base_link}{str(server_nick['nick_or_id']).lower()}")
 
-            embed.title = f"{utils.codes(api['citizenship'])} " + api['login'] + ", " + server
+            embed.title = f"{utils.get_flag_code(api['citizenship'])} " + api['login'] + ", " + server
             embed.url = f"https://{server_nick['server']}.e-sim.org/profile.html?id={api['id']}"
             profile_items = {utils.normalize_slot(item["slot"]): tuple(
                 (utils.normalize_parameter_string(p["name"]), p["value"]) for p in item["parameters"])

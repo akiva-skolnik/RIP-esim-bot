@@ -17,7 +17,8 @@ from discord.ext.commands import Cog
 from Utils import utils, db_utils
 from Utils.constants import all_countries, all_countries_by_name, api_url
 from Utils.transformers import BattleTypes, Ids, Server
-from Utils.utils import CoolDownModified, dmg_calculator
+from Utils.utils import CoolDownModified
+from Utils.DmgCalculator import dmg_calculator
 
 
 class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": False}):
@@ -221,7 +222,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                        if "equipmentBack" in quality]
                 profile_medals = utils.get_profile_medals(tree)
                 strength = api['strength']
-                dmg = await dmg_calculator(api=api)
+                dmg = dmg_calculator(api=api)
                 stats = {"crit": 12.5, "avoid": 5, "miss": 12.5, "damage": 0, "max": 0}
                 for eq_type, parameters, values, _ in utils.get_eqs(tree):
                     for val, p in zip(values, parameters):
@@ -637,7 +638,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                 count += 1
                 msg = await utils.update_percent(count, (last_page - 2) * 24 + len(links), msg)
                 api = await utils.get_content(f"{base_url}apiCitizenById.html?id={user_id}")
-                dmg = await dmg_calculator(api)
+                dmg = dmg_calculator(api)
                 csv_writer.writerow([api["login"], api['citizenship'], api['eqCriticalHit'], api['eqReduceMiss'],
                                      api['eqAvoidDamage'], api['eqIncreaseMaxDamage'], api['eqIncreaseDamage'],
                                      dmg["avoid"], dmg["clutch"], api['eqIncreaseEcoSkill']])

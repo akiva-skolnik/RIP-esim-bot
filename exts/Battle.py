@@ -17,7 +17,7 @@ from discord.app_commands import (Transform, check, checks, command, describe,
 from discord.ext.commands import Cog, Context, hybrid_command
 from matplotlib import pyplot as plt
 
-from Utils import utils
+from Utils import utils, UiButtons
 from Utils.battle_utils import (cup_func, motivate_func, normal_pdf, ping_func,
                                 watch_auction_func, watch_func)
 from Utils.constants import (all_countries, all_countries_by_name, all_servers,
@@ -25,8 +25,8 @@ from Utils.constants import (all_countries, all_countries_by_name, all_servers,
 from Utils.dmg_func import dmg_func
 from Utils.transformers import (AuctionLink, BattleLink, Country, Server,
                                 TournamentLink)
-from Utils.utils import (CoolDownModified, bar,
-                         dmg_calculator, draw_pil_table, not_support)
+from Utils.utils import CoolDownModified, bar, draw_pil_table, not_support
+from Utils.DmgCalculator import dmg_calculator
 
 
 class Battle(Cog):
@@ -78,7 +78,7 @@ class Battle(Cog):
                      nick.lower() == current_nick.lower()))):
                 continue
 
-            country_nick = f" {utils.codes(citizenship) if not country else ''} [{current_nick[:12]}]({link})"
+            country_nick = f" {utils.get_flag_code(citizenship) if not country else ''} [{current_nick[:12]}]({link})"
             hyperlink = (":star:" if premium else ":lock:") + country_nick
 
             # A buff last for 24 hours
@@ -123,11 +123,11 @@ class Battle(Cog):
                    nick: str, bonuses: str = "") -> None:
         """DMG calculator."""
         api = await utils.get_content(f"https://{server}.e-sim.org/apiCitizenByName.html?name={nick.lower()}")
-        dmg = await dmg_calculator(api, bonuses)
+        dmg = dmg_calculator(api, bonuses)
 
         embed = Embed(colour=0x3D85C6,
                       description=f"[{api['login']}](https://{server}.e-sim.org/profile.html?id={api['id']}),"
-                                  f" {utils.codes(api['citizenship'])} {api['citizenship']}")
+                                  f" {utils.get_flag_code(api['citizenship'])} {api['citizenship']}")
         embed.add_field(name="Estimate Dmg", value=f"{dmg['avoid']:,}")
         embed.add_field(name="Without Avoid", value=f"{dmg['clutch']:,}")
         embed.add_field(name="Number of hits", value=f"{dmg['hits']}")
@@ -165,7 +165,7 @@ class Battle(Cog):
                 await utils.replace_one("collection", interaction.command.name, find_cup)
                 await cup_func(self.bot, interaction, link, server,
                                battle_ids_range=battle_ids_range,
-                               excluded_ids=set(battle_ids_range) - set(ids))
+                               excluded_ids=set(battle_ids_range) - ids)
             else:
                 await interaction.edit_original_response(
                     content="No IDs found. Consider using the `cup` command instead. "
@@ -201,7 +201,7 @@ class Battle(Cog):
         db_key = f"{server} {first_battle_id} {last_battle_id}"
         closest_query = None if db_key in find_cup else next((k for k in find_cup if server in k and k != db_key), None)
         if closest_query is not None:
-            view = utils.Confirm()
+            view = UiButtons.Confirm()
             await interaction.edit_original_response(
                 content=f"Would you like to change your request (`{db_key}`) into `{closest_query}`?"
                         f" It will be much faster.\n"
@@ -463,7 +463,7 @@ class Battle(Cog):
             for citizen_data in citizens_data:
                 types = citizen_data["food"], citizen_data["gift"], citizen_data["wep"]
                 if any(types):
-                    result["nick"].append(f"{utils.codes(citizen_data['country'])} ["
+                    result["nick"].append(f"{utils.get_flag_code(citizen_data['country'])} ["
                                           f"{citizen_data['name']}]({base_url}profile.html?id={citizen_data['citizen_id']})")
                     result["motivate"].append(" ".join("\U0001f534" if not x else "\U0001f7e2" for x in types))
                     result["registered"].append(citizen_data['registered'])
@@ -556,7 +556,7 @@ class Battle(Cog):
                 for motivate_type in types:
                     icons[int(motivate_type) - 1] = "\U0001f534"
                 results.append([f'[{nick}]({base_url}motivateCitizen.html?id={citizen_id})',
-                                f"{utils.codes(citizenship)} {citizenship}", " ".join(icons)])
+                                f"{utils.get_flag_code(citizenship)} {citizenship}", " ".join(icons)])
 
             citizen_id -= 1
             if (index + 1) % 10 == 0 or today - birthday > 3:
@@ -566,7 +566,7 @@ class Battle(Cog):
                     embed.add_field(name="Citizenship", value="\n".join([x[1] for x in results]))
                     embed.add_field(name=":gun: :bread: :gift:", value="\n".join([x[2] for x in results]))
                     results.clear()
-                    view = utils.StopNext(interaction)
+                    view = UiButtons.StopNext(interaction)
                     await interaction.edit_original_response(content=f"I have scanned {index + 1} players so far.",
                                                              embed=await utils.convert_embed(interaction, embed),
                                                              view=view)
@@ -728,15 +728,15 @@ class Battle(Cog):
                         find_buff[name][5], date_format)).total_seconds() < 86400 else ":green_circle: "
                     level = buff + str(level)
                     citizenship_name = find_buff[name][1]
-                    name = f"{utils.codes(citizenship_name)} [{name}]({find_buff[name][0]})"
+                    name = f"{utils.get_flag_code(citizenship_name)} [{name}]({find_buff[name][0]})"
 
                 else:
                     citizenship_name = all_countries[citizenship]
-                    name = f"{utils.codes(citizenship_name)} [{name}]({base_url}profile.html?id={row['id']})"
+                    name = f"{utils.get_flag_code(citizenship_name)} [{name}]({base_url}profile.html?id={row['id']})"
                     level = f":unlock: {level}"
 
                 header = "CS, Nick", "Level", "Location"
-                table.append((name, level, f"{utils.codes(location)} {location}"))
+                table.append((name, level, f"{utils.get_flag_code(location)} {location}"))
         if not table:
             await utils.custom_followup(
                 interaction, "I'm sorry, but I could not find anyone online " +
@@ -942,8 +942,8 @@ class Battle(Cog):
             embed.add_field(name="Time Remaining", value=f'{h:02d}:{m:02d}:{s:02d}')
             defender = all_countries.get(api_battles["defenderId"], "defender")
             attacker = all_countries.get(api_battles["attackerId"], "attacker")
-            embed.add_field(name="Sides", value=f"{utils.codes(defender)} {defender} vs "
-                                                f"{utils.codes(attacker)} {attacker}")
+            embed.add_field(name="Sides", value=f"{utils.get_flag_code(defender)} {defender} vs "
+                                                f"{utils.get_flag_code(attacker)} {attacker}")
             embed.add_field(name="Score", value=f'{api_battles["defenderScore"]}:{api_battles["attackerScore"]}')
             embed.set_footer(text="If you want me to stop watching this battle, use /unwatch")
             find_watch = await utils.find_one("collection", "watch") or {"watch": []}

@@ -55,7 +55,7 @@ async def cup_func(bot, interaction: Interaction, db_key: str, server: str, batt
         for i, (citizen_id, row) in enumerate(api_fights_df.head(10).to_dict(orient="index").items()):
             api_citizen = await utils.get_content(
                 f'{base_url}apiCitizenById.html?id={citizen_id}')  # TODO: cache to db
-            hyperlink = f"{utils.codes(api_citizen['citizenship'])}" \
+            hyperlink = f"{utils.get_flag_code(api_citizen['citizenship'])}" \
                         f" [{api_citizen['login'][:25]}]({base_url}profile.html?id={citizen_id})"
             final[hyperlink]['damage'] = row['damage']
             final[hyperlink]['hits'] = row['hits']
@@ -83,7 +83,7 @@ async def cup_func(bot, interaction: Interaction, db_key: str, server: str, batt
                     try:
                         api = await utils.get_content(
                             f'{base_url}apiCitizenByName.html?name={data["nick"].lower()}')
-                        key = f"{utils.codes(api['citizenship'])} [{api['login']}]({base_url}profile.html?id={api['id']})"
+                        key = f"{utils.get_flag_code(api['citizenship'])} [{api['login']}]({base_url}profile.html?id={api['id']})"
                         if key not in final:
                             i = api_fights_df.index.get_loc(api['id'])
                             embed.add_field(name="\u200B", value=f"{i}. __{key}__")
@@ -261,11 +261,11 @@ async def ping_func(channel: TextChannel, t: float, server: str, ping_id: str, c
                               description=f"**T{t}, Score:** "
                                           f"{battle_dict['defender']['score']}:{battle_dict['attacker']['score']}\n"
                                           + (f"**Total Dmg:** {battle_dict['dmg']}" if 'dmg' in battle_dict else ''))
-                embed.add_field(name=f"{utils.codes(d_name)} " + utils.shorten_country(d_name),
+                embed.add_field(name=f"{utils.get_flag_code(d_name)} " + utils.shorten_country(d_name),
                                 value=f"{defender_dmg:,}")
                 embed.add_field(name=f"Battle type: {api_battles['type'].replace('_', ' ').title()}",
                                 value=utils.bar(defender_dmg, attacker_dmg, d_name, a_name))
-                embed.add_field(name=f"{utils.codes(a_name)} " + utils.shorten_country(a_name),
+                embed.add_field(name=f"{utils.get_flag_code(a_name)} " + utils.shorten_country(a_name),
                                 value=f"{attacker_dmg:,}")
                 embed.set_footer(text="Type /stop if you wish to stop it.")
                 embed.set_thumbnail(url=f"attachment://{channel.id}.png")
@@ -341,11 +341,11 @@ async def watch_func(bot, channel: TextChannel, link: str, t: float, role: str, 
         msg = f"{role} {custom}"
         embed = Embed(colour=0x3D85C6,
                       title=f"T{t}, **Score:** {api_battles['defenderScore']}:{api_battles['attackerScore']}", url=link)
-        embed.add_field(name=f"{utils.codes(defender)}" + utils.shorten_country(defender),
+        embed.add_field(name=f"{utils.get_flag_code(defender)}" + utils.shorten_country(defender),
                         value=f"{my_dict[defender]:,}")
         embed.add_field(name=f'Battle type: {api_battles["type"].replace("_", " ").title()}',
                         value=utils.bar(my_dict[defender], my_dict[attacker], defender, attacker))
-        embed.add_field(name=f"{utils.codes(attacker)} " + utils.shorten_country(attacker),
+        embed.add_field(name=f"{utils.get_flag_code(attacker)} " + utils.shorten_country(attacker),
                         value=f"{my_dict[attacker]:,}")
         embed.set_thumbnail(url=f"attachment://{channel.id}.png")
         embed.set_footer(text="If you want to stop watching this battle, type /unwatch")

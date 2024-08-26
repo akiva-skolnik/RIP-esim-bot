@@ -165,7 +165,7 @@ class General(Cog):
 
         is_online = tree.xpath('//*[@id="loginBar"]//span[2]/@class')[0] == "online"
         embed = Embed(colour=0x3D85C6, url=link, description=title, title=("\U0001f7e2" if is_online else "\U0001f534")
-                                                                          + f" {api['login']}, {utils.codes(api['citizenship'])} {api['citizenship']}")
+                                                                          + f" {api['login']}, {utils.get_flag_code(api['citizenship'])} {api['citizenship']}")
 
         birthday = (tree.xpath('//*[@class="profile-row" and span = "Birthday"]/span/text()') or [1])[0]
         debts = sum(float(x) for x in tree.xpath('//*[@class="profile-data red"]//li/text()')[::6])
@@ -257,7 +257,7 @@ class General(Cog):
             if any((country, military_unit_id, nick)) and not any(
                     (cs.lower() == country.lower(), citizen_id in members, nick.lower() == current_nick.lower())):
                 continue
-            row = (f"#{index} {utils.codes(cs) if not country else ''}"
+            row = (f"#{index} {utils.get_flag_code(cs) if not country else ''}"
                    f" [{current_nick[:17]}]({base_url}profile.html?id={citizen_id})",
                    f"**{int(total_minutes):,}** ({total_avg}h per day)",
                    f"**{int(month_minutes):,}** ({month_avg}h per day)")
@@ -451,7 +451,7 @@ class General(Cog):
             row = await utils.get_content(get_url)
             if "party" in link:
                 del row["members_list"]
-                row["country"] = f"{utils.codes(row['country'])} " + row["country"]
+                row["country"] = f"{utils.get_flag_code(row['country'])} " + row["country"]
             embed.add_field(name="Info", value="\n".join([f"**{k.replace('_', ' ').title()}:** {v}"
                                                           for k, v in sorted(row.items())]))
 
@@ -459,7 +459,7 @@ class General(Cog):
             row = await utils.get_content(get_url)
             embed.add_field(name="#", value="\n".join([f"**{k}**" for k in range(1, len(row["citizens"]) + 1)][:5]))
             embed.add_field(name="Nick", value="\n".join(
-                [f"{utils.codes(v['country'])} [{v['nick']}]({base_url}profile.html?id={v['id']}),"
+                [f"{utils.get_flag_code(v['country'])} [{v['nick']}]({base_url}profile.html?id={v['id']}),"
                  f" {v['country']}" for v in row["citizens"]][:5]))
             embed.add_field(name=row["statistic_type"],
                             value="\n".join([f"{v['value']:,}" for v in row["citizens"]][:5]))
@@ -478,7 +478,7 @@ class General(Cog):
                 types = v["food"], v["gift"], v["wep"]
                 if any(types):
                     result["nick"].append(
-                        f"{utils.codes(v['country'])} [{v['name']}]({base_url}profile.html?id={v['id']})")
+                        f"{utils.get_flag_code(v['country'])} [{v['name']}]({base_url}profile.html?id={v['id']})")
                     result["motivate"].append(" ".join(["\U0001f534" if x else "\U0001f7e2" for x in types]))
                     result["registered"].append(v['registered'])
 
@@ -490,7 +490,7 @@ class General(Cog):
         elif "/partyStatistics.html" in link:
             row = await utils.get_content(get_url)
             embed.add_field(name="Party", value="\n".join(
-                [f"{utils.codes(v['country'])} [{v['party']}]({base_url}party.html?id={v['party_id']}), "
+                [f"{utils.get_flag_code(v['country'])} [{v['party']}]({base_url}party.html?id={v['party_id']}), "
                  f"{v['country']}" for v in row][:5]))
             embed.add_field(name="Members", value="\n".join([str(v['members']) for v in row][:5]))
             embed.add_field(name="Prestige", value="\n".join([f"{v['prestige']:,}" for v in row][:5]))
@@ -507,8 +507,8 @@ class General(Cog):
             row = await utils.get_content(get_url)
             embed.add_field(name="Time Reminding", value="\n".join([v['time_remaining'] for v in row['battles']][:5]))
             embed.add_field(name="Defender | Attacker", value="\n".join(
-                [f"[{utils.codes(v['defender']['name'])} {v['defender']['name']} |"
-                 f" {utils.codes(v['attacker']['name'])} {v['attacker']['name']}]"
+                [f"[{utils.get_flag_code(v['defender']['name'])} {v['defender']['name']} |"
+                 f" {utils.get_flag_code(v['attacker']['name'])} {v['attacker']['name']}]"
                  f"({base_url}battle.html?id={v['battle_id']})"
                  f" ({v['defender']['score']}:{v['attacker']['score']})" for v in row['battles']][:5]))
             embed.add_field(name="Bar", value="\n".join(
@@ -520,8 +520,8 @@ class General(Cog):
             row = await utils.get_content(get_url)
             embed.add_field(name="Region", value="\n".join([v['region'] for v in row['battles']][:5]))
             embed.add_field(name="Defender | Attacker", value="\n".join(
-                [f"[{utils.codes(v['defender_name'])} {v['defender_name']} |"
-                 f" {utils.codes(v['attacker_name'])} {v['attacker_name']}]"
+                [f"[{utils.get_flag_code(v['defender_name'])} {v['defender_name']} |"
+                 f" {utils.get_flag_code(v['attacker_name'])} {v['attacker_name']}]"
                  f"({base_url}battle.html?id={v['id']})"
                  f" ({v['defender_score']}:{v['attacker_score']})" for v in row['battles']][:5]))
             embed.add_field(name="Dmg", value="\n".join([f"{v['dmg']:,}" for v in row['battles']][:5]))
@@ -532,7 +532,7 @@ class General(Cog):
             embed.add_field(name="Company", value="\n".join([f"[Q{x['quality']} {x['company_type']}]({base_url}company"
                                                              f".html?id={x['company_id']})" for x in row][:5]))
             embed.add_field(name="Location", value="\n".join(
-                [f"{utils.codes(x['country'])} [{x['location_name']}]"
+                [f"{utils.get_flag_code(x['country'])} [{x['location_name']}]"
                  f"({base_url}region.html?id={x['location_id']}) ({x['country']})" for x in row][:5]))
             embed.add_field(name="Price", value="\n".join([str(x["price"]) for x in row[:5]]))
 
@@ -542,7 +542,7 @@ class General(Cog):
             embed.add_field(name="Candidate", value="\n".join(
                 [f"[{x['candidate']}]({base_url}profile.html?id={x['candidate_id']})" for x in row["candidates"]][:5]))
             embed.add_field(name="Votes", value="\n".join([str(x['votes']) for x in row["candidates"]][:5]))
-            embed.set_footer(text=f"{utils.codes(row['country'])} {row['country']}, {row['date']}")
+            embed.set_footer(text=f"{utils.get_flag_code(row['country'])} {row['country']}, {row['date']}")
 
         elif "/productMarket.html" in link:
             row = await utils.get_content(get_url)
@@ -560,7 +560,7 @@ class General(Cog):
             row["penalty"] = penalty
             row["buildings"] = len(row["buildings"])
             for key in ("current_owner", "rightful_owner"):
-                row[key] = f"{utils.codes(row[key])} " + row[key]
+                row[key] = f"{utils.get_flag_code(row[key])} " + row[key]
             embed.add_field(name="Info", value="\n".join([
                 f"**{k.replace('_', ' ').title()}:** {v}" for k, v in row.items() if (
                         not isinstance(v, (dict, list)) and v != "No resources")]))
@@ -570,7 +570,7 @@ class General(Cog):
             embed.add_field(name="#",
                             value="\n".join([f"**{k}**" for k in range(1, len(row["stock_companies"]) + 1)][:5]))
             embed.add_field(name="Stock Company",
-                            value="\n".join([f"{utils.codes(v['country'])} [{v['stock_company']}]"
+                            value="\n".join([f"{utils.get_flag_code(v['country'])} [{v['stock_company']}]"
                                              f"({base_url}stockCompany.html?id={v['id']}), {v['country']}" for v in row[
                                                  "stock_companies"]][:5]))
             embed.add_field(name=row["statistic_type"],
@@ -581,7 +581,7 @@ class General(Cog):
             embed.add_field(name="#",
                             value="\n".join([f"**{k}**" for k in range(1, len(row["countries"]) + 1)][:5]))
             embed.add_field(name="Country", value="\n".join(
-                [f"{utils.codes(v['country'])} " + v['country'] for v in row["countries"]][:5]))
+                [f"{utils.get_flag_code(v['country'])} " + v['country'] for v in row["countries"]][:5]))
             embed.add_field(name=row["statistic_type"],
                             value="\n".join([f"{v['value']:,}" for v in row["countries"]][:5]))
 
@@ -590,7 +590,7 @@ class General(Cog):
             wanted_keys = {"country", "citizens_online", "minimal_salary", "new_citizens_today",
                            "total_active_citizens", "total_coins_in_treasury"}
             row["total_coins_in_treasury"] = round(sum(row["treasury"][0].values()))
-            row['country'] = f"{utils.codes(row['country'])} " + row['country']
+            row['country'] = f"{utils.get_flag_code(row['country'])} " + row['country']
             embed.add_field(name="Info",
                             value="\n".join([f"**{k.replace('_', ' ').title()}:** {v}" for k, v in row.items()
                                              if k in wanted_keys]))
@@ -649,7 +649,7 @@ class General(Cog):
                    "Today Damage": f"{api2['todayDamage']:,}", "Max Members": api1['maxMembers'],
                    "Citizenship": all_countries[api1['countryId']], "Type": api1['militaryUnitType'],
                    "Value": api2['value']}
-            row['Citizenship'] = f"{utils.codes(row['Citizenship'])}" + row['Citizenship']
+            row['Citizenship'] = f"{utils.get_flag_code(row['Citizenship'])}" + row['Citizenship']
             embed.add_field(name="Info", value="\n".join([f"**{k}:** {v}" for k, v in row.items()]))
             row = {f"Battle Order: {all_countries[api2['todayBattleAttacker']]} VS "
                    f"{all_countries[api2['todayBattleDefender']]}": f"{base_url}battle.html?id={api2['todayBattleId']}",
@@ -690,15 +690,14 @@ class General(Cog):
 
         elif "/stockCompanyProducts.html" in link:
             row = await utils.get_content(get_url)
-            row = await utils.split_list(row["storage"], 3)
+            row = utils.split_list(row["storage"], 3)
             for LIST in row:
                 embed.add_field(name="\u200B",
                                 value="\n".join([f"**{x['product'].title()}:** {x['amount']:,}" for x in LIST]))
 
         elif "/battleDrops.html" in link:
             row = await utils.get_content(get_url)
-            row = await utils.split_list(row["drops"], 3)
-            for LIST in row:
+            for LIST in utils.split_list(row["drops"], 3):
                 embed.add_field(name="Item: Nick", value="\n".join([
                     (f"**Q{x['quality']} {x['item'].title()}:**" if 'quality' in x else f"**{x['item'].title()}:**") +
                     f" [{x['nick']}]({base_url}profile.html?id={x['citizen_id']})" for x in LIST]))
@@ -731,11 +730,11 @@ class General(Cog):
             score = f"{api_battles['defenderScore']}:{api_battles['attackerScore']}"
             embed = Embed(colour=0x3D85C6, url=link,
                           title=("" if "8" in score else f"T{t}, ") + f"**Score:** {score}")
-            embed.add_field(name=utils.codes(defender) + " " + utils.shorten_country(defender),
+            embed.add_field(name=utils.get_flag_code(defender) + " " + utils.shorten_country(defender),
                             value=f"{my_dict[defender]:,}")
             embed.add_field(name=f'Battle type: {api_battles["type"]}',
                             value=utils.bar(my_dict[defender], my_dict[attacker], defender, attacker))
-            embed.add_field(name=utils.codes(attacker) + " " + utils.shorten_country(attacker),
+            embed.add_field(name=utils.get_flag_code(attacker) + " " + utils.shorten_country(attacker),
                             value=f"{my_dict[attacker]:,}")
             embed.set_thumbnail(url=f"attachment://{interaction.id}.png")
             await utils.custom_followup(interaction,

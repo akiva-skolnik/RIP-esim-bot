@@ -216,11 +216,12 @@ class Premium(Cog):
             if index:  # Ignore headers
                 _, seller, buyer, item, price = row
                 if buyer != "None":
-                    sellers[seller]["money"] += float(price)
+                    price = float(price)
+                    sellers[seller]["money"] += price
                     sellers[seller]["count"] += 1
-                    buyers[buyer]["money"] += float(price)
+                    buyers[buyer]["money"] += price
                     buyers[buyer]["count"] += 1
-                    items[item]["money"] += float(price)
+                    items[item]["money"] += price
                     items[item]["count"] += 1
 
         output1 = StringIO()
@@ -337,11 +338,11 @@ class Premium(Cog):
                 citizens_dict[nick]["donations"] += 1
                 citizens_dict[nick]["gold"] += amount * 5
 
-                if float(amount) >= 20:
+                if amount >= 20:
                     citizens_dict[nick]["medkits"] += 3
-                if float(amount) >= 50:
+                if amount >= 50:
                     citizens_dict[nick]["Q6 item"] += 1
-                if float(amount) >= 99:
+                if amount >= 99:
                     citizens_dict[nick]["Q5 LC"] += 1
 
         for index, (nick, DICT) in enumerate(citizens_dict.items()):

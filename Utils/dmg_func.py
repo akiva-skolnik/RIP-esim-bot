@@ -7,7 +7,7 @@ from discord import Embed, File, Interaction
 from discord.app_commands import Transform
 from discord.utils import MISSING
 
-from . import utils
+from . import utils, UiButtons
 from .constants import all_countries, all_countries_by_name
 from .transformers import BattleLink, Country
 from .utils import dmg_trend, draw_pil_table
@@ -177,7 +177,7 @@ async def dmg_func(bot, interaction: Interaction, battle_link: Transform[dict, B
             if key == "citizenship":
                 embed_name = "Country"
                 filed = all_countries[name]
-                filed = f"{utils.codes(filed)} " + filed
+                filed = f"{utils.get_flag_code(filed)} " + filed
             elif key == "militaryUnit":
                 embed_name = "Military Unit Id"
                 filed = f"[{name}]({base_url}militaryUnit.html?id={name})"
@@ -233,7 +233,7 @@ async def dmg_func(bot, interaction: Interaction, battle_link: Transform[dict, B
 
     files = [File(fp=BytesIO(output.getvalue().encode()), filename="dmg.csv"),
              File(fp=output_buffer, filename=f"{interaction.id}.png")]
-    view = utils.Transform() if "Id" in embed_name else MISSING
+    view = UiButtons.Transform() if "Id" in embed_name else MISSING
     if len(table) == 1 and not range_of_battles:
         if key != 'citizenship':
             citizenship = all_countries[
@@ -242,7 +242,7 @@ async def dmg_func(bot, interaction: Interaction, battle_link: Transform[dict, B
         else:
             citizenship = table[0][0]
             embed.url = f"{base_url}countryPoliticalStatistics.html?countryId={key_id}"
-        embed.title = f"**{utils.codes(citizenship)} {table[0][0]}** - {table[0][-1]} DMG"
+        embed.title = f"**{utils.get_flag_code(citizenship)} {table[0][0]}** - {table[0][-1]} DMG"
         for num, (name, value) in enumerate(zip(headers[1:], table[0][1:])):
             embed.insert_field_at(num, name=name, value=value)
         embed.insert_field_at(-3, name="\u2800", value="\u2800", inline=False)
@@ -267,7 +267,7 @@ async def dmg_func(bot, interaction: Interaction, battle_link: Transform[dict, B
             for num, value in enumerate(values):
                 value = value.split("[")[1].split("]")[0]
                 api_battles = await utils.get_content(f'{base_url}{keys[embed_name]["api_url"]}.html?id={value}')
-                flag = utils.codes(all_countries[api_battles[keys[embed_name]['cs_key']]])
+                flag = utils.get_flag_code(all_countries[api_battles[keys[embed_name]['cs_key']]])
                 values[num] = f"{flag} [{api_battles[keys[embed_name]['api_key'][:20]]}]" \
                               f"({base_url}{keys[embed_name]['final_link']}.html?id={value})"
                 await utils.custom_delay(interaction)
