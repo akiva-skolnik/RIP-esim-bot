@@ -1,13 +1,15 @@
 """Bot.py."""
+import asyncio
 import json
 import logging
 import os
 from datetime import date, datetime
+from types import ModuleType
 
 import asyncmy
 from aiohttp import ClientSession, ClientTimeout
 from discord import (AllowedMentions, Forbidden, Game, HTTPException, Intents,
-                     Interaction, Message, NotFound, app_commands)
+                     Interaction, Message, NotFound, app_commands, InteractionType)
 from discord.ext.commands import Bot
 
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -39,9 +41,14 @@ def find_one(collection: str, _id: str) -> dict:
 class MyTree(app_commands.CommandTree):
     async def interaction_check(self, interaction: Interaction) -> bool:
         """Lock new server."""
+        if interaction.type != InteractionType.application_command:
+            return True
+        bot = self.client
+
         # TODO: x free commands per day & free user
         # This is done at the beginning of every interaction.
         await interaction.response.defer()  # type: ignore
+        _ = asyncio.create_task(self.log_interaction_start(interaction))
 
         if not any("elysia" in str(v) for v in interaction.data.values()):
             return True
@@ -68,8 +75,21 @@ class MyTree(app_commands.CommandTree):
             pass
         return False
 
+    @staticmethod
+    async def log_interaction_start(interaction: Interaction) -> None:
+        """Log interaction in background."""
+        # inserting also time, as there might be a delay in the background.
+        query = """
+        INSERT INTO collections.commands_logs (command, parameters, user_id, guild_id, interaction_id, time)
+            VALUES (%s, %s, %s, %s, %s, %s)"""
+        interaction_params = interaction.data["name"] + " " + " ".join(
+            f"{x.get('name')}: {x.get('value')}" for x in interaction.data.get('options', []))
+        params = (interaction.command.name, interaction_params,
+                  interaction.user.id, interaction.guild.id, interaction.id, interaction.created_at)
+        await bot.db_utils.execute_query(bot.pool, query, params)
 
-class MyClient(Bot):
+
+class EsimBot(Bot):
     """Custom Client."""
 
     def __init__(self) -> None:
@@ -84,6 +104,8 @@ class MyClient(Bot):
             # {"db_url": "", "TOKEN": ""}
         self.before_invoke(reset_cancel)
         self.should_cancel = should_cancel
+        self.utils: ModuleType = None  # type: ignore
+        self.db_utils: ModuleType = None  # type: ignore
         self.cancel_command = {}
         self.orgs = {}
         self.delay = {}
@@ -109,7 +131,8 @@ class MyClient(Bot):
         await load_extensions()
 
     async def close(self):
-        await self.session.close()
+        if self.session:
+            await self.session.close()
         for server, session in self.locked_sessions.items():
             await session.close()
         if self.pool is not None:
@@ -142,4 +165,4 @@ async def reset_cancel(interaction: Interaction) -> None:
         del bot.cancel_command[interaction.user.id]
 
 
-bot = MyClient()
+bot = EsimBot()

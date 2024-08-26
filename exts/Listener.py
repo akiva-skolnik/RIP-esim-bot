@@ -1,5 +1,5 @@
 """Listener.py."""
-import sys
+from datetime import datetime, UTC
 from json import decoder
 from traceback import format_exception
 
@@ -9,7 +9,7 @@ from discord.app_commands import (AppCommandError, CheckFailure, Command,
                                   CommandOnCooldown)
 from discord.ext.commands import Cog
 
-from Utils import utils
+from Utils import utils, db_utils
 from Utils.constants import config_ids
 
 
@@ -25,10 +25,15 @@ class Listener(Cog):
         """Commands Counter."""
         if "name" not in interaction.data or not command:
             return
-        msg = self.__get_error_msg(interaction)
+        msg = self.__get_formatted_interaction(interaction)
+
+        query = """INSERT INTO collections.commands_logs (interaction_id, is_success, time)
+                   VALUES (%s, %s, %s)"""
+        params = (interaction.id, True, datetime.now(UTC))
+        await db_utils.execute_query(self.bot.pool, query, params)
 
         my_cogs = sorted([cog for cog in self.bot.cogs if cog != "Listener"] + ["BlackMarket"])
-        channel_name = f"{str(command.name).lower().split()[-1].replace('+', '-plus')}"
+        channel_name = command.name.lower().split()[-1]
         guild = self.bot.get_guild(config_ids["commands_server_id"])
         cog_name = command.module.split(".")[-1]
         if cog_name == "__main__":
@@ -50,7 +55,7 @@ class Listener(Cog):
         await utils.replace_one("collection", "commands_count", commands_count)
 
     @staticmethod
-    def __get_error_msg(interaction: Interaction):
+    def __get_formatted_interaction(interaction: Interaction):
         """Get error message."""
         data = interaction.data["name"] + " " + " ".join(
             f"**{x.get('name')}**: {x.get('value')}" for x in interaction.data.get('options', []))
@@ -60,14 +65,15 @@ class Listener(Cog):
     async def on_app_command_error(self, interaction: Interaction, error: AppCommandError):
         """On app command error."""
         error = getattr(error, 'original', error)
-        msg = self.__get_error_msg(interaction)
+        msg = self.__get_formatted_interaction(interaction)
+
+        query = """INSERT INTO collections.commands_logs (interaction_id, is_success, time, error)
+                   VALUES (%s, %s, %s, %s)"""
+        params = (interaction.id, False, datetime.now(UTC), str(error))
+        await db_utils.execute_query(self.bot.pool, query, params)
 
         error_channel = self.bot.get_channel(config_ids["error_channel_id"])
-        exc_type, exc_value, exc_traceback = sys.exc_info()
-        locals_before_exception = (exc_traceback.tb_next or exc_traceback).tb_frame.f_locals
-        locals_before_exception.pop("self", None)
-        locals_before_exception.pop("interaction", None)
-        error_msg = f"{locals_before_exception}\n{msg}\n```{''.join(format_exception(type(error), error, error.__traceback__))}```"
+        error_msg = f"{msg}\n```{''.join(format_exception(type(error), error, error.__traceback__))}```"
         if len(error_msg) > 2000:
             error_msg = error_msg[:990] + "\n...\n" + error_msg[-990:]
         await error_channel.send(error_msg)

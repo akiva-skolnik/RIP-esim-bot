@@ -1,7 +1,7 @@
 """Admin.py."""
+import logging
 import textwrap
 import traceback
-import logging
 from contextlib import redirect_stdout
 from datetime import date
 from io import BytesIO, StringIO
@@ -45,7 +45,7 @@ class Admin(Cog):
                 async with connection.cursor() as cursor:
                     await cursor.execute("CREATE DATABASE " + server)
 
-                    await cursor.execute(f'''CREATE TABLE `{server}`.apiBattles
+                    await cursor.execute(f"""CREATE TABLE `{server}`.apiBattles
                                           (battle_id INT UNSIGNED PRIMARY KEY,
                                           currentRound TINYINT,
                                           lastVerifiedRound TINYINT,
@@ -57,9 +57,9 @@ class Admin(Cog):
                                           defenderId SMALLINT UNSIGNED,
                                           attackerId SMALLINT UNSIGNED,
                                           totalSecondsRemaining SMALLINT UNSIGNED
-                                          )''')
+                                          )""")
 
-                    await cursor.execute(f'''CREATE TABLE {server}.apiFights
+                    await cursor.execute(f"""CREATE TABLE {server}.apiFights
                                           (battle_id INT UNSIGNED,
                                           round_id TINYINT,
                                           damage INT UNSIGNED,
@@ -73,7 +73,7 @@ class Admin(Cog):
                                           PRIMARY KEY (citizenId, time)
                                           -- FOREIGN KEY (battle_id) REFERENCES apiBattles(battle_id)
                                           -- this does not allow me to update apiBattles because of foreign key
-                                          )''')
+                                          )""")
 
                     await cursor.execute(f"CREATE INDEX battle_id_index ON {server}.apiFights (battle_id)")
         await utils.custom_followup(interaction, "done")

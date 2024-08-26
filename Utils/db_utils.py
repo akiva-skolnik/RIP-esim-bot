@@ -7,7 +7,7 @@ from asyncmy.cursors import logger as asyncmy_logger
 from discord import Interaction, File
 
 from bot.bot import bot
-from .utils import custom_delay, get_content, custom_followup, update_percent
+from . import utils
 
 asyncmy_logger.setLevel("ERROR")  # I INSERT IGNORE, so I don't care about duplicate key warnings
 logger = logging.getLogger()
@@ -38,7 +38,7 @@ async def cache_api_battles(interaction: Interaction, server: str, battle_ids: i
     battle_id_where = await get_battle_id_where(battle_ids, excluded_ids)
 
     # Select battles that are in the db and have finished, to be excluded from reinserting
-    query = f"SELECT battle_id FROM `{server}`.apiBattles " +\
+    query = f"SELECT battle_id FROM `{server}`.apiBattles " + \
             f"WHERE {battle_id_where} AND (defenderScore = 8 OR attackerScore = 8)"
 
     existing_battles = {x[0] for x in await execute_query(bot.pool, query, fetch=True)}  # x[0] = battle_id
@@ -48,7 +48,7 @@ async def cache_api_battles(interaction: Interaction, server: str, battle_ids: i
             break
         if battle_id not in existing_battles:
             await insert_into_api_battles(server, battle_id)
-            await custom_delay(interaction)
+            await utils.custom_delay(interaction)
     logger.info(f"cache_api_battles: Done caching {len(battle_ids)} battles from {server=}")
 
 
@@ -67,14 +67,14 @@ async def get_battle_id_where(battle_ids: iter, excluded_ids: set) -> str:
             excluded_ids = ",".join(map(str, excluded_ids))
         elif not isinstance(battle_ids, range):
             excluded_ids = ",".join(str(i) for i in range(start_id, end_id + 1) if i not in battle_ids)
-        battle_id_where = f"battle_id BETWEEN {start_id} AND {end_id} " +\
+        battle_id_where = f"battle_id BETWEEN {start_id} AND {end_id} " + \
                           (f"AND battle_id NOT IN ({excluded_ids})" if excluded_ids else "")
     return battle_id_where
 
 
 async def insert_into_api_battles(server: str, battle_id: int) -> dict:
     """Insert_into_api_battles."""
-    api_battles = await get_content(f'https://{server}.e-sim.org/apiBattles.html?battleId={battle_id}')
+    api_battles = await utils.get_content(f'https://{server}.e-sim.org/apiBattles.html?battleId={battle_id}')
     api_battles['totalSecondsRemaining'] = (api_battles["hoursRemaining"] * 3600 +
                                             api_battles["minutesRemaining"] * 60 + api_battles["secondsRemaining"])
     api_battles['battle_id'] = battle_id
@@ -93,8 +93,8 @@ async def select_many_api_battles(server: str, battle_ids: iter, *, columns: tup
     columns = columns or api_battles_columns
     logger.info(f"select_many_api_battles: {server=}, {len(battle_ids)=}, {custom_condition=}")
     battle_id_where = await get_battle_id_where(battle_ids, excluded_ids)
-    query = f"SELECT {','.join(columns)} FROM `{server}`.apiBattles " +\
-            f"WHERE {battle_id_where} " +\
+    query = f"SELECT {','.join(columns)} FROM `{server}`.apiBattles " + \
+            f"WHERE {battle_id_where} " + \
             ("" if not custom_condition else f"AND {custom_condition}")
 
     api_battles = await execute_query(bot.pool, query, fetch=True)
@@ -107,7 +107,7 @@ async def select_one_api_battles(server: str, battle_id: int, columns: tuple = N
     columns = columns or api_battles_columns
     # TODO: ensure columns contains defenderScore and attackerScore or add them
     query = f"SELECT {','.join(columns)} FROM `{server}`.apiBattles WHERE battle_id=%s LIMIT 1"
-    r = await execute_query(bot.pool, query, params=(battle_id, ), fetch=True)
+    r = await execute_query(bot.pool, query, params=(battle_id,), fetch=True)
     r = dict(zip(columns, r[0])) if r else {}
     if not r or 8 not in (r['defenderScore'], r['attackerScore']):
         r = await insert_into_api_battles(server, battle_id)
@@ -116,7 +116,8 @@ async def select_one_api_battles(server: str, battle_id: int, columns: tuple = N
 
 async def insert_into_api_fights(server: str, battle_id: int, round_id: int) -> None:
     """Insert_into_api_fights."""
-    api_fights = await get_content(f'https://{server}.e-sim.org/apiFights.html?battleId={battle_id}&roundId={round_id}')
+    api_fights = await utils.get_content(
+        f'https://{server}.e-sim.org/apiFights.html?battleId={battle_id}&roundId={round_id}')
     if not api_fights:
         # insert dummy hit to avoid rechecking this round
         api_fights = [{'damage': 0, 'weapon': 0, 'berserk': False, 'defenderSide': False, 'citizenship': None,
@@ -126,7 +127,7 @@ async def insert_into_api_fights(server: str, battle_id: int, round_id: int) -> 
     api_fights = tuple((battle_id, round_id, hit['damage'], hit['weapon'], hit['berserk'], hit['defenderSide'],
                         hit['citizenship'], hit['citizenId'],
                         ".".join(hit["time"].strip().rsplit(":", 1))
-                         if hit["time"].count(":") == 3 else hit["time"].strip(),
+                        if hit["time"].count(":") == 3 else hit["time"].strip(),
                         hit.get('militaryUnit')) for hit in reversed(api_fights))
 
     placeholders = ', '.join(['%s'] * len(api_fights[0]))
@@ -140,10 +141,10 @@ async def cache_api_fights(interaction: Interaction, server: str, api_battles_df
                                   api_battles_df["lastVerifiedRound"].sum() -
                                   len(api_battles_df))
     logger.info(f"cache_api_fights: {server=}, {len(api_battles_df)=}, {total_rounds_to_be_scanned=}")
-    msg = await custom_followup(interaction,
-                                "Progress status: 1%.\n(I will update you after every 10%)\n"
-                                if total_rounds_to_be_scanned > 10 else "Alright, Sir. Just a moment.",
-                                file=File(bot.typing_gif_path))
+    msg = await utils.custom_followup(interaction,
+                                      "Progress status: 1%.\n(I will update you after every 10%)\n"
+                                      if total_rounds_to_be_scanned > 10 else "Alright, Sir. Just a moment.",
+                                      file=File(bot.typing_gif_path))
 
     scanned_rounds = 0
     for api_battles in api_battles_df.to_dict(orient="index").values():
@@ -159,11 +160,11 @@ async def cache_api_fights(interaction: Interaction, server: str, api_battles_df
         for round_id in range(last_verified_round + 1, current_round):
             # Using int because battle_id is np.int64
             await insert_into_api_fights(server, int(api_battles["battle_id"]), round_id)
-            await custom_delay(interaction)
+            await utils.custom_delay(interaction)
         scanned_rounds += current_round
 
         await update_last_verified_round(server, api_battles)
-        msg = await update_percent(scanned_rounds, total_rounds_to_be_scanned, msg)
+        msg = await utils.update_percent(scanned_rounds, total_rounds_to_be_scanned, msg)
 
     try:
         await msg.delete()
@@ -208,7 +209,7 @@ async def select_many_api_fights(server: str, battle_ids: iter, columns: tuple =
     logger.info(f"select_many_api_fights: {server=}, {len(battle_ids)=}, {custom_condition=}")
     battle_id_where = await get_battle_id_where(battle_ids, excluded_ids)
     query = f"SELECT {', '.join(columns)} FROM `{server}`.apiFights " \
-            f"WHERE {battle_id_where} " +\
+            f"WHERE {battle_id_where} " + \
             ("" if not custom_condition else f"AND {custom_condition}")
 
     api_fights = await execute_query(bot.pool, query, fetch=True)
@@ -217,7 +218,8 @@ async def select_many_api_fights(server: str, battle_ids: iter, columns: tuple =
     return df
 
 
-async def get_api_fights_sum(server: str, battle_ids: iter, group_by: str = "citizenId", excluded_ids: set = None) -> pd.DataFrame:
+async def get_api_fights_sum(server: str, battle_ids: iter, group_by: str = "citizenId",
+                             excluded_ids: set = None) -> pd.DataFrame:
     """Get the sum of damage, hits, and quality for each citizen in the given battles.
 
     Returns a DataFrame with columns: citizenId, damage, Q0, Q1, Q2, Q3, Q4, Q5, hits
@@ -266,7 +268,7 @@ async def select_one_api_fights(server: str, api: dict, round_id: int = 0) -> pd
     else:
         last_round = current_round + 1
     for round_id in range(first_round, last_round):
-        api_fights = await get_content(
+        api_fights = await utils.get_content(
             f'https://{server}.e-sim.org/apiFights.html?battleId={battle_id}&roundId={round_id}')
         if not api_fights:
             continue
