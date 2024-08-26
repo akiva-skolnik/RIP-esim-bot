@@ -108,6 +108,17 @@ class MyClient(Bot):
 
         await load_extensions()
 
+    async def close(self):
+        await self.session.close()
+        for server, session in self.locked_sessions.items():
+            await session.close()
+        if self.pool is not None:
+            self.pool.close()
+        await super().close()
+
+    def __del__(self):
+        self.loop.run_until_complete(self.close())
+
 
 async def should_cancel(interaction: Interaction, msg: Message = None) -> bool:
     """Return whether the function should be cancelled."""
