@@ -6,7 +6,7 @@ from asyncio import sleep
 from collections import defaultdict
 from copy import deepcopy
 from csv import reader
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, UTC
 from io import BytesIO, StringIO
 from itertools import islice
 from os import path
@@ -515,21 +515,35 @@ async def custom_delay(interaction: Interaction) -> None:
     await sleep(bot.custom_delay_dict.get(str(interaction.user.id), 0.4))
 
 
-async def send_error(interaction: Interaction | None, error: Exception, cmd: str = "") -> None:
-    """Send error."""
-    logger.error(f"Error in {cmd}", exc_info=error)
-    if interaction:
-        data = interaction.data["name"] + " " + "  ".join(
+def get_formatted_interaction(interaction: Interaction | None) -> str | None:
+    if interaction and getattr(interaction, "data", None):
+        return interaction.data.get("name", "") + " " + "  ".join(
             f"**{x.get('name')}**: {x.get('value')}" for x in interaction.data.get('options', []))
-    else:
-        data = cmd
+
+
+async def log_error(interaction: Interaction | None, error: Exception, cmd: str = "") -> None:
+    logger.error(f"Error in {cmd}", exc_info=error)
+    data = get_formatted_interaction(interaction) or cmd
+
     msg = f"[{get_current_time_str()}] : {data}"
     error_channel = bot.get_channel(config_ids["error_channel_id"])
+    error_msg = f"{msg}\n```{''.join(format_exception(type(error), error, error.__traceback__))}```"
+    if len(error_msg) >= 2000:
+        error_msg = error_msg[:990] + "\n...\n" + error_msg[-990:]
     try:
-        await error_channel.send(
-            f"{msg}\n```{''.join(format_exception(type(error), error, error.__traceback__))}```")
+        await error_channel.send(error_msg)
     except Exception:  # Big msg
         await error_channel.send(f"{msg}\n{error}"[:1900])
+
+    query = """INSERT INTO collections.commands_logs (interaction_id, is_success, time, error)
+               VALUES (%s, %s, %s, %s)"""
+    params = (interaction.id, False, datetime.now(UTC), str(error))
+    await bot.db_utils.execute_query(bot.pool, query, params)
+
+
+async def send_error(interaction: Interaction | None, error: Exception, cmd: str = "") -> None:
+    """Send error."""
+    await log_error(interaction, error, cmd)
     if interaction is None:
         return
     user_error = f"An error occurred. Please report this at the support server: {config_ids['support_invite']}" \

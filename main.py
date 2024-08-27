@@ -4,8 +4,7 @@ import importlib
 import logging
 import os
 import subprocess
-from sys import modules
-from traceback import format_exc
+from sys import exc_info, modules
 
 import matplotlib
 from discord import Interaction
@@ -13,7 +12,7 @@ from discord.app_commands import guilds
 from discord.utils import setup_logging
 
 from Utils import utils, db_utils
-from Utils.constants import all_servers, config_ids
+from Utils.constants import all_servers
 from bot.bot import bot, load_extensions
 from exts.Battle import (motivate_func, ping_func, watch_auction_func,
                          watch_func)
@@ -26,14 +25,12 @@ bot.db_utils = db_utils
 
 @bot.event
 async def on_error(*args, **kwargs) -> None:
-    """Error Handling."""
-    if len(args) > 1 and hasattr(args[1], "clean_content"):
-        msg = f"[{utils.get_current_time_str()}] {args[1].clean_content}"
-    else:
-        msg = " "
-    msg += kwargs.get('msg', '')
-    error_channel = bot.get_channel(config_ids["error_channel_id"])
-    await error_channel.send(f"{msg}\n```{format_exc()}"[:1900] + "```")
+    """handling errors raised in events"""
+    # args[0] is the event name, the rest are the arguments passed to the event.
+    exc_type, exc_value, traceback = exc_info()
+    await utils.log_error(interaction=args[1] if len(args) > 1 else None,
+                          error=exc_value,
+                          cmd=args[0] if len(args) > 0 else None)
 
 
 async def activate_reminder() -> None:

@@ -1,7 +1,6 @@
 """Listener.py."""
 from datetime import datetime, UTC
 from json import decoder
-from traceback import format_exception
 
 from aiohttp import ClientError, client_exceptions
 from discord import Embed, Interaction, errors
@@ -25,7 +24,7 @@ class Listener(Cog):
         """Commands Counter."""
         if "name" not in interaction.data or not command:
             return
-        msg = self.__get_formatted_interaction(interaction)
+        msg = f"[{utils.get_current_time_str()}] : {utils.get_formatted_interaction(interaction)}"
 
         query = """INSERT INTO collections.commands_logs (interaction_id, is_success, time)
                    VALUES (%s, %s, %s)"""
@@ -54,29 +53,11 @@ class Listener(Cog):
 
         await utils.replace_one("collection", "commands_count", commands_count)
 
-    @staticmethod
-    def __get_formatted_interaction(interaction: Interaction):
-        """Get error message."""
-        data = interaction.data["name"] + " " + " ".join(
-            f"**{x.get('name')}**: {x.get('value')}" for x in interaction.data.get('options', []))
-        return f"[{utils.get_current_time_str()}] : {data}"
-
     @Cog.listener()
     async def on_app_command_error(self, interaction: Interaction, error: AppCommandError):
         """On app command error."""
         error = getattr(error, 'original', error)
-        msg = self.__get_formatted_interaction(interaction)
-
-        query = """INSERT INTO collections.commands_logs (interaction_id, is_success, time, error)
-                   VALUES (%s, %s, %s, %s)"""
-        params = (interaction.id, False, datetime.now(UTC), str(error))
-        await db_utils.execute_query(self.bot.pool, query, params)
-
-        error_channel = self.bot.get_channel(config_ids["error_channel_id"])
-        error_msg = f"{msg}\n```{''.join(format_exception(type(error), error, error.__traceback__))}```"
-        if len(error_msg) > 2000:
-            error_msg = error_msg[:990] + "\n...\n" + error_msg[-990:]
-        await error_channel.send(error_msg)
+        await utils.log_error(interaction, error)
 
         if isinstance(error, CheckFailure):
             return await utils.custom_followup(interaction, str(error))
