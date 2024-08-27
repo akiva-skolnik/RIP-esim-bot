@@ -387,7 +387,7 @@ async def create_session(server: str = None) -> ClientSession:
 
 async def get_session(server: str) -> ClientSession:
     """Get session."""
-    if server not in bot.locked_sessions:
+    if server not in bot.locked_sessions or bot.locked_sessions[server].closed:
         bot.locked_sessions[server] = await create_session(server)
     return bot.locked_sessions[server]
 
