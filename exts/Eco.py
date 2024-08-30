@@ -29,7 +29,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
     """Economy Commands."""
     options = ("iron", "grain", "oil", "stone", "wood", "diamonds")
     product_gids = {"primera": 6602346, "secura": 1142213909, "suna": 1317638633, "alpha": 1073258602,
-                    'luxia': 1542255867, "xena": 681890089, "elysia": 91790250}
+                    'luxia': 1542255867, "elysia": 91790250}
 
     def __init__(self, bot) -> None:
         self.bot = bot
@@ -515,7 +515,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 prices_per_day = {day: min(price, med + 2 * std) for day, price in prices_per_day.items()}
 
                 # calculate the moving average
-                temp_server = server in ('xena', 'elysia')
+                temp_server = server in ('elysia', )
                 window = 12 if not temp_server else 7
                 prices_list = list(prices_per_day.values())
                 moving_average = tuple(statistics.median(prices_list[i - window // 2: i + window // 2])
