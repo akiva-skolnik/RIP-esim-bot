@@ -199,7 +199,7 @@ async def find_one(collection: str, _id: str) -> dict:
     root = os.path.dirname(os.path.abspath(__file__))
     filename = os.path.join(os.path.dirname(root), f"db/{collection}_{_id}.json")
     if os.path.exists(filename):
-        with open(filename, "r", encoding='utf-8') as file:
+        with open(filename, encoding='utf-8') as file:
             return json.load(file)
     else:
         return {}
