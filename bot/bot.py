@@ -82,7 +82,7 @@ class MyTree(app_commands.CommandTree):
         query = """
         INSERT INTO collections.commands_logs (command, parameters, user_id, guild_id, interaction_id, time)
             VALUES (%s, %s, %s, %s, %s, %s)"""
-        interaction_params = bot.utils.get_formatted_interaction(interaction)
+        interaction_params = bot.utils.get_formatted_interaction(interaction, bold=False)
         params = (interaction.command.name, interaction_params,
                   interaction.user.id, interaction.guild.id, interaction.id, interaction.created_at)
         await bot.db_utils.execute_query(bot.pool, query, params)

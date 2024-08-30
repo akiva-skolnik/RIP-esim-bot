@@ -24,7 +24,6 @@ class Listener(Cog):
         """Commands Counter."""
         if "name" not in interaction.data or not command:
             return
-        msg = f"[{utils.get_current_time_str()}] : {utils.get_formatted_interaction(interaction)}"
 
         query = """INSERT INTO collections.commands_logs (interaction_id, is_success, time)
                    VALUES (%s, %s, %s)"""
@@ -39,6 +38,7 @@ class Listener(Cog):
             return
         category = guild.categories[my_cogs.index(cog_name)]
         channels = {channel.name: channel for channel in category.channels}
+        msg = f"[{utils.get_current_time_str()}] : {utils.get_formatted_interaction(interaction)}"
         if channel_name in channels:
             await channels[channel_name].send(msg)
         else:

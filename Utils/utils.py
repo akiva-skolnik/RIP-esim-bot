@@ -329,7 +329,7 @@ async def get_content(link: str, return_type: str = "", method: str = "get", ses
         "https://")[1].split(".e-sim.org")[0]
     if not session:
         session = bot.session
-    for _ in range(5):
+    for _ in range(3):
         try:
             async with session.get(link, ssl=False) if method == "get" else session.post(
                     link, ssl=False) as respond:
@@ -515,17 +515,16 @@ async def custom_delay(interaction: Interaction) -> None:
     await sleep(bot.custom_delay_dict.get(str(interaction.user.id), 0.4))
 
 
-def get_formatted_interaction(interaction: Interaction | None) -> str | None:
+def get_formatted_interaction(interaction: Interaction | None, bold: bool = True) -> str | None:
     if interaction and getattr(interaction, "data", None):
         return interaction.data.get("name", "") + " " + "  ".join(
-            f"**{x.get('name')}**: {x.get('value')}" for x in interaction.data.get('options', []))
+            (f"**{x.get('name')}**" if bold else x.get('name')) +
+            f": {x.get('value')}" for x in interaction.data.get('options', []))
 
 
 async def log_error(interaction: Interaction | None, error: Exception, cmd: str = "") -> None:
     logger.error(f"Error in {cmd}", exc_info=error)
-    data = get_formatted_interaction(interaction) or cmd
-
-    msg = f"[{get_current_time_str()}] : {data}"
+    msg = f"[{get_current_time_str()}] : {get_formatted_interaction(interaction) or cmd}"
     error_channel = bot.get_channel(config_ids["error_channel_id"])
     error_msg = f"{msg}\n```{''.join(format_exception(type(error), error, error.__traceback__))}```"
     if len(error_msg) >= 2000:
