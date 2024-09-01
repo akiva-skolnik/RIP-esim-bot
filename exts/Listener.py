@@ -24,7 +24,7 @@ class Listener(Cog):
         """Commands Counter."""
         if "name" not in interaction.data or not command:
             return
-
+        # TODO: the interaction may end before, but wait for user input like convert ids in /dmg
         query = """INSERT INTO collections.commands_logs (interaction_id, is_success, time)
                    VALUES (%s, %s, %s)"""
         params = (interaction.id, True, datetime.now(UTC))
