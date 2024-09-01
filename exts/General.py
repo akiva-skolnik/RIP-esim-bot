@@ -719,11 +719,12 @@ class General(Cog):
                 round_id = link.split("&round=")[1].split("&")[0]
                 api = link.replace("battle", "apiFights").replace("id", "battleId").replace("round", "roundId")
             else:
-                if api_battles['defenderScore'] == 8 or api_battles['attackerScore'] == 8:
-                    round_id = api_battles['currentRound'] - 1
-                else:
-                    round_id = api_battles['currentRound']
-                api = link.replace("battle", "apiFights").replace("id", "battleId") + f"&roundId={round_id}"
+                # if api_battles['defenderScore'] == 8 or api_battles['attackerScore'] == 8:
+                #     round_id = api_battles['currentRound'] - 1
+                # else:
+                #     round_id = api_battles['currentRound']
+                round_id = 0
+                api = link.replace("battle", "apiFights").replace("id", "battleId") # + f"&roundId={round_id}"
 
             my_dict, hit_time = await utils.save_dmg_time(api, attacker, defender)
             output_buffer = await utils.dmg_trend(hit_time, server, f'{link.split("=")[1].split("&")[0]}-{round_id}')

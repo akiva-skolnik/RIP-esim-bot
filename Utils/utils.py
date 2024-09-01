@@ -318,7 +318,7 @@ def camel_case_merge(identifier: str) -> str:
 
 
 async def get_content(link: str, return_type: str = "", method: str = "get", session: ClientSession = None,
-                      throw: bool = False) -> dict | HtmlElement:
+                      throw: bool = False) -> list[dict] | dict | HtmlElement:
     """Get content."""
     if not return_type:
         if "api" in link or link.startswith(api_url):

@@ -15,7 +15,7 @@ from .utils import dmg_trend, draw_pil_table
 
 # TODO: Shorten this function / break it down into smaller functions
 async def dmg_func(bot, interaction: Interaction, battle_link: Transform[dict, BattleLink], nick: str = "",
-                   country: Transform[str, Country] = "", mu_id: int = 0) -> None:
+                   country: Transform[str, Country] = "", mu_id: int = 0, calculate_tops: bool = False) -> None:
     """
     Displays wep used and dmg done (Per player, MU, country, or overall) in a given battle(s).
 
@@ -77,8 +77,8 @@ async def dmg_func(bot, interaction: Interaction, battle_link: Transform[dict, B
     attacker, defender = utils.get_sides(api_battles, attacker_id, defender_id)
 
     hit_time = defaultdict(lambda: {"dmg": [], "time": []})
-    tops = False
-    my_dict = defaultdict(lambda: {'weps': [0, 0, 0, 0, 0, 0], 'dmg': 0})
+    # entity is side and (citizen or MU)
+    stats_per_entity = defaultdict(lambda: {'weps': [0, 0, 0, 0, 0, 0], 'dmg': 0})
     if range_of_battles:
         msg = await utils.custom_followup(interaction,
                                           "Progress status: 1%.\n(I will update you after every 10%)" if
@@ -90,25 +90,27 @@ async def dmg_func(bot, interaction: Interaction, battle_link: Transform[dict, B
         empty_sides = {defender: {'weps': [0, 0, 0, 0, 0, 0], 'dmg': 0},
                        attacker: {'weps': [0, 0, 0, 0, 0, 0], 'dmg': 0},
                        "Total": {'weps': [0, 0, 0, 0, 0, 0], 'dmg': 0}}
-    my_dict.update(empty_sides)
+    stats_per_entity.update(empty_sides)
 
     if not round_id:
         for index, battle_id in enumerate(range(battle_id, last_battle + 1)):
             if range_of_battles:
                 msg = await utils.update_percent(index, last_battle - battle_id, msg)
 
-            if api_battles['defenderScore'] == 8 or api_battles['attackerScore'] == 8:
+            if not calculate_tops:
+                last = 2
+            elif api_battles['defenderScore'] == 8 or api_battles['attackerScore'] == 8:
                 last = api_battles['currentRound']
             else:
                 last = api_battles['currentRound'] + 1
             for round_i in range(1, last):
                 defender_details = defaultdict(lambda: {'weps': [0, 0, 0, 0, 0, 0], 'dmg': 0})
                 attacker_details = defaultdict(lambda: {'weps': [0, 0, 0, 0, 0, 0], 'dmg': 0})
+                round_s = f'&roundId={round_i}' if calculate_tops else ''
                 for hit in reversed(
-                        await utils.get_content(
-                            f'{base_url}apiFights.html?battleId={battle_id}&roundId={round_i}')):
+                        await utils.get_content(f'{base_url}apiFights.html?battleId={battle_id}{round_s}')):
                     side_string = defender if hit['defenderSide'] else attacker
-                    update_hit_dmg(hit, my_dict, range_of_battles, key, side_string)
+                    update_hit_dmg(hit, stats_per_entity, range_of_battles, key, side_string)
                     update_hit_time(hit, hit_time, side_string)
 
                     if key == 'citizenId':
@@ -119,16 +121,15 @@ async def dmg_func(bot, interaction: Interaction, battle_link: Transform[dict, B
                 for side in (attacker_details, defender_details):
                     side = sorted(side.items(), key=lambda x: x[1]['dmg'], reverse=True)
                     for (name, value) in side:
-                        if "tops" not in my_dict[name]:
-                            my_dict[name]["tops"] = [0, 0, 0, 0]
-                        my_dict[name]["tops"][3] += 1
-                        tops = True
+                        if "tops" not in stats_per_entity[name]:
+                            stats_per_entity[name]["tops"] = [0, 0, 0, 0]
+                        stats_per_entity[name]["tops"][3] += 1
                         if (name, value) in side[:10]:
-                            my_dict[name]["tops"][2] += 1
+                            stats_per_entity[name]["tops"][2] += 1
                             if (name, value) in side[:3]:
-                                my_dict[name]["tops"][1] += 1
+                                stats_per_entity[name]["tops"][1] += 1
                                 if (name, value) in side[:1]:
-                                    my_dict[name]["tops"][0] += 1
+                                    stats_per_entity[name]["tops"][0] += 1
 
                 await utils.custom_delay(interaction)
 
@@ -141,7 +142,7 @@ async def dmg_func(bot, interaction: Interaction, battle_link: Transform[dict, B
                 f'{base_url}apiFights.html?battleId={battle_id}&roundId={round_id}')
             for hit in reversed(api_fights):
                 side_string = defender if hit['defenderSide'] else attacker
-                update_hit_dmg(hit, my_dict, range_of_battles, key, side_string)
+                update_hit_dmg(hit, stats_per_entity, range_of_battles, key, side_string)
                 if key in hit:
                     # TODO: I am not sure what this is doing
                     if (not range_of_battles) and (not key_id or hit[key] == key_id):
@@ -162,12 +163,12 @@ async def dmg_func(bot, interaction: Interaction, battle_link: Transform[dict, B
     output = StringIO()
     csv_writer = writer(output)
     row = [key, "dmg"] + [f"Q{x} wep" for x in range(6)]
-    if tops:
+    if calculate_tops:
         row.extend(["Top 1", "Top 3", "Top 10", "Total Participation"])
     csv_writer.writerow(row)
     table = []
     embed_name = "Citizen Id"
-    for name, value in sorted(my_dict.items(), key=lambda x: x[1]["dmg"], reverse=True):
+    for name, value in sorted(stats_per_entity.items(), key=lambda x: x[1]["dmg"], reverse=True):
         row = [name if key != "citizenship" else all_countries.get(name, name), value["dmg"]] + value["weps"]
         if "tops" in value:
             row.extend(value["tops"])
@@ -255,7 +256,7 @@ async def dmg_func(bot, interaction: Interaction, battle_link: Transform[dict, B
                                           embed=await utils.convert_embed(interaction, deepcopy(embed)),
                                           files=[File(fp=output_buffer1,
                                                       filename=f'{battle_id} {server}.jpg')] + files, view=view)
-    del my_dict, table
+    del stats_per_entity, table
     if "Id" not in embed_name:
         return
     await view.wait()

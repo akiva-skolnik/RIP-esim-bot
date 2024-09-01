@@ -239,9 +239,10 @@ class Battle(Cog):
     @describe(battle_link='battle link, or server and battle id',
               nick='Please choose nick, country, or mu id',
               country='Please choose nick, country, or mu id',
-              mu_id='Please choose nick, country, or mu id')
+              mu_id='Please choose nick, country, or mu id',
+              calculate_tops='Calculate top1, top3, top10 (takes longer)')
     async def dmg(self, interaction: Interaction, battle_link: Transform[dict, BattleLink], nick: str = "",
-                  country: Transform[str, Country] = "", mu_id: int = 0) -> None:
+                  country: Transform[str, Country] = "", mu_id: int = 0, calculate_tops: bool = False) -> None:
         """
         Displays wep used and dmg done (Per player, MU, country, or overall) in a given battle(s).
 
@@ -250,7 +251,7 @@ class Battle(Cog):
         - For range of battles, use `<first>_<last>` instead of `<link>` (`/dmg battle_link: alpha 1165_1167 country: Israel`)
         """  # noqa
 
-        await dmg_func(self.bot, interaction, battle_link, nick, country, mu_id)
+        await dmg_func(self.bot, interaction, battle_link, nick, country, mu_id, calculate_tops)
 
     @checks.dynamic_cooldown(CoolDownModified(5))
     @command()
@@ -284,6 +285,7 @@ class Battle(Cog):
                 tops_per_player[hit['citizenId']]['hits'] += 5 if hit['berserk'] else 1
                 hits_per_player[hit["citizenId"]] += 5 if hit['berserk'] else 1
 
+            # TODO: move to function (duplicated in /dmg)
             for side in (attacker, defender):
                 side = sorted(side.items(), key=lambda x: x[1], reverse=True)
                 for (player, dmg) in side:
