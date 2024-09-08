@@ -136,7 +136,7 @@ countries_per_id = {1: ('poland', 'pl', 'pln'), 2: ('russia', 'ru', 'rub'), 3: (
                     173: ('republic of china', 'cn', 'cn'), 174: ('persia', 'prs', 'prs')}
 
 # api_countries = requests.get("https://elysia.e-sim.org/apiCountries.html", verify=False).json()
-# print(sorted(x["id"] for x in api_countries))
+# print(tuple(sorted(x["id"] for x in api_countries)))
 countries_per_server = {
     'luxia': (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
               30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55,
@@ -165,7 +165,12 @@ countries_per_server = {
                29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54,
                55, 56, 57, 58, 59, 60, 62, 63, 64, 71, 72, 80, 110, 111, 112, 115, 119, 120, 121, 122, 123, 124, 125,
                126, 127, 128, 130, 131, 132, 133, 135, 137, 138, 142, 143, 144, 145, 147, 148, 149, 150, 152, 155, 156,
-               162, 165, 777)
+               162, 165, 777),
+    'lima': (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29,
+             30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56,
+             57, 58, 59, 60, 62, 63, 64, 71, 72, 80, 110, 111, 112, 115, 119, 120, 121, 122, 123, 124, 125, 126, 127,
+             128, 130, 131, 132, 133, 135, 137, 138, 142, 143, 144, 145, 147, 148, 149, 150, 152, 155, 156, 162, 165,
+             777)
 }
 
 config_ids = {
@@ -187,12 +192,13 @@ gids = {  # server: (sheet id, time gid, buffs gid)
     "suna": ("1imlsoLdaEb45NnJGmo5T7mQxsjzzTGbrkvqfcR8pMlE", 2061648609, 563437000),
     "alpha": ("1KqxbZ9LqS191wRf1VGLNl-aw6UId9kmUE0k7NfKQdI4", 1445005647, 1812695346),
     "elysia": ("1blDBu-_DA4UsvZJ7sG7SFLyuHzFKcnJgX_ke4hvlyw8", 1445005647, 1812695346),
+    "lima": ("1wYI5iey016PmqPOVnY-HSaGRqV_2Tir5iCB-x9zxv9g", 1445005647, 1812695346),
 }
 
 api_url = "http://107.174.205.248:5000/"
 date_format = "%d-%m-%Y %H:%M:%S"
 
-all_servers = ('primera', 'secura', 'suna', 'alpha', 'luxia', 'elysia')
+all_servers = ('primera', 'secura', 'suna', 'alpha', 'luxia', 'elysia', 'lima')
 
 all_products = ("iron", "grain", "oil", "stone", "wood", "diamonds",  # raw
                 "weapon", "house", "gift", "food", "ticket", "defense_system", "hospital", "estate")

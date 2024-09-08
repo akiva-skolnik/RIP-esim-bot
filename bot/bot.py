@@ -50,7 +50,7 @@ class MyTree(app_commands.CommandTree):
         await interaction.response.defer()  # type: ignore
         _ = asyncio.create_task(self.log_interaction_start(interaction))
 
-        if not any("elysia" in str(v) for v in interaction.data.values()):
+        if not any("lima" in str(v) for v in interaction.data.values()):
             return True
 
         # remove expired users
@@ -68,7 +68,7 @@ class MyTree(app_commands.CommandTree):
             return True
         try:
             await interaction.followup.send(  # type: ignore
-                "elysia server is for premium users only. You can use one command per day for free."
+                "lima server is for premium users only. You can use one command per day for free."
                 "\nGet premium at <https://www.buymeacoffee.com/RipEsim> :coffee:"
                 "\nSupport: https://discord.com/invite/q96wSd6")
         except HTTPException:
