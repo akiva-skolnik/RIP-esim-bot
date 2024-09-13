@@ -158,23 +158,21 @@ async def dmg_trend(hit_time: dict, server: str, battle_id: str) -> BytesIO:
 async def get_auction(link: str) -> dict:
     """Get auction."""
     tree = await get_content(link)
-    seller = tree.xpath("//div[1]//table[1]//tr[2]//td[1]//a/text()")[0]  # TODO: update
-    buyer = (tree.xpath("//div[1]//table[1]//tr[2]//td[2]//a/text()") or ["None"])[0]
-    item = tree.xpath("//*[@id='esim-layout']//div[1]//tr[2]//td[3]/b/text()")
-    if not item:
-        item = strip(tree.xpath("//*[@id='esim-layout']//div[1]//tr[2]//td[3]/text()"))
-    price = tree.xpath("//div[1]//table[1]//tr[2]//td[4]//b//text()")[0]
-    bidders = int(tree.xpath('//*[@id="esim-layout"]//div[1]//table//tr[2]//td[5]/b')[0].text)
-    time1 = tree.xpath('//*[@id="esim-layout"]//div[1]//table//tr[2]//td[6]/span/text()')
-    if not time1:
-        time1 = strip(tree.xpath('//*[@id="esim-layout"]//div[1]//table//tr[2]//td[6]/text()'))[0]
+    info = tree.xpath('//button[@class="btn-buy btn-yellow"]')[0]
+    seller = info.get('data-seller')
+    buyer = info.get('data-top-bidder')
+    item = " ".join(info.get('data-auction-item').split()[:2]).replace("_", " ")
+    price = info.get('data-current-price')
+    time_remaining = tree.xpath('//*[@class="auctionTime"]//span/text()')
+    if not time_remaining:  # finished
+        time_remaining = strip(tree.xpath('//*[@class="auctionTime"]/text()'))[0]
         remaining_seconds = -1
     else:
-        time1 = tuple(int(x) for x in time1[0].split(":"))
-        remaining_seconds = time1[0] * 60 * 60 + time1[1] * 60 + time1[2]
-        time1 = f'{time1[0]:02d}:{time1[1]:02d}:{time1[2]:02d}'
-    return {"seller": seller.strip(), "buyer": buyer.strip(), "item": item[0],
-            "price": price, "time": time1, "bidders": bidders, "remaining_seconds": remaining_seconds}
+        time_remaining = tuple(int(x) for x in time_remaining[0].split(":"))
+        remaining_seconds = time_remaining[0] * 60 * 60 + time_remaining[1] * 60 + time_remaining[2]
+        time_remaining = f'{time_remaining[0]:02d}:{time_remaining[1]:02d}:{time_remaining[2]:02d}'
+    return {"seller": seller.strip(), "buyer": buyer.strip(), "item": item,
+            "price": price, "time": time_remaining, "remaining_seconds": remaining_seconds}
 
 
 async def save_dmg_time(api_fights: str, attacker: str, defender: str) -> (dict, dict):
