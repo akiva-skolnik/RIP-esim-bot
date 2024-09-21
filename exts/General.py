@@ -286,14 +286,15 @@ class General(Cog):
 
         date_format = "%Y/%m/%d %H:%M:%S"
         now = utils.get_current_time(timezone_aware=False)
-        now_str = utils.get_current_time_str(timezone_aware=False)
+        now_str = utils.get_current_time_str(timezone_aware=False, _format=date_format)
         when = when.replace("-", "/")
-        if when.count(":") == 1:
+        if when.count(":") == 1:  # adding the seconds
             when += ":00"
-        if "/" not in when:
+        if "/" not in when:  # adding the current date
             when = now_str.split()[0] + " " + when
-        elif when.count("/") != 2:
-            when = now_str.split("/")[0] + "/" + when
+        elif when.count("/") == 1:  # adding the current year
+            when = f"{now.year}/{when}"
+
         try:
             seconds = (datetime.strptime(when, date_format) - now).total_seconds()
         except Exception:

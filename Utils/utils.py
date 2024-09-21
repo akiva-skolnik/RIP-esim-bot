@@ -902,8 +902,8 @@ def get_profile_medals(tree: HtmlElement) -> list[str]:
     return profile_medals
 
 
-def get_current_time_str(timezone_aware: bool = True) -> str:
-    return get_current_time(timezone_aware=timezone_aware).strftime(date_format)
+def get_current_time_str(timezone_aware: bool = True, _format: str = date_format) -> str:
+    return get_current_time(timezone_aware=timezone_aware).strftime(_format)
 
 
 def get_current_time(timezone_aware: bool = True) -> datetime:
