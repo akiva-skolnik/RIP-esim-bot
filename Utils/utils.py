@@ -380,7 +380,7 @@ async def create_session(server: str = None) -> ClientSession:
     headers = {"User-Agent": bot.config["headers"]}
     if server:
         headers["Host"] = server + ".e-sim.org"
-    return ClientSession(timeout=ClientTimeout(total=150), headers=headers)
+    return ClientSession(timeout=ClientTimeout(total=15), headers=headers)
 
 
 async def get_session(server: str) -> ClientSession:
