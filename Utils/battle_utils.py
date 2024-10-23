@@ -317,10 +317,8 @@ async def watch_func(bot, channel: TextChannel, link: str, t: float, role: str, 
     """Watch func."""
     for _ in range(20):  # Max rounds: 15, plus option for some freeze/delay
         api_battles = await utils.get_content(link.replace("battle", "apiBattles").replace("id", "battleId"))
-        if await watch_should_break(link, api_battles):
-            break
 
-        for _ in range(5):  # allow 5 delays from e-sim
+        for _ in range(3):  # allow some delays from e-sim
             h, m, s = api_battles["hoursRemaining"], api_battles["minutesRemaining"], api_battles["secondsRemaining"]
             sleep_time = h * 3600 + m * 60 + s - t * 60
             if sleep_time < 30:
@@ -330,6 +328,9 @@ async def watch_func(bot, channel: TextChannel, link: str, t: float, role: str, 
             # check again, in case e-sim froze the battle / delayed it
             api_battles = await utils.get_content(
                 link.replace("battle", "apiBattles").replace("id", "battleId"))
+
+        if await watch_should_break(link, api_battles):
+            break
 
         attacker, defender = utils.get_sides(api_battles)
         api_fights_link = link.replace("battle", "apiFights").replace(
