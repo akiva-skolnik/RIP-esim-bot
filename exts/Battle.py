@@ -884,11 +884,13 @@ class Battle(Cog):
                 if sides and score:  # there can't be one without the other
                     row += f", **Sides:** {sides} ({score})"
                 data.append(row)
-        await utils.custom_followup(interaction, '\n'.join(["**Watch List:**"] + data + [
-            "\nIf you want to remove any, write `/unwatch link: <link>` or `/unwatch link: ALL`",
-            f"Example: `/unwatch link: {data[0].split()[0]}`"]) if data else
-        "Currently, I'm not watching any battle. "
-        "Type `/watch` if you want to watch one.")
+        if data:
+            await utils.custom_followup(interaction, '\n'.join(["**Watch List:**"] + data + [
+                "\nIf you want to remove any, write `/unwatch link: <link>` or `/unwatch link: ALL`",
+                f"Example: `/unwatch link: {data[0].split()[0]}`"]))
+        else:
+            await utils.custom_followup(interaction,
+                                        "Currently, I'm not watching any battle. Type `/watch` if you want to watch one.")
 
     @checks.dynamic_cooldown(CoolDownModified(10))
     @command()

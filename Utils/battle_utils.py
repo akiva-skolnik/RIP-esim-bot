@@ -300,7 +300,7 @@ async def watch_should_break(link: str, api_battles: dict) -> bool:
         if watch_dict["link"] != link:
             continue
         if (8 in (api_battles['defenderScore'], api_battles['attackerScore'])
-                or find_watch.get("removed")
+                or watch_dict.get("removed")
                 or api_battles['frozen']):
             find_watch["watch"].remove(watch_dict)
         else:
