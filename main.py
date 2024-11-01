@@ -13,7 +13,7 @@ from discord.utils import setup_logging
 
 from Utils import utils, db_utils
 from Utils.constants import all_servers
-from update_db.bot import bot, load_extensions
+from bot.bot import bot, load_extensions
 from exts.Battle import (motivate_func, ping_func, watch_auction_func,
                          watch_func)
 from exts.General import remind_func

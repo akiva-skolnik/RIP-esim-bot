@@ -6,7 +6,7 @@ from discord.app_commands import (CheckFailure, Choice, Transformer,
                                   TransformerError)
 
 from Utils import utils
-from update_db.bot import bot
+from bot.bot import bot
 from .constants import (all_countries, all_countries_by_name, all_products,
                         all_servers)
 

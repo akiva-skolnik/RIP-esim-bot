@@ -6,7 +6,7 @@ import pandas as pd
 from asyncmy.cursors import logger as asyncmy_logger
 from discord import Interaction, File
 
-from update_db.bot import bot
+from bot.bot import bot
 from . import utils
 
 asyncmy_logger.setLevel("ERROR")  # I INSERT IGNORE, so I don't care about duplicate key warnings
