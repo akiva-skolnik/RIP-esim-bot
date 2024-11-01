@@ -200,6 +200,7 @@ api_url = "http://107.174.205.248:5000/"
 date_format = "%d-%m-%Y %H:%M:%S"
 
 all_servers = ('primera', 'secura', 'suna', 'alpha', 'luxia', 'lima', 'viva')
+temp_servers = all_servers[-2:]  # Note: sometimes there will be 3 temp servers
 
 all_products = ("iron", "grain", "oil", "stone", "wood", "diamonds",  # raw
                 "weapon", "house", "gift", "food", "ticket", "defense_system", "hospital", "estate")

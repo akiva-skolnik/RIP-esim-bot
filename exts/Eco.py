@@ -20,7 +20,7 @@ from matplotlib.ticker import FixedLocator, MaxNLocator
 from Utils import utils
 from Utils.constants import (all_countries, all_countries_by_name,
                              all_parameters, all_products, api_url, config_ids,
-                             date_format)
+                             date_format, temp_servers)
 from Utils.transformers import Country, Product, ProfileLink, Server
 from Utils.utils import CoolDownModified, draw_pil_table, split_list
 
@@ -515,8 +515,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 prices_per_day = {day: min(price, med + 2 * std) for day, price in prices_per_day.items()}
 
                 # calculate the moving average
-                temp_server = server in ('lima', 'viva')
-                window = 12 if not temp_server else 7
+                is_temp_server = server in temp_servers
+                window = 12 if not is_temp_server else 7
                 prices_list = list(prices_per_day.values())
                 moving_average = tuple(statistics.median(prices_list[i - window // 2: i + window // 2])
                                        if i + window // 2 <= len(prices_list) and i >= window // 2 else None
@@ -527,7 +527,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                 ax.set_ylabel('Price')
                 ax.set_xlabel('Date')
                 ax.plot(prices_per_day.keys(), prices_per_day.values(),  # noqa WPS221
-                        label="Daily Average" if temp_server else "Monthly Average")
+                        label="Daily Average" if is_temp_server else "Monthly Average")
                 if any(moving_average):
                     ax.plot(prices_per_day.keys(), moving_average, '.-', label="Moving Average")  # noqa WPS221
                 ax.legend()

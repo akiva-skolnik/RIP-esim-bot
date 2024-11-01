@@ -12,6 +12,8 @@ from discord import (AllowedMentions, Forbidden, Game, HTTPException, Intents,
                      Interaction, Message, NotFound, app_commands, InteractionType)
 from discord.ext.commands import Bot
 
+from Utils.constants import all_servers
+
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -50,7 +52,8 @@ class MyTree(app_commands.CommandTree):
         await interaction.response.defer()  # type: ignore
         _ = asyncio.create_task(self.log_interaction_start(interaction))
 
-        if not any("lima" in str(v) for v in interaction.data.values()):
+        last_server = all_servers[-1]
+        if not any(last_server in str(v) for v in interaction.data.values()):
             return True
 
         # remove expired users
@@ -68,7 +71,7 @@ class MyTree(app_commands.CommandTree):
             return True
         try:
             await interaction.followup.send(  # type: ignore
-                "lima server is for premium users only. You can use one command per day for free."
+                f"`{last_server}` server is for premium users only. You can use one command per day for free."
                 "\nGet premium at <https://www.buymeacoffee.com/RipEsim> :coffee:"
                 "\nSupport: https://discord.com/invite/q96wSd6")
         except HTTPException:

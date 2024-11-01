@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from random import randint
 
 import utils
-from Utils.constants import gids, config_ids, date_format, countries_per_id, countries_per_server
+from Utils.constants import gids, config_ids, date_format, countries_per_id, countries_per_server, temp_servers
 
 MAX_ERROR_LENGTH = 10000
 
@@ -381,7 +381,7 @@ async def update_prices(server: str) -> None:
 
             # Update the history
             now = utils.current_datetime()
-            if server not in ('lima', 'viva'):
+            if server not in temp_servers:
                 this_month = "01-" + now.strftime("%m-%Y")
             else:
                 this_month = now.strftime("%d-%m-%Y")
