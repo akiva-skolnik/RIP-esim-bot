@@ -18,6 +18,11 @@ It gathers information about buffed players, player online time, and market pric
 * **Monitor Player Activity:** Gain insights into player online time and buffing activity.
 * **Stay Informed:** Access valuable data directly within the Discord bot.
 
+## Running the Bot:
+```bash
+python3.12 -m update_db.bot
+```
+
 ## Getting Involved:
 
 * View Google Sheets Data:

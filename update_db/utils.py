@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from google.oauth2.service_account import Credentials
 from lxml.html import fromstring
 
-from constants import countries_per_id, countries_per_server
+from Utils.constants import countries_per_id, countries_per_server
 
 load_dotenv()
 
