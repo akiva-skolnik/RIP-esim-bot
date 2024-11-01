@@ -45,7 +45,6 @@ a donation:
 Your contributions will help ensure the bot's continued improvement and availability for the e-Sim community.
 
 **Note:**
-Some commands rely on one of my [other projects](https://github.com/akiva-skolnik/RIP-esim-data-collector) to be
-operational.
+Some commands assume `update_db/bot.py` is running in the background to update the database with the latest game data.
 
 ## Thank you for your interest!
