@@ -9,21 +9,12 @@ from datetime import datetime, timedelta
 from random import randint
 
 import utils
-from constants import countries_per_id, countries_per_server
+from Utils.constants import gids, config_ids, date_format, countries_per_id, countries_per_server
 
-DEFAULT_DATETIME_FORMAT = "%d-%m-%Y %H:%M:%S"
 MAX_ERROR_LENGTH = 10000
 
-PRODUCT_SHEET = "17y8qEU4aHQRTXKdnlM278z3SDzY16bmxMwrZ0RKWcEI"
-servers = {
-    "viva": "1x2EzfjVtb5Z-fuR0OHYV0Df2gby-dBlTejvxldxelCA",
-    "lima": "1wYI5iey016PmqPOVnY-HSaGRqV_2Tir5iCB-x9zxv9g",
-    "luxia": "1mx_JkHVnTVikNdTSxhvfFh4Pzuepp9ZGakCAtxnGxyY",
-    "suna": "1imlsoLdaEb45NnJGmo5T7mQxsjzzTGbrkvqfcR8pMlE",
-    "alpha": "1KqxbZ9LqS191wRf1VGLNl-aw6UId9kmUE0k7NfKQdI4",
-    "primera": "1laY2aYa5_TcaDPCZ4FrFjZnbvVkxRIrGdm7ZRaO41nY",
-    "secura": "10en9SJVsIQz7uGhbXwb9GInnOdcDuE4p7L93un0q6xw"
-}
+PRODUCT_SHEET = config_ids["product_sheet_id"]
+servers = {server: v[0] for server, v in reversed(gids.items())}
 
 
 # TODO: split into smaller functions.
@@ -310,7 +301,7 @@ async def update_monetary_market():
 
             # update history
             history = await utils.find_one("mm_history", server)
-            today = utils.current_datetime_str(DEFAULT_DATETIME_FORMAT.split()[0])
+            today = utils.current_datetime_str(date_format.split()[0])
             for country_id, price in mm_per_server[server].items():
                 country_id = str(country_id)  # MongoDB forcing keys to be str
                 price = str(price)
