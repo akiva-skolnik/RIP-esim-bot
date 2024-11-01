@@ -1,5 +1,12 @@
-python-dotenv
-pytz
+discord.py[speed]>=2.0.0
+aiohttp==3.9.5  # 3.10 cause problems in windows
+git+https://github.com/Rapptz/discord-ext-menus
+sympy
+tabulate
 lxml
-aiohttp
-gspread-asyncio
+Pillow
+wolframalpha
+matplotlib
+pytz
+pandas
+asyncmy

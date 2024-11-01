@@ -1,28 +1,38 @@
-# RIP-esim Data Collector
+# Discord Bot For The [e-sim](https://alpha.e-sim.org) Browser Game
 
-This project collects and processes data from the browser game [e-sim](https://alpha.e-sim.org), specifically for
-the [RIP-esim](https://github.com/akiva-skolnik/RIP-esim-bot) Discord bot.
+## Overview
 
-It gathers information about buffed players, player online time, and market price history.
+This Discord bot enhances the player experience for the browser game [e-sim](https://alpha.e-sim.org) by providing
+exclusive insights, graphs, and integrated data.
+
+It utilizes a caching mechanism powered by MySQL for improved performance.
+
+This project has been a significant part of my learning journey in Python, and I'm continually refining it to provide
+better features and performance, even though I no longer play the game.
 
 ## Key Features:
 
-* **Automatic Data Collection:** Regularly fetches data from e-sim API & HTML pages.
-* **Database:** Stores the collected data for efficient access and analysis.
-* **Google Sheets Integration:** Makes specific data points readily available to users through Google Sheets.
-* **Supports RIP-esim Bot:** Provides essential data for various bot functionalities.
+* **Extensive Command List:** The bot boasts a wide range of commands that offer valuable information and tools to
+  players (see image below for reference).
+* **Data Visualization:** Complex data is presented in clear and concise graphs for easy understanding.
+* **Integrated Information:** Seamlessly access game data directly within Discord, eliminating the need to switch
+  between platforms.
+* **MySQL Cache:** Ensures efficient data retrieval and reduces API calls.
+* **Cloud-Hosted:** The bot runs on a reliable cloud server, funded by generous users.
+* **Community-Driven:** Over 500,000 commands have been executed, demonstrating its popularity and usefulness.
 
-**Benefits for e-sim Players:**
+## Join the Community:
 
-* **Track Market Trends:** Analyze historical market data to make informed investment decisions.
-* **Monitor Player Activity:** Gain insights into player online time and buffing activity.
-* **Stay Informed:** Access valuable data directly within the Discord bot.
+Experience the bot's capabilities firsthand and connect with other e-Sim players
+on [our Discord server](https://discord.com/invite/q96wSd6)
+You can
+also [invite it to your own server](https://discordapp.com/api/oauth2/authorize?client_id=542220847491055647&permissions=182336&scope=bot)
 
-## Getting Involved:
+**Image of Command List:**
 
-* View Google Sheets Data:
-    * [Market Price History](https://docs.google.com/spreadsheets/d/17y8qEU4aHQRTXKdnlM278z3SDzY16bmxMwrZ0RKWcEI)
-    * [Player Online and Buff Time](https://docs.google.com/spreadsheets/d/1KqxbZ9LqS191wRf1VGLNl-aw6UId9kmUE0k7NfKQdI4#gid=1812695346)
+![Command List](https://i.imgur.com/FG4f4dE.png)
+
+(some commands may be outdated)
 
 ## Support the Project:
 
@@ -32,6 +42,10 @@ a donation:
 - [Buy Me a Coffee](https://www.buymeacoffee.com/ripEsim)
 - [Patreon](https://www.patreon.com/ripEsim)
 
-Your contributions will help ensure the bot's continued improvement and availability for the e-sim community.
+Your contributions will help ensure the bot's continued improvement and availability for the e-Sim community.
 
-### Thank you for your interest!
+**Note:**
+Some commands rely on one of my [other projects](https://github.com/akiva-skolnik/RIP-esim-data-collector) to be
+operational.
+
+## Thank you for your interest!

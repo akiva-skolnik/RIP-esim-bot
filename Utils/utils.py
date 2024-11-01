@@ -27,7 +27,7 @@ from matplotlib.ticker import FixedLocator
 from pytz import timezone
 from tabulate import tabulate
 
-from bot.bot import bot
+from update_db.bot import bot
 from .constants import (all_countries, all_parameters, all_servers, api_url,
                         config_ids, countries_per_id, countries_per_server,
                         date_format, flags_codes)
