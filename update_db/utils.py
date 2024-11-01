@@ -195,9 +195,14 @@ def get_eqs(tree) -> iter:
         yield slot, parameters, values, eq_link
 
 
+def get_file_path(collection: str, _id: str) -> str:
+    """db/ is in the parent directory of the root directory of the project."""
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(os.path.dirname(root), f"db/{collection}_{_id}.json")
+
+
 async def find_one(collection: str, _id: str) -> dict:
-    root = os.path.dirname(os.path.abspath(__file__))
-    filename = os.path.join(os.path.dirname(root), f"db/{collection}_{_id}.json")
+    filename = get_file_path(collection, _id)
     if os.path.exists(filename):
         with open(filename, encoding='utf-8') as file:
             return json.load(file)
@@ -206,8 +211,7 @@ async def find_one(collection: str, _id: str) -> dict:
 
 
 async def replace_one(collection: str, _id: str, data: dict) -> None:
-    root = os.path.dirname(os.path.abspath(__file__))
-    filename = os.path.join(os.path.dirname(root), f"db/{collection}_{_id}.json")
+    filename = get_file_path(collection, _id)
     with open(filename, "w", encoding='utf-8', errors='ignore') as file:
         json.dump(data, file)
 
