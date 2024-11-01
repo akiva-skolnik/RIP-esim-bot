@@ -706,7 +706,7 @@ class Battle(Cog):
             if extra_premium_info:
                 tree = await utils.get_content(f"{base_url}profile.html?id={row['id']}")
                 try:
-                    dmg = tree.xpath('//*[@class="profile-row" and span = "Damage"]/span/text()')[0]
+                    dmg = tree.xpath('//*[@class="profile-row"]/span/text()')[2]
                 except IndexError:
                     continue
                 buffs, debuffs = utils.get_buffs_debuffs(tree)

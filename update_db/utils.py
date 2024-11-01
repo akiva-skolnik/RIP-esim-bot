@@ -228,7 +228,7 @@ def extract_player_details(player_profile_link: str, tree: fromstring) -> dict:
     try:
         premium = len(tree.xpath('//*[@class="premium-account"]')) == 1
         citizenship = tree.xpath('//*[@class="profile-row" and span = "Citizenship"]/span/span/text()')[0]
-        damage = tree.xpath('//*[@class="profile-row" and span = "Damage"]/span/text()')[0]
+        damage = tree.xpath('//*[@class="profile-row"]/span/text()')[2]
         buffs_debuffs = [
             x.split("/specialItems/")[-1].split(".png")[0] for x in tree.xpath(
                 '//*[@class="profile-row" and (strong="Debuffs" or strong="Buffs")]//img/@src') if
