@@ -133,7 +133,8 @@ countries_per_id = {1: ('poland', 'pl', 'pln'), 2: ('russia', 'ru', 'rub'), 3: (
                     166: ('vanuatu', 'vu', 'vut'), 167: ('san marino', 'sm', 'rsm'), 168: ('palestine', 'ps', 'psd'),
                     169: ('soviet union', 'su', 'sur'), 170: ('czechoslovakia', 'cshh', 'cs'),
                     171: ('yugoslavia', 'yug', 'yug'), 172: ('weimar republic', 'wer', 'wer'),
-                    173: ('republic of china', 'cn', 'cn'), 174: ('persia', 'prs', 'prs')}
+                    173: ('republic of china', 'cn', 'cn'), 174: ('persia', 'prs', 'prs'),
+                    777: ('adminland', '-', '-')}
 
 # import requests
 # api_countries = requests.get("https://viva.e-sim.org/apiCountries.html", verify=False).json()
