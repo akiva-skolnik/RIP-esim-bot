@@ -195,11 +195,13 @@ async def motivate_func(bot, server: str, data: dict) -> None:
             if old_citizen_id and citizen_id != old_citizen_id:
                 embed = Embed(colour=0x3D85C6, title="Citizens Registered In The Last 5 Minutes",
                               url=f'{base_url}newCitizens.html?countryId=0')
+                last_citizen = min(old_citizen_id + 10, citizen_id)
                 embed.add_field(name="Motivate Link", value="\n".join(
-                    f'{base_url}motivateCitizen.html?id={i + 1}' for i in range(old_citizen_id, citizen_id)))
+                    f'{base_url}motivateCitizen.html?id={i + 1}' for i in range(old_citizen_id, last_citizen)))
                 embed.set_footer(text=f"If you want to stop it, type /got servers: {server}")
                 for channel_id in list(data[server]):
                     try:
+                        # TODO: remove old channels (1 month)
                         channel = bot.get_channel(int(channel_id))
                         await channel.send(embed=await utils.custom_author(embed))
                     except Exception as e:
