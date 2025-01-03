@@ -72,7 +72,7 @@ def server_validation(server: str) -> str:
     server = server.lower().strip()
     if server in all_servers:
         return server
-    raise CheckFailure(f"`{server} ` is not a valid server.\nValid servers: " + ", ".join(all_servers))
+    raise CheckFailure(f"`{server}` is not a valid server.\nValid servers: " + ", ".join(all_servers))
 
 
 def human_format(num: float) -> str:
