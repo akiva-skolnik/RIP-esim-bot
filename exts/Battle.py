@@ -712,14 +712,14 @@ class Battle(Cog):
                 buffs, debuffs = utils.get_buffs_debuffs(tree)
                 if check_battle and api_battles['type'] != "ATTACK":
                     header = "Nick", "Citizenship", "lvl", "Total DMG", "Buffs", "Debuffs"
-                    table.append((name, all_countries[citizenship], level, dmg, buffs, debuffs))
+                    table.append([name, all_countries[citizenship], level, dmg, buffs, debuffs])
                 else:
                     if not country:
                         header = "Nick", "Citizenship", "lvl", "Total DMG", "Location", "Buffs", "Debuffs"
-                        table.append((name, all_countries[citizenship], level, dmg, location, buffs, debuffs))
+                        table.append([name, all_countries[citizenship], level, dmg, location, buffs, debuffs])
                     else:
                         header = "Nick", "lvl", "Total DMG", "Location", "Buffs", "Debuffs"
-                        table.append((name, level, dmg, location, buffs, debuffs))
+                        table.append([name, level, dmg, location, buffs, debuffs])
             else:
                 if name in find_buff and find_buff[name][5]:
                     buff = ":red_circle: " if not (now - datetime.strptime(
@@ -734,7 +734,7 @@ class Battle(Cog):
                     level = f":unlock: {level}"
 
                 header = "CS, Nick", "Level", "Location"
-                table.append((name, level, f"{utils.get_flag_code(location)} {location}"))
+                table.append([name, level, f"{utils.get_flag_code(location)} {location}"])
         if not table:
             await utils.custom_followup(
                 interaction, "I'm sorry, but I could not find anyone online " +
