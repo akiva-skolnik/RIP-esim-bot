@@ -286,7 +286,7 @@ async def ping_func(channel: TextChannel, t: float, server: str, ping_id: str, c
         find_ping = await utils.find_one("collection", "ping")
 
 
-async def watch_should_break(link: str, api_battles: dict) -> bool:
+async def watch_should_break(link: str, channel_id: int, api_battles: dict) -> bool:
     """Returns True if link should be removed from watch dict:
 
         1. if battle is over
@@ -299,7 +299,7 @@ async def watch_should_break(link: str, api_battles: dict) -> bool:
     should_break = True
     find_watch = await utils.find_one("collection", "watch") or {"watch": []}
     for watch_dict in list(find_watch["watch"]):
-        if watch_dict["link"] != link:
+        if watch_dict["link"] != link or watch_dict["channel_id"] != channel_id:
             continue
         if (8 in (api_battles['defenderScore'], api_battles['attackerScore'])
                 or watch_dict.get("removed")
@@ -331,7 +331,7 @@ async def watch_func(bot, channel: TextChannel, link: str, t: float, role: str, 
             api_battles = await utils.get_content(
                 link.replace("battle", "apiBattles").replace("id", "battleId"))
 
-        if await watch_should_break(link, api_battles):
+        if await watch_should_break(link, channel.id, api_battles):
             break
 
         attacker, defender = utils.get_sides(api_battles)
