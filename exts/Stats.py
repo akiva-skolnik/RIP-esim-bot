@@ -637,7 +637,14 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
             for user_id in links:
                 count += 1
                 msg = await utils.update_percent(count, (last_page - 2) * 24 + len(links), msg)
-                api = await utils.get_content(f"{base_url}apiCitizenById.html?id={user_id}")
+                try:
+                    api = await utils.get_content(f"{base_url}apiCitizenById.html?id={user_id}")
+                except Exception as error:
+                    if count == 0:
+                        raise error  # probably a mistake we can't recover from
+                    else:
+                        self.bot.logger.error(f"error in sets for user_id={user_id}: {error}")
+                        continue
                 dmg = dmg_calculator(api)
                 csv_writer.writerow([api["login"], api['citizenship'], api['eqCriticalHit'], api['eqReduceMiss'],
                                      api['eqAvoidDamage'], api['eqIncreaseMaxDamage'], api['eqIncreaseDamage'],
