@@ -591,7 +591,7 @@ async def convert_embed(interaction_or_author: Interaction | int, embed: Embed, 
             if "fix" not in first_item and (
                     is_ascii(first_item) or "%" in first_item) and embed_fields[index].value.count("\n") > 3:
                 embed.set_field_at(index, name=embed_fields[index].name,
-                                   value=embed_fields[index].value.replace("\n", " <:fix:824351642103185408>\n"),
+                                   value=embed_fields[index].value.replace("\n", " <:fix:1367880792121802762>\n"),
                                    inline=embed_fields[index].inline)
         if is_columns and not embed.footer and len(embed_fields) > 1 and any("\n" in f.value for f in embed_fields):
             embed.set_footer(text="type `!phone` if it looks ugly")
