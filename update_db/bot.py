@@ -182,8 +182,8 @@ async def update_time(server: str) -> None:
     initial_date_info = {
         "primera": ["Minutes online (since 10/12/20)", "10/12/2020"],
         "luxia": ["Minutes online (since day 1)", "11/02/2022"],
-        "zara": ["Minutes online (since day 1)", "03/01/2025"],
         "mira": ["Minutes online (since day 1)", "08/03/2025"],
+        "oria": ["Minutes online (since day 1)", "02/05/2025"],
     }
     default_date_info = ["Minutes online (since 19/05/2020)", "19/05/2020"]
 
