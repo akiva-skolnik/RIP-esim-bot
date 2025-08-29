@@ -16,10 +16,11 @@ from discord.app_commands import (Transform, check, checks, command, describe,
                                   guild_only)
 from discord.ext.commands import Cog, Context, hybrid_command
 from matplotlib import pyplot as plt
+import numpy as np
 
 from Utils import utils, UiButtons
 from Utils.DmgCalculator import dmg_calculator
-from Utils.battle_utils import (cup_func, motivate_func, normal_pdf, ping_func,
+from Utils.battle_utils import (cup_func, motivate_func, normal_pdf, binom_pmf, ping_func,
                                 watch_auction_func, watch_func)
 from Utils.constants import (all_countries, all_countries_by_name, all_servers,
                              date_format, gids)
@@ -334,52 +335,54 @@ class Battle(Cog):
         max_k = 0
         for user_id, value in tops_per_player.items():
             player = given_user_id if nick else user_id
-            if player == user_id:
-                for quality, total_drops in {k: v[0] for k, v in drops_per_q.items()}.items():
-                    if quality in indexes:
-                        total_tops = all_total_tops[indexes[quality]]
-                        my_tops = value['tops'][indexes[quality]] if 'tops' in value else 0
-                    elif "upg" in quality:
-                        total_tops = hits
-                        my_tops = value['hits']
+            if player != user_id:
+                continue
+            for quality, total_drops in {k: v[0] for k, v in drops_per_q.items()}.items():
+                if quality in indexes:
+                    total_tops = all_total_tops[indexes[quality]]
+                    my_tops = value['tops'][indexes[quality]] if 'tops' in value else 0
+                elif "upg" in quality:
+                    total_tops = hits
+                    my_tops = value['hits']
+                else:
+                    total_tops = hits_with_bonus
+                    my_tops = value['hits'] + value['hits'] * bonus / 100
+
+                n = total_drops
+                p = (my_tops / total_tops) if total_tops else 0
+                mean = n * p  # mu
+                mean_values.append(mean)
+                std = math.sqrt(mean * (1 - p))  # sigma
+                if n * p >= 5 and n * (1 - p) >= 5:
+                    # normal approx
+                    percentages = [normal_pdf(k, mean, std) * 100 for k in range(n + 1)]
+                else:
+                    probs = binom_pmf(n, p)
+                    percentages = [p * 100 for p in probs]
+
+                cum_sum = np.cumsum(percentages)
+                # keep only values below 99.9
+                percentages = [percentages[i] for i in range(len(cum_sum)) if cum_sum[i] < 99.9]
+
+                max_k = max(max_k, len(percentages))
+
+                first, last = round(mean - std), round(mean + std)
+                if total_drops and my_tops:
+                    if first == 0:
+                        drops_range = "1" if total_drops == 1 else "1+"
+                        chances = 100 - percentages[0]
                     else:
-                        total_tops = hits_with_bonus
-                        my_tops = value['hits'] + value['hits'] * bonus / 100
+                        drops_range = f"{first}-{last}" if first != last else str(first)
+                        chances = sum(percentages[first:last + 1])
+                    final[player][quality] = (drops_range, f"{round(chances)}%")
+                    qualities.add(quality)
+                else:
+                    final[player][quality] = (0, "100%")
 
-                    x, y = [], []
-                    total_chances = 0
-                    n = total_drops
-                    p = (my_tops / total_tops) if total_tops else 0
-                    mean = n * p  # mu
-                    mean_values.append(mean)
-                    std = math.sqrt(mean * (1 - p))  # sigma
-                    for k in range(n + 1):
-                        if n * p >= 5 and n * (1 - p) >= 5:  # or: n*p*(1-p) > 10
-                            prob = normal_pdf(k, mean, std)
-                        else:
-                            prob = math.comb(n, k) * math.pow(p, k) * math.pow(1 - p, n - k)
-                        x.append(prob * 100)
-                        y.append(k + 1)  # Shift the data to avoid log(0)
-                        max_k = max(max_k, k)
-                        total_chances += prob
-                        if total_chances > 0.99:
-                            break
-
-                    first, last = round(mean - std), round(mean + std)
-                    if total_drops and my_tops:
-                        if first == 0:
-                            drops_range = "1" if total_drops == 1 else "1+"
-                            chances = 100 - x[0]
-                        else:
-                            drops_range = f"{first}-{last}" if first != last else str(first)
-                            chances = sum(x[first:last + 1])
-                        final[player][quality] = (drops_range, f"{round(chances)}%")
-                        qualities.add(quality)
-                    else:
-                        final[player][quality] = (0, "100%")
-
-                    if nick and len(x) > 1:
-                        await self.bot.loop.run_in_executor(None, lambda: ax.plot(y, x, marker='.', label=quality))
+                if nick and len(percentages) > 1:
+                    amounts = list(range(1, len(percentages) + 1))
+                    await self.bot.loop.run_in_executor(None, lambda: ax.plot(
+                        amounts, percentages, marker='.', label=quality))
 
         csv_writer = None
         if not nick:
@@ -397,6 +400,8 @@ class Battle(Cog):
                 csv_writer.writerow(row)
             else:
                 def plot_drops() -> BytesIO:
+                    plt.ylim(bottom=0.1)
+
                     ax.legend()
                     ax.set_title(f"Drop chances for {nick} ({server}, {battle_id})")
                     ax.set_ylabel('%')

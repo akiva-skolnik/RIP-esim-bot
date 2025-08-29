@@ -8,5 +8,6 @@ Pillow
 wolframalpha
 matplotlib
 pytz
+numpy
 pandas
 asyncmy

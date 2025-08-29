@@ -24,6 +24,55 @@ def normal_pdf(x, mean, std) -> float:
     return math.exp(- math.pow((x - mean) / std, 2) / 2) / (math.sqrt(2 * math.pi) * std)
 
 
+def binom_pmf(n: int, p: float) -> list[float]:
+    """Return full Binomial(n,p) PMF as a list of floats length n+1.
+    Uses a centered recurrence around the mode; falls back to log-space shift if needed.
+    """
+    if p <= 0.0:
+        probs = [1.0] + [0.0] * n
+        return probs
+    if p >= 1.0:
+        probs = [0.0] * n + [1.0]
+        return probs
+
+    # mode (an integer where PMF is maximal)
+    mode = int(math.floor((n + 1) * p))
+    mode = max(0, min(n, mode))
+
+    # log P(mode)
+    logp_mode = (math.lgamma(n + 1) - math.lgamma(mode + 1) - math.lgamma(n - mode + 1)
+                 + mode * math.log(p) + (n - mode) * math.log1p(-p))
+    try:
+        prob_mode = math.exp(logp_mode)
+    except OverflowError:
+        prob_mode = 0.0
+
+    # If we got a sane nonzero mode probability, expand outwards by recurrence
+    if prob_mode > 0.0:
+        probs = [0.0] * (n + 1)
+        probs[mode] = prob_mode
+        # downward (k -> k-1)
+        for k in range(mode, 0, -1):
+            probs[k - 1] = probs[k] * (k) / (n - k + 1) * ((1.0 - p) / p)
+        # upward (k -> k+1)
+        for k in range(mode, n):
+            probs[k + 1] = probs[k] * (n - k) / (k + 1) * (p / (1.0 - p))
+        s = sum(probs)
+        if s > 0.0:
+            return [v / s for v in probs]  # normalize to guard against tiny FP drift
+
+    # Fallback: compute log-PMF for all k, shift by max log to avoid underflow, exponentiate, normalize
+    log_probs = [
+        (math.lgamma(n + 1) - math.lgamma(k + 1) - math.lgamma(n - k + 1)
+         + k * math.log(p) + (n - k) * math.log1p(-p))
+        for k in range(n + 1)
+    ]
+    max_log = max(log_probs)
+    probs = [math.exp(lp - max_log) for lp in log_probs]
+    s = sum(probs)
+    return [v / s for v in probs]
+
+
 async def cup_func(bot, interaction: Interaction, db_key: str, server: str, battle_ids_range: range,
                    excluded_ids: set = None) -> None:
     """Cup function."""
