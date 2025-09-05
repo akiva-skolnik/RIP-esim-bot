@@ -167,7 +167,7 @@ class General(Cog):
         embed = Embed(colour=0x3D85C6, url=link, description=title, title=("\U0001f7e2" if is_online else "\U0001f534")
                                                                           + f" {api['login']}, {utils.get_flag_code(api['citizenship'])} {api['citizenship']}")
 
-        birthday = (tree.xpath('//*[@class="profile-row" and span = "Birthday"]/span/text()') or [1])[0]
+        birthday = (tree.xpath('//*[@class="profile-row newProfileRow" and span = "Birthday"]/span/text()') or [1])[0]
         debts = sum(float(x) for x in tree.xpath('//*[@class="profile-data red"]//li/text()')[::6])
         assets = sum(float(x.strip()) for x in tree.xpath(
             '//*[@class="profile-data" and (strong = "Assets")]//ul//li/text()') if "." in x)

@@ -237,7 +237,7 @@ async def motivate_func(bot, server: str, data: dict) -> None:
         try:
             tree = await utils.get_content(f'{base_url}newCitizens.html?countryId=0')
             try:
-                citizen_id = int(utils.get_ids_from_path(tree, "//tr[2]//td[1]/a")[0])
+                citizen_id = int(utils.get_ids_from_path(tree, "//tr[2]//td[1]/div/a")[0])
             except IndexError:
                 await sleep(randint(500, 700))
                 continue

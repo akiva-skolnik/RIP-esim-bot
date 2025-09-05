@@ -227,11 +227,11 @@ def extract_player_details(player_profile_link: str, tree: fromstring) -> dict:
     """Extract player details such as whether they are premium and their buffs."""
     try:
         premium = len(tree.xpath('//*[@class="premium-account"]')) == 1
-        citizenship = tree.xpath('//*[@class="profile-row" and span = "Citizenship"]/span/span/text()')[0]
-        damage = tree.xpath('//*[@class="profile-row"]/span/text()')[2]
+        citizenship = tree.xpath('//*[@class="profile-row newProfileRow" and span = "Citizenship"]/span/span/text()')[0]
+        damage = tree.xpath('//*[@class="profile-row newProfileRow"]/span/text()')[2]
         buffs_debuffs = [
             x.split("/specialItems/")[-1].split(".png")[0] for x in tree.xpath(
-                '//*[@class="profile-row" and (strong="Debuffs" or strong="Buffs")]//img/@src') if
+                '//*[@class="profile-row newProfileRow" and (strong="Debuffs" or strong="Buffs")]//img/@src') if
             "img/specialItems/" in x]
         buffs = [x.split("_")[0].lower() for x in buffs_debuffs if "positive" in x.split("_")[1:]]
         buffed = any(a in buffs for a in ('steroids', 'tank', 'bunker', 'sewer')) or any(

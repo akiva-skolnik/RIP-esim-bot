@@ -763,7 +763,7 @@ def get_id(string: str) -> str:
 
 
 def get_ids_from_path(tree: HtmlElement, xpath: str) -> list:
-    """Get battle_ids from path."""
+    """Get ids from path."""
     ids = tree.xpath(xpath + "/@href")
     if ids and all("#" == x for x in ids):
         ids = [get_id(x.values()[-1]) for x in tree.xpath(xpath)]
@@ -862,7 +862,7 @@ async def remove_old_donors():
 def get_buffs_debuffs(tree: HtmlElement) -> (str, str):
     buffs_debuffs = [camel_case_merge(x.split("/specialItems/")[-1].split(".png")[0]).replace("Elixir", "")
                      for x in tree.xpath(
-            '//*[@class="profile-row" and (strong="Debuffs" or strong="Buffs")]//img/@src') if "img/specialItems/" in x]
+            '//*[@class="profile-row newProfileRow" and (strong="Debuffs" or strong="Buffs")]//img/@src') if "img/specialItems/" in x]
     buffs = ', '.join(x.split("_")[0].replace("Vacations", "Vac").replace(
         "Resistance", "Sewer").replace("Pain Dealer", "PD ").replace(
         "Bonus Damage", "") + ("% Bonus" if "Bonus Damage" in x.split("_")[0] else "")

@@ -536,7 +536,7 @@ class Battle(Cog):
         await utils.custom_followup(interaction, "Scanning...")
         base_url = f'https://{server}.e-sim.org/'
         tree = await utils.get_content(f'{base_url}newCitizens.html?countryId=0')
-        citizen_id = int(utils.get_ids_from_path(tree, "//tr[2]//td[1]/a")[0])
+        citizen_id = int(utils.get_ids_from_path(tree, "//tr[2]//td[1]/div/a")[0])
         today = 0
         embed = Embed(colour=0x3D85C6, title="Motivates", url=f'{base_url}newCitizenStatistics.html')
         embed.set_footer(text="\U0001f7e2, \U0001f534 = Already Sent / Available")
@@ -545,7 +545,7 @@ class Battle(Cog):
         for index in range(200):
             tree = await utils.get_locked_content(f'{base_url}profile.html?id={citizen_id}', index == 0)
             birthday = int(tree.xpath(
-                '//*[@class="profile-row" and span = "Birthday"]/span/text()')[0].split()[-1])
+                '//*[@class="profile-row newProfileRow" and span = "Birthday"]/span/text()')[0].split()[-1])
             if not today:  # first citizen
                 today = birthday
             if today - birthday <= 3:
@@ -711,7 +711,7 @@ class Battle(Cog):
             if extra_premium_info:
                 tree = await utils.get_content(f"{base_url}profile.html?id={row['id']}")
                 try:
-                    dmg = tree.xpath('//*[@class="profile-row"]/span/text()')[2]
+                    dmg = tree.xpath('//*[@class="profile-row newProfileRow"]/span/text()')[2]
                 except IndexError:
                     continue
                 buffs, debuffs = utils.get_buffs_debuffs(tree)
