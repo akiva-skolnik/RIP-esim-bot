@@ -129,6 +129,8 @@ class EsimBot(Bot):
                                               user=self.config.get("db_user", "root"),
                                               password=self.config["db_password"],
                                               autocommit=True)
+        for key in ("db_host", "db_user", "db_password"):
+            self.config.pop(key, None)
 
         await load_extensions()
 

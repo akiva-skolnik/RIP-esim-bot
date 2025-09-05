@@ -144,7 +144,9 @@ async def main() -> None:
 
         handler = logging.FileHandler(filename=os.path.join(bot.root, "ripesim.log"))
         setup_logging(handler=handler, level=logging.INFO)
-        await bot.start(bot.config["TOKEN"])
+        token = bot.config["TOKEN"]
+        del bot.config["TOKEN"]
+        await bot.start(token)
 
 
 asyncio.run(main())
