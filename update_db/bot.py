@@ -19,8 +19,8 @@ servers = {server: v[0] for server, v in reversed(gids.items())}
 
 # TODO: split into smaller functions.
 async def update_buffs(server: str) -> None:
-    print("start update_buffs", server)
     """update buffs db"""
+    print("start update_buffs", server)
     base_url = f'https://{server}.e-sim.org/'
     BUFF_SIZES = {"mili": 15, "mini": 30, "standard": 60,
                   "major": 2 * 60, "huge": 4 * 60, "exceptional": 8 * 60}
@@ -31,6 +31,7 @@ async def update_buffs(server: str) -> None:
     while True:
         loop_start_time = time.time()
         try:
+            print("Starting buffs update for", server)
             buffs_data = await utils.find_one("buffs", server) or {}
             now = utils.current_datetime()
             now_s = utils.current_datetime_str()
@@ -59,11 +60,10 @@ async def update_buffs(server: str) -> None:
                         buffs_data[nick][BUFFED_AT] = now_s
 
                 # Calculate the elixir buff durations
-                elixir_bonus = 0
-                for eq_type, parameters, sorted_data, eq_link in utils.get_eqs(tree):
-                    for val, p in zip(sorted_data, parameters):
-                        if p == "elixir":
-                            elixir_bonus += val
+                elixir_bonus = sum(val
+                                   for eq_type, parameters, sorted_data, eq_link in utils.get_eqs(tree)
+                                   for val, p in zip(sorted_data, parameters)
+                                   if p == "elixir")
 
                 # Update the times of the elixir buff
                 for buff in player_details.get("buffs", []):
@@ -158,7 +158,9 @@ async def update_buffs(server: str) -> None:
             # sort by citizenship then nick
             sorted_data.update(dict(sorted(buffs_data.items(), key=lambda x: (x[1][CITIZENSHIP], nick))))
             buffs_data.clear()  # Clear the data to free up memory
-            if is_first_update or randint(1, 10) == 1:
+            should_update_sheet = is_first_update or randint(1, 10) == 1
+            print(f"Collected {len(buffs_data)} buff data for {server}, updating db" + (" and sheet" if should_update_sheet else ""))
+            if should_update_sheet:
                 await utils.spreadsheets(
                     servers[server], "buffs", f"A1:Q{len(sorted_data) + 1}",
                     [([v[0], k] + v[1:]) if k != "Last update:" else [k] + v
@@ -166,9 +168,10 @@ async def update_buffs(server: str) -> None:
                 is_first_update = False
             await utils.replace_one("buffs", server, sorted_data)
             sorted_data.clear()
+            print("Updated buffs for", server)
         except Exception as e:
             error_traceback = traceback.format_exc()
-            print(error_traceback if len(error_traceback) < MAX_ERROR_LENGTH else "buffs long error")
+            print(server, error_traceback if len(error_traceback) < MAX_ERROR_LENGTH else "buffs long error")
         await asyncio.sleep(max(300 - time.time() + loop_start_time, 1))
 
 
@@ -265,7 +268,7 @@ async def update_time(server: str) -> None:
             player_data.clear()
         except Exception:
             error_traceback = traceback.format_exc()
-            print(error_traceback if len(error_traceback) < MAX_ERROR_LENGTH else "time online long error")
+            print(server, error_traceback if len(error_traceback) < MAX_ERROR_LENGTH else "time online long error")
 
         await asyncio.sleep(max(60 - time.time() + loop_start_time, 1))
 
@@ -296,7 +299,7 @@ async def update_monetary_market():
                     if not monetary_market_ration and ratios:
                         monetary_market_ration = float(ratios[-1])
                 except Exception as e:
-                    print("ERROR update_monetary_market", e)
+                    print("ERROR update_monetary_market", server, e)
                 mm_per_server[server][str(country_id)] = min(1.4, monetary_market_ration)
                 await asyncio.sleep(0.35)
 
@@ -450,7 +453,7 @@ async def update_prices(server: str) -> None:
             new_values.clear()
         except Exception:
             error_traceback = traceback.format_exc()
-            print(error_traceback if len(error_traceback) < MAX_ERROR_LENGTH else "price long error")
+            print(server, error_traceback if len(error_traceback) < MAX_ERROR_LENGTH else "price long error")
 
         await asyncio.sleep(max(1000 - time.time() + loop_start_time, 1))
 
@@ -467,8 +470,8 @@ async def delay(coro: callable, index: int, seconds: int):
 loop.create_task(update_monetary_market())
 
 for i, server in enumerate(servers):
+    loop.create_task(delay(update_buffs(server), i, 30 + i * 120 // len(servers)))
     loop.create_task(delay(update_prices(server), i, 10 + i * 900 // len(servers)))
     loop.create_task(delay(update_time(server), i, 20 + i * 120 // len(servers)))
-    loop.create_task(delay(update_buffs(server), i, 30 + i * 120 // len(servers)))
 
 loop.run_forever()
