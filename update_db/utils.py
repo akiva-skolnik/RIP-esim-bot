@@ -1,4 +1,5 @@
 import asyncio
+import asyncmy
 import json
 import os
 import traceback
@@ -264,3 +265,17 @@ def current_datetime() -> datetime:
 
 def current_datetime_str(_format: str = DEFAULT_DATETIME_FORMAT) -> str:
     return current_datetime().strftime(_format)
+
+
+async def create_pool() -> asyncmy.Pool:
+    """Create and return a MySQL connection pool."""
+    config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config.json')
+    with open(config_path) as f:
+        db_config = json.load(f)
+
+    return await asyncmy.create_pool(
+        host=db_config.get('db_host', 'localhost'),
+        user=db_config.get('db_user', 'root'),
+        password=db_config["db_password"],
+        autocommit=True,
+    )

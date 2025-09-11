@@ -23,6 +23,7 @@ from Utils.constants import (all_countries, all_countries_by_name,
                              date_format, temp_servers)
 from Utils.transformers import Country, Product, ProfileLink, Server
 from Utils.utils import CoolDownModified, draw_pil_table, split_list
+from Utils.db_utils import execute_query
 
 
 class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": False}):
@@ -377,6 +378,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         base_url = f'https://{server}.e-sim.org/'
         product_name = f"Q{quality} {item.title()}" if item.lower() not in all_products[:6] else item.title()
         best_price = 0
+        embed: Embed = None
         if not real_time:
             db_dict = await utils.find_one("price", server)
             if product_name in db_dict:
@@ -390,7 +392,6 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                     if market_is_not_empty:
                         real_time = True
 
-            embed = None
             if not real_time:
                 embed = Embed(colour=0x3D85C6, title=f"{product_name}, {server}",
                               description=f"[All products]({self._get_product_sheet_link(server)}),"
@@ -499,49 +500,56 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         else:
             message = "You can add optimal price and i will let you know once the price in market is below that price\n"
 
-        db_dict = await utils.find_one("prices_history", product_name.replace(" ", "_"))
-        db_dict = db_dict[server] if server in db_dict else {}
-        if len(db_dict.keys()) > 2:
-            def x(db_dict: dict) -> BytesIO:
-                prices_per_day = {
-                    datetime.strptime(k, "%d-%m-%Y"): sum(float(key) * val for key, val in v.items()) / sum(v.values())
-                    for k, v in db_dict.items()}
+        query = """
+            SELECT date, SUM(price * count) / SUM(count) AS avg_price
+            FROM collections.prices_history
+            WHERE server = %s AND product = %s
+            GROUP BY date
+        """
+        prices_per_day: dict[str, float] = {k: float(v) for k, v in await execute_query(
+            self.bot.pool, query, (server, product_name), fetch=True)}
 
-                if best_price:
-                    prices_per_day[utils.get_current_time()] = best_price
-
-                med = statistics.median(prices_per_day.values())
-                std = statistics.stdev(prices_per_day.values())
-                prices_per_day = {day: min(price, med + 2 * std) for day, price in prices_per_day.items()}
-
-                # calculate the moving average
-                is_temp_server = server in temp_servers
-                window = 12 if not is_temp_server else 7
-                prices_list = list(prices_per_day.values())
-                moving_average = tuple(statistics.median(prices_list[i - window // 2: i + window // 2])
-                                       if i + window // 2 <= len(prices_list) and i >= window // 2 else None
-                                       for i in range(len(prices_list)))
-
-                fig, ax = plt.subplots()
-                ax.set_title(f"{product_name}, {server}")
-                ax.set_ylabel('Price')
-                ax.set_xlabel('Date')
-                ax.plot(prices_per_day.keys(), prices_per_day.values(),  # noqa WPS221
-                        label="Daily Average" if is_temp_server else "Monthly Average")
-                if any(moving_average):
-                    ax.plot(prices_per_day.keys(), moving_average, '.-', label="Moving Average")  # noqa WPS221
-                ax.legend()
-                fig.autofmt_xdate()
-                ax.grid()
-                return utils.plt_to_bytes(fig)
-
-            output_buffer = await self.bot.loop.run_in_executor(None, x, db_dict)
-            file = File(fp=output_buffer, filename=f"{interaction.id}.png")
-            embed.set_thumbnail(url=f"attachment://{interaction.id}.png")
-            await utils.custom_followup(interaction, message, file=file,
-                                        embed=await utils.convert_embed(interaction, embed))
-        else:
+        if len(prices_per_day.keys()) <= 2:
             await utils.custom_followup(interaction, message, embed=await utils.convert_embed(interaction, embed))
+            return
+
+        output_buffer = await self.bot.loop.run_in_executor(
+            None, self.plot_avg_prices, prices_per_day, best_price, product_name, server
+        )
+        file = File(fp=output_buffer, filename=f"{interaction.id}.png")
+        embed.set_thumbnail(url=f"attachment://{interaction.id}.png")
+        await utils.custom_followup(interaction, message, file=file,
+                                    embed=await utils.convert_embed(interaction, embed))
+
+    @staticmethod
+    def plot_avg_prices(prices_per_day: dict, current_price: float, product_name: str, server: str) -> BytesIO:
+        if current_price:
+            prices_per_day[utils.get_current_time()] = current_price
+
+        med = statistics.median(prices_per_day.values())
+        std = statistics.stdev(prices_per_day.values())
+        prices_per_day = {day: min(price, med + 2 * std) for day, price in prices_per_day.items()}
+
+        # calculate the moving average
+        is_temp_server = server in temp_servers
+        window = 12 if not is_temp_server else 7
+        prices_list = list(prices_per_day.values())
+        moving_average = tuple(statistics.median(prices_list[i - window // 2: i + window // 2])
+                               if i + window // 2 <= len(prices_list) and i >= window // 2 else None
+                               for i in range(len(prices_list)))
+
+        fig, ax = plt.subplots()
+        ax.set_title(f"{product_name}, {server}")
+        ax.set_ylabel('Price')
+        ax.set_xlabel('Date')
+        ax.plot(prices_per_day.keys(), prices_per_day.values(),  # noqa WPS221
+                label="Daily Average" if is_temp_server else "Monthly Average")
+        if any(moving_average):
+            ax.plot(prices_per_day.keys(), moving_average, '.-', label="Moving Average")  # noqa WPS221
+        ax.legend()
+        fig.autofmt_xdate()
+        ax.grid()
+        return utils.plt_to_bytes(fig)
 
     @command()
     @check(utils.is_premium_level_1)
@@ -776,10 +784,15 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
                           utils.get_countries(server, int(k)).title(), v) for k, v in
                          sorted(mm_db.items(), key=lambda item: float(item[1])))
             return await utils.send_long_embed(interaction, embed, headers, data)
-        mm_history = (await utils.find_one("mm_history", server))[str(country_id)]
-        prices_per_day = {
-            datetime.strptime(k, "%d-%m-%Y"): sum(float(key) * val for key, val in v.items()) / sum(v.values())
-            for k, v in mm_history.items()}
+
+        query = """
+            SELECT date, SUM(price * count) / SUM(count) AS avg_price
+            FROM collections.mm_history
+            WHERE server = %s AND country_id = %s
+            GROUP BY date
+        """
+        prices_per_day: dict[str, float] = {k: float(v) for k, v in await execute_query(
+            self.bot.pool, query, (server, country_id), fetch=True)}
 
         med = statistics.median(prices_per_day.values())
         std = statistics.stdev(prices_per_day.values())

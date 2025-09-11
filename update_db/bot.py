@@ -1,5 +1,6 @@
 """bot.py"""
 import asyncio
+import asyncmy
 import heapq
 import json
 import time
@@ -9,7 +10,8 @@ from datetime import datetime, timedelta
 from random import randint
 
 from . import utils
-from Utils.constants import gids, config_ids, date_format, countries_per_id, countries_per_server, temp_servers
+from Utils import db_utils
+from Utils.constants import gids, config_ids, countries_per_id, countries_per_server, temp_servers
 
 MAX_ERROR_LENGTH = 10000
 
@@ -273,7 +275,7 @@ async def update_time(server: str) -> None:
         await asyncio.sleep(max(60 - time.time() + loop_start_time, 1))
 
 
-async def update_monetary_market():
+async def update_monetary_market(pool: asyncmy.Pool):
     print("start update_monetary_market")
     while True:
         mm_per_server = {server: {} for server in servers}
@@ -304,20 +306,14 @@ async def update_monetary_market():
                 await asyncio.sleep(0.35)
 
             # update history
-            history = await utils.find_one("mm_history", server)
-            today = utils.current_datetime_str(date_format.split()[0])
+            today = utils.current_datetime_str('%Y-%m-%d')
             for country_id, price in mm_per_server[server].items():
-                country_id = str(country_id)  # MongoDB forcing keys to be str
-                price = str(price)
-                if country_id not in history:
-                    history[country_id] = {}
-                if today not in history[country_id]:
-                    history[country_id][today] = {}
-                if price not in history[country_id][today]:
-                    history[country_id][today][price] = 0
-                history[country_id][today][price] += 1
-            await utils.replace_one("mm_history", server, history)
-            history.clear()
+                query = """
+                INSERT INTO collections.mm_history (server, country_id, date, price, count)
+                VALUES (%s, %s, %s, %s, 1)
+                ON DUPLICATE KEY UPDATE count = count + 1
+                """
+                await db_utils.execute_query(pool, query, (server, country_id, today, price))
 
             # update db
             now = utils.current_datetime_str()
@@ -346,7 +342,7 @@ async def update_monetary_market():
         await asyncio.sleep(max(3600 - time.time() + loop_start_time, 1))
 
 
-async def update_prices(server: str) -> None:
+async def update_prices(pool: asyncmy.Pool, server: str) -> None:
     print("start update_prices", server)
     """Continuously updates the product prices database from the e-sim game for a given server."""
     base_url = f'https://{server}.e-sim.org/'
@@ -386,9 +382,9 @@ async def update_prices(server: str) -> None:
             # Update the history
             now = utils.current_datetime()
             if server not in temp_servers:
-                this_month = "01-" + now.strftime("%m-%Y")
+                this_month = now.strftime("%Y-%m") + "-01"
             else:
-                this_month = now.strftime("%d-%m-%Y")
+                this_month = now.strftime("%Y-%m-%d")
             now_s = utils.current_datetime_str()
 
             results = defaultdict(list)
@@ -412,19 +408,14 @@ async def update_prices(server: str) -> None:
                         price += stock * offer["price"]
                         n += stock
 
-                # Update history  TODO: use SQL
-                history_key = product_key.replace(" ", "_")
-                avg_price = str(round(price / n if n else 0, 4))
-                history_entry = await utils.find_one("prices_history", history_key)
-                if server not in history_entry:
-                    history_entry[server] = {}
-                if this_month not in history_entry[server]:
-                    history_entry[server][this_month] = {}
-                if avg_price not in history_entry[server][this_month]:
-                    history_entry[server][this_month][avg_price] = 0
-                history_entry[server][this_month][avg_price] += 1
-                await utils.replace_one("prices_history", history_key, history_entry)
-                history_entry.clear()
+                # Update history
+                avg_price = round(price / n if n else 0, 4)
+                query = """
+                    INSERT INTO collections.prices_history (server, product, date, price, count)
+                    VALUES (%s, %s, %s, %s, 1)
+                    ON DUPLICATE KEY UPDATE count = count + 1
+                """
+                await db_utils.execute_query(pool, query, (product_key, server, this_month, avg_price))
 
             offers.clear()
             total_stock_per_product.clear()
@@ -467,11 +458,28 @@ async def delay(coro: callable, index: int, seconds: int):
     await coro
 
 
-loop.create_task(update_monetary_market())
+async def main():
+    """Initialize the database pool and start all tasks."""
+    pool = await utils.create_pool()
 
-for i, server in enumerate(servers):
-    loop.create_task(delay(update_buffs(server), i, 30 + i * 120 // len(servers)))
-    loop.create_task(delay(update_prices(server), i, 10 + i * 900 // len(servers)))
-    loop.create_task(delay(update_time(server), i, 20 + i * 120 // len(servers)))
+    loop.create_task(update_monetary_market(pool))
+    for i, server in enumerate(servers):
+        loop.create_task(delay(update_buffs(server), i, 30 + i * 120 // len(servers)))
+        loop.create_task(delay(update_prices(pool, server), i, 10 + i * 900 // len(servers)))
+        loop.create_task(delay(update_time(server), i, 20 + i * 120 // len(servers)))
 
-loop.run_forever()
+    try:
+        await asyncio.Future()  # run forever
+    finally:
+        if pool:
+            pool.close()
+            await pool.wait_closed()
+
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("Shutting down...")
+    finally:
+        loop.close()
