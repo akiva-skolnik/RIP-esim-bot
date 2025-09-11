@@ -449,9 +449,6 @@ async def update_prices(pool: asyncmy.Pool, server: str) -> None:
         await asyncio.sleep(max(1000 - time.time() + loop_start_time, 1))
 
 
-loop = asyncio.new_event_loop()
-
-
 async def delay(coro: callable, index: int, seconds: int):
     if index > 0:
         await asyncio.sleep(seconds)
@@ -462,11 +459,11 @@ async def main():
     """Initialize the database pool and start all tasks."""
     pool = await utils.create_pool()
 
-    loop.create_task(update_monetary_market(pool))
+    asyncio.create_task(update_monetary_market(pool))
     for i, server in enumerate(servers):
-        loop.create_task(delay(update_buffs(server), i, 30 + i * 120 // len(servers)))
-        loop.create_task(delay(update_prices(pool, server), i, 10 + i * 900 // len(servers)))
-        loop.create_task(delay(update_time(server), i, 20 + i * 120 // len(servers)))
+        asyncio.create_task(delay(update_buffs(server), i, 30 + i * 120 // len(servers)))
+        asyncio.create_task(delay(update_prices(pool, server), i, 10 + i * 900 // len(servers)))
+        asyncio.create_task(delay(update_time(server), i, 20 + i * 120 // len(servers)))
 
     try:
         await asyncio.Future()  # run forever
@@ -481,5 +478,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         print("Shutting down...")
-    finally:
-        loop.close()
