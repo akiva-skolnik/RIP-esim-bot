@@ -415,7 +415,7 @@ async def update_prices(pool: asyncmy.Pool, server: str) -> None:
                     VALUES (%s, %s, %s, %s, 1)
                     ON DUPLICATE KEY UPDATE count = count + 1
                 """
-                await db_utils.execute_query(pool, query, (product_key, server, this_month, avg_price))
+                await db_utils.execute_query(pool, query, (server, product_key, this_month, avg_price))
 
             offers.clear()
             total_stock_per_product.clear()
