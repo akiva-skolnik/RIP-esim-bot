@@ -13,6 +13,7 @@ from discord import (AllowedMentions, Forbidden, Game, HTTPException, Intents,
 from discord.ext.commands import Bot
 
 from Utils.constants import all_servers
+from Utils.db_utils import execute_query
 
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -88,7 +89,7 @@ class MyTree(app_commands.CommandTree):
         interaction_params = bot.utils.get_formatted_interaction(interaction, bold=False)
         params = (interaction.command.name, interaction_params,
                   interaction.user.id, interaction.guild.id, interaction.id, interaction.created_at)
-        await bot.db_utils.execute_query(bot.pool, query, params)
+        await execute_query(bot.pool, query, params)
 
 
 class EsimBot(Bot):

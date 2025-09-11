@@ -14,7 +14,7 @@ from discord import Attachment, File, Interaction
 from discord.app_commands import Transform, check, checks, command, describe
 from discord.ext.commands import Cog
 
-from Utils import utils, db_utils
+from Utils import utils, battle_db_utils
 from Utils.constants import all_countries, all_countries_by_name, api_url
 from Utils.transformers import BattleTypes, Ids, Server
 from Utils.utils import CoolDownModified
@@ -301,14 +301,14 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                 where += f" AND (type IN {battles_types})"
             return where
 
-        await db_utils.cache_api_battles(interaction, server, battle_ids)
+        await battle_db_utils.cache_api_battles(interaction, server, battle_ids)
         where = get_where_dmg_stats()
-        api_battles_df = await db_utils.select_many_api_battles(server, battle_ids, custom_condition=where)
+        api_battles_df = await battle_db_utils.select_many_api_battles(server, battle_ids, custom_condition=where)
         restore_battles_types = ('COUNTRY_TOURNAMENT', 'CUP_EVENT_BATTLE',
                                  'MILITARY_UNIT_CUP_EVENT_BATTLE', 'TEAM_TOURNAMENT')
         api_battles_df["is_restore_battle"] = api_battles_df["type"].isin(restore_battles_types)
-        await db_utils.cache_api_fights(interaction, server, api_battles_df)
-        api_fights_df = await db_utils.select_many_api_fights(server, battle_ids)
+        await battle_db_utils.cache_api_fights(interaction, server, api_battles_df)
+        api_fights_df = await battle_db_utils.select_many_api_fights(server, battle_ids)
 
         side_dmg = api_fights_df.groupby(['battle_id', 'round_id', 'defenderSide'])['damage'].sum().unstack().fillna(
             0).rename_axis(None, axis=1)

@@ -32,6 +32,7 @@ from .constants import (all_countries, all_parameters, all_servers, api_url,
                         config_ids, countries_per_id, countries_per_server,
                         date_format, flags_codes)
 from .paginator import FieldPageSource, Pages
+from .db_utils import execute_query
 
 hidden_guild = config_ids["commands_server_id"]
 font = ImageFont.truetype(path.join(path.dirname(path.dirname(__file__)), "files", "DejaVuSansMono.ttf"), 100)
@@ -535,7 +536,7 @@ async def log_error(interaction: Interaction | None, error: Exception, cmd: str 
     query = """INSERT INTO collections.commands_logs (interaction_id, is_success, time, error)
                VALUES (%s, %s, %s, %s)"""
     params = (interaction.id, False, datetime.now(UTC), str(error))
-    await bot.db_utils.execute_query(bot.pool, query, params)
+    await execute_query(bot.pool, query, params)
 
 
 async def send_error(interaction: Interaction | None, error: Exception, cmd: str = "") -> None:

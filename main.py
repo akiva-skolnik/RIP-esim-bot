@@ -11,7 +11,7 @@ from discord import Interaction
 from discord.app_commands import guilds
 from discord.utils import setup_logging
 
-from Utils import utils, db_utils
+from Utils import utils
 from Utils.constants import all_servers
 from bot.bot import bot, load_extensions
 from exts.Battle import (motivate_func, ping_func, watch_auction_func,
@@ -20,7 +20,6 @@ from exts.General import remind_func
 
 matplotlib.use('Agg')
 bot.utils = utils
-bot.db_utils = db_utils
 
 
 @bot.event

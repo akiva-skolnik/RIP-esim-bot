@@ -12,7 +12,7 @@ from matplotlib.dates import DateFormatter
 from matplotlib.gridspec import GridSpec
 from matplotlib.ticker import FixedLocator
 
-from . import db_utils, utils
+from . import battle_db_utils, utils
 
 
 def normal_pdf(x, mean, std) -> float:
@@ -53,7 +53,7 @@ def binom_pmf(n: int, p: float) -> list[float]:
         probs[mode] = prob_mode
         # downward (k -> k-1)
         for k in range(mode, 0, -1):
-            probs[k - 1] = probs[k] * (k) / (n - k + 1) * ((1.0 - p) / p)
+            probs[k - 1] = probs[k] * k / (n - k + 1) * ((1.0 - p) / p)
         # upward (k -> k+1)
         for k in range(mode, n):
             probs[k + 1] = probs[k] * (n - k) / (k + 1) * (p / (1.0 - p))
@@ -79,7 +79,7 @@ async def cup_func(bot, interaction: Interaction, db_key: str, server: str, batt
     try:
         base_url = f"https://{server}.e-sim.org/"
         start_id, end_id = battle_ids_range.start, battle_ids_range.stop - 1
-        battle_type = (await db_utils.select_one_api_battles(server, start_id))['type']
+        battle_type = (await battle_db_utils.select_one_api_battles(server, start_id))['type']
         if battle_type not in ('TEAM_TOURNAMENT', "COUNTRY_TOURNAMENT", "LEAGUE", "CUP_EVENT_BATTLE",
                                "MILITARY_UNIT_CUP_EVENT_BATTLE", "TEAM_NATIONAL_CUP_BATTLE"):
             await utils.custom_followup(interaction, f"First battle must be a cup (not `{battle_type}`)")
@@ -88,12 +88,12 @@ async def cup_func(bot, interaction: Interaction, db_key: str, server: str, batt
             return await utils.replace_one("collection", interaction.command.name, db_dict)
 
         bot.logger.info(f"cup_func start: {server=}, {start_id=}, {end_id=}, {db_key=}, {battle_type=}")
-        await db_utils.cache_api_battles(interaction, server, battle_ids_range, excluded_ids=excluded_ids)
-        api_battles_df = await db_utils.select_many_api_battles(
+        await battle_db_utils.cache_api_battles(interaction, server, battle_ids_range, excluded_ids=excluded_ids)
+        api_battles_df = await battle_db_utils.select_many_api_battles(
             server, battle_ids_range, excluded_ids=excluded_ids, custom_condition=f"type = '{battle_type}'")
-        await db_utils.cache_api_fights(interaction, server, api_battles_df)
+        await battle_db_utils.cache_api_fights(interaction, server, api_battles_df)
 
-        api_fights_df = await db_utils.get_api_fights_sum(server, battle_ids_range, excluded_ids=excluded_ids)
+        api_fights_df = await battle_db_utils.get_api_fights_sum(server, battle_ids_range, excluded_ids=excluded_ids)
         del api_battles_df  # free memory
 
         output = BytesIO()
@@ -112,7 +112,7 @@ async def cup_func(bot, interaction: Interaction, db_key: str, server: str, batt
                 top5[citizen_id] = api_citizen['login']
             await utils.custom_delay(interaction)
 
-        hit_time_df = await db_utils.select_many_api_fights(server, battle_ids_range,
+        hit_time_df = await battle_db_utils.select_many_api_fights(server, battle_ids_range,
                                                             columns=("citizenId", "time", "damage"),
                                                             custom_condition=f"citizenId in {tuple(top5)}")
         output_buffer = generate_cup_plot(hit_time_df, top5)
