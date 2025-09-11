@@ -863,7 +863,7 @@ async def remove_old_donors():
 def get_buffs_debuffs(tree: HtmlElement) -> (str, str):
     buffs_debuffs = [camel_case_merge(x.split("/specialItems/")[-1].split(".png")[0]).replace("Elixir", "")
                      for x in tree.xpath(
-            '//*[@class="profile-row newProfileRow" and (strong="Debuffs" or strong="Buffs")]//img/@src') if "img/specialItems/" in x]
+            '//*[@class="profile-row" and (strong="Debuffs" or strong="Buffs")]//img/@src') if "img/specialItems/" in x]
     buffs = ', '.join(x.split("_")[0].replace("Vacations", "Vac").replace(
         "Resistance", "Sewer").replace("Pain Dealer", "PD ").replace(
         "Bonus Damage", "") + ("% Bonus" if "Bonus Damage" in x.split("_")[0] else "")
