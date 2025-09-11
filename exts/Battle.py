@@ -362,7 +362,7 @@ class Battle(Cog):
 
                 cum_sum = np.cumsum(percentages)
                 # keep only values below 99.9
-                percentages = [percentages[i] for i in range(len(cum_sum)) if cum_sum[i] < 99.9]
+                percentages = [percentages[i] for i in range(len(cum_sum)) if cum_sum[i] < 99.9] or percentages
 
                 max_k = max(max_k, len(percentages))
 
