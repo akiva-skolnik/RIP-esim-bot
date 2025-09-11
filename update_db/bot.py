@@ -161,7 +161,7 @@ async def update_buffs(server: str) -> None:
             sorted_data.update(dict(sorted(buffs_data.items(), key=lambda x: (x[1][CITIZENSHIP], nick))))
             buffs_data.clear()  # Clear the data to free up memory
             should_update_sheet = is_first_update or randint(1, 10) == 1
-            print(f"Collected {len(buffs_data)} buff data for {server}, updating db" + (" and sheet" if should_update_sheet else ""))
+            print(f"Collected {len(sorted_data)} buff data for {server}, updating db" + (" and sheet" if should_update_sheet else ""))
             if should_update_sheet:
                 await utils.spreadsheets(
                     servers[server], "buffs", f"A1:Q{len(sorted_data) + 1}",
