@@ -514,7 +514,7 @@ class Premium(Cog):
                                 tree.xpath('//*[@class="rank"]/text()') if "Friends" in x), "0")
                 nick = tree.xpath("//span[@class='big-login']")[0].text
                 try:
-                    citizenship = tree.xpath("//div[@class='profile-data']//div[8]//span[1]//span[1]")[0].text
+                    citizenship = tree.xpath("//div[@class='profile-data newProfileData']//div[12]//span[1]//span[1]")[0].text
                 except IndexError:
                     break
                 profile_medals = utils.get_profile_medals(tree)

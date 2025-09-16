@@ -66,8 +66,9 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
         break_main = False
         for page in range(1, last_page):
             tree = await utils.get_content(f'{link}&page={page}')
-            ids = utils.get_ids_from_path(tree, '//*[@id="esim-layout"]//div[3]//div/a')
-            nicks = tree.xpath('//*[@id="esim-layout"]//div[3]//div/a/text()')
+            ids = utils.get_ids_from_path(tree, '//td/div[3]//div/a')
+            nicks = [x.strip() for x in tree.xpath('//td/div[3]//span[contains(@class,"citizenName")]/text()') if
+                     x.strip()]
             for nick, user_id in zip(nicks, ids):
                 if await self.bot.should_cancel(interaction, msg):
                     break_main = True
@@ -76,8 +77,8 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
                 msg = await utils.update_percent(count, (last_page - 2) * 24 + len(ids), msg)
                 profile_tree = await utils.get_content(f"{base_url}profile.html?id={user_id}")
                 bh_medals = profile_tree.xpath("//*[@id='medals']//ul//li[7]//div")[0].text.replace("x", "")
-                cs = profile_tree.xpath("//div[@class='profile-data']//div[8]//span[1]//span[1]")
-                csv_writer.writerow([nick.strip(), cs[0].text if cs else "Unknown", bh_medals])
+                cs = profile_tree.xpath("//div[@class='profile-data newProfileData']//div[12]//span[1]//span[1]")
+                csv_writer.writerow([nick, cs[0].text if cs else "Unknown", bh_medals])
                 await utils.custom_delay(interaction)
             if break_main:
                 break
@@ -633,7 +634,7 @@ class Stats(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": 
         count = 0
         for page in range(1, last_page):
             tree = await utils.get_content(f'{link}&page={page}')
-            links = utils.get_ids_from_path(tree, '//*[@id="esim-layout"]//div[3]//div/a')
+            links = utils.get_ids_from_path(tree, '//td/div[3]//div/a')
             for user_id in links:
                 count += 1
                 msg = await utils.update_percent(count, (last_page - 2) * 24 + len(links), msg)
