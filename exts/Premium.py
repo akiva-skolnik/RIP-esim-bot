@@ -389,14 +389,13 @@ class Premium(Cog):
         for page in range(1, 51):
             for citizen_id in utils.get_ids_from_path(
                     await utils.get_content(
-                        f'{base_url}citizenStatistics.html?statisticType=DAMAGE&countryId=0&page={page}'), "//td/a"):
+                        f'{base_url}citizenStatistics.html?statisticType=DAMAGE&countryId=0&page={page}'), "//td/div/a"):
                 if await self.bot.should_cancel(interaction, msg):
                     break_main = True
                     break
                 msg = await utils.update_percent(count, 1000, msg)
                 count += 1
                 api = await utils.get_content(f'{base_url}apiCitizenById.html?id={citizen_id}')
-                del api['gearInfo']
                 if not header:  # First loop
                     header = list(api.keys())
                     csv_writer.writerow(header)
@@ -405,6 +404,9 @@ class Premium(Cog):
             if break_main:
                 break
 
+        if not header:
+            await utils.custom_followup(interaction, "No citizens found.", ephemeral=True)
+            return
         output.seek(0)
         await utils.custom_followup(interaction, "This file is NOT sorted!", mention_author=page > 10, files=[
             File(fp=await utils.csv_to_image(output), filename=f"Preview_{server}.png"),
@@ -503,7 +505,7 @@ class Premium(Cog):
         for page in range(1, pages + 1):
             for citizen_id in utils.get_ids_from_path(await utils.get_content(
                     f'https://{server}.e-sim.org/citizenStatistics.html?statisticType=DAMAGE&countryId=0&page={page}'),
-                                                      "//td/a"):
+                                                      "//td/div/a"):
                 if await self.bot.should_cancel(interaction, msg):
                     break_main = True
                     break
