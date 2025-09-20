@@ -396,6 +396,7 @@ class Premium(Cog):
                 msg = await utils.update_percent(count, 1000, msg)
                 count += 1
                 api = await utils.get_content(f'{base_url}apiCitizenById.html?id={citizen_id}')
+                del api['gearInfo']  # Too much data
                 if not header:  # First loop
                     header = list(api.keys())
                     csv_writer.writerow(header)
@@ -407,6 +408,7 @@ class Premium(Cog):
         if not header:
             await utils.custom_followup(interaction, "No citizens found.", ephemeral=True)
             return
+
         output.seek(0)
         await utils.custom_followup(interaction, "This file is NOT sorted!", mention_author=page > 10, files=[
             File(fp=await utils.csv_to_image(output), filename=f"Preview_{server}.png"),
