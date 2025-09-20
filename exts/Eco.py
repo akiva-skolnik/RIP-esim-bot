@@ -103,8 +103,8 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
         embed.add_field(name="**Eco skill (each):**", value="\n".join(map(str, workers_per_skill_dict)))
         await utils.custom_followup(interaction, embed=await utils.convert_embed(interaction, embed))
 
-    @checks.dynamic_cooldown(CoolDownModified(30))
     @command()
+    @check(utils.is_premium_level_1)
     async def job(self, interaction: Interaction, server: Transform[str, Server], skill: float) -> None:
         """Job finder."""
 
@@ -118,7 +118,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
             if await self.bot.should_cancel(interaction, msg):
                 break
             msg = await utils.update_percent(index, len(api_countries), msg)
-            tree = await utils.get_content(f"{base_url}getJobOffers.html?countryId={k}&minimalSkill={skill}&regionId=0")
+            tree = await utils.get_locked_content(f"{base_url}getJobOffers.html?countryId={k}&minimalSkill={skill}&regionId=0")
             salary = tree.xpath('//*[@class="currency"]/b/text()')
             if salary:
                 try:
