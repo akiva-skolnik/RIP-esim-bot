@@ -10,8 +10,9 @@ from datetime import date, datetime, timedelta, UTC
 from io import BytesIO, StringIO
 from itertools import islice
 from os import path
-from re import finditer
+from re import finditer, findall
 from traceback import format_exception
+from typing import Tuple, Dict, Iterable, Container, Callable, Optional
 
 from PIL import Image, ImageDraw, ImageFont
 from aiohttp import ClientSession, ClientTimeout
@@ -52,7 +53,7 @@ class CoolDownModified:
         return Cooldown(self.rate, self.per)
 
 
-def remove_decimal(x: float or int) -> int or float:
+def remove_decimal(x: int | float) -> int | float:
     """5 -> 5, 5.0 -> 5, 5.1 -> 5.1."""
     return int(x) if isinstance(x, float) and x.is_integer() else x
 
@@ -92,7 +93,7 @@ def human_format(num: float) -> str:
     return f'{num:.{precision}f}' + ['', 'K', 'M', 'B', 'T', 'P'][magnitude]
 
 
-def split_list(alist: list or tuple, wanted_parts: int) -> tuple:
+def split_list(alist: list | tuple, wanted_parts: int) -> tuple:
     """Split list into parts."""
     length = len(alist)
     small_lists = tuple(alist[i * length // wanted_parts: (i + 1) * length // wanted_parts]
@@ -100,12 +101,7 @@ def split_list(alist: list or tuple, wanted_parts: int) -> tuple:
     return tuple(x for x in small_lists if x)
 
 
-def chunker(seq: list or tuple, size: int) -> iter:
-    """List to sub lists."""
-    return (seq[pos:pos + size] for pos in range(0, len(seq), size))
-
-
-def draw_pil_table(my_table: list or tuple, header: list or tuple, new_lines: int = 0) -> BytesIO:
+def draw_pil_table(my_table: list | tuple, header: list | tuple, new_lines: int = 0) -> BytesIO:
     """Draw table."""
     tabulate_table = tabulate(my_table, headers=header, tablefmt='grid', numalign="center", stralign="center")
     table_len = len(tabulate_table) / (len(my_table) * 2 + 3 + new_lines)
@@ -176,7 +172,7 @@ async def get_auction(link: str) -> dict:
             "price": price, "time": time_remaining, "remaining_seconds": remaining_seconds}
 
 
-async def save_dmg_time(api_fights: str, attacker: str, defender: str) -> (dict, dict):
+async def save_dmg_time(api_fights: str, attacker: str, defender: str) -> Tuple[Dict, Dict]:
     """Save dmg time."""
     my_dict = {defender: 0, attacker: 0}
     hit_time = {defender: {"dmg": [], "time": []}, attacker: {"dmg": [], "time": []}}
@@ -637,7 +633,7 @@ async def convert_embed(interaction_or_author: Interaction | int, embed: Embed, 
     return embed
 
 
-async def send_long_embed(interaction: Interaction, embed: Embed, headers: list or tuple, data: list or tuple,
+async def send_long_embed(interaction: Interaction, embed: Embed, headers: list | tuple, data: list | tuple,
                           files: list[File] = MISSING) -> None:
     """Send long embed."""
     for index, header in enumerate(headers):
@@ -692,7 +688,7 @@ def get_countries(server: str, country: int = 0, index: int = -1) -> dict[int, s
     return per_id
 
 
-def get_time(string: str or datetime, floor_to_10: bool = False) -> datetime:
+def get_time(string: str | datetime, floor_to_10: bool = False) -> datetime:
     """Get time."""
     if isinstance(string, datetime):
         dt = string
@@ -729,7 +725,7 @@ def normalize_slot(slot: str) -> str:
         "weapon upgrade", "WU").replace("  ", " ").title().strip()
 
 
-def get_eqs(tree: HtmlElement) -> iter:
+def get_eqs(tree: HtmlElement) -> Iterable[Tuple]:
     """Get eqs."""
     for slot_path in tree.xpath('//*[@id="profileEquipmentNew"]//div//div//div//@title'):
         tree = fromstring(slot_path)
@@ -797,7 +793,7 @@ async def custom_followup(interaction: Interaction, content: str = None, **kwarg
 
 
 async def get_battles(base_url: str, country_id: int = 0,
-                      filtering: iter = ('Normal battle', 'Resistance war')) -> list[dict]:
+                      filtering: Container[str] = ('Normal battle', 'Resistance war')) -> list[dict]:
     """Get battles data."""
     battles = []
     link = f'{base_url}battles.html?countryId={country_id}'
@@ -807,9 +803,9 @@ async def get_battles(base_url: str, country_id: int = 0,
         progress_attackers = (float(x.replace("%", "")) for x in tree.xpath('//*[@id="attackerScoreInPercent"]/text()'))
         attackers_dmg = tree.xpath('//*[@id="attackerDamage"]/text()')
         defenders_dmg = tree.xpath('//*[@id="defenderDamage"]/text()')
-        counters = tuple(i.split(");\n")[0] for i in tree.xpath('//*[@id="battlesTable"]//div//div//script/text()')
-                         for i in i.split("() + ")[1:])
-        counters = (f'{int(x[0]):02d}:{int(x[1]):02d}:{int(x[2]):02d}' for x in chunker(counters, 3))
+        counters_raw = tree.xpath('//*[@id="battlesTable"]//div//div//script/text()')
+        counters_list = [findall(r'Number\(\'(\d+)\'\)', x) for x in counters_raw]
+        counters = (f'{int(x[0]):02d}:{int(x[1]):02d}:{int(x[2]):02d}' for x in counters_list)
         sides = tree.xpath('//*[@class="battleHeader"]//em/text()')
         battle_ids = tree.xpath('//*[@class="battleHeader"]//a/@href')
         battle_regions = tree.xpath('//*[@class="battleHeader"]//a/text()')
@@ -860,7 +856,7 @@ async def remove_old_donors():
     await replace_one("collection", "donors", bot.premium_users)
 
 
-def get_buffs_debuffs(tree: HtmlElement) -> (str, str):
+def get_buffs_debuffs(tree: HtmlElement) -> Tuple[str, str]:
     buffs_debuffs = [camel_case_merge(x.split("/specialItems/")[-1].split(".png")[0]).replace("Elixir", "")
                      for x in tree.xpath(
             '//*[@class="profile-row" and (strong="Debuffs" or strong="Buffs")]//img/@src') if "img/specialItems/" in x]
@@ -882,7 +878,7 @@ def parse_product_icon(icon: str) -> str:
     return icon.split("img/productIcons/")[1].split(".png")[0].replace("Rewards/", "")
 
 
-def strip(data: tuple or list, apply_function: callable = None) -> tuple:
+def strip(data: Iterable[str], apply_function: Optional[Callable] = None) -> tuple:
     # same as tuple(func(x.strip()) for x in data if x.strip()), but faster
     if apply_function:
         return tuple(map(apply_function, filter(None, map(str.strip, data))))
@@ -914,7 +910,7 @@ def get_current_time(timezone_aware: bool = True) -> datetime:
     return now
 
 
-def get_bonus_regions(api_map: list[dict], api_battles: dict, region_neighbour_ids: set[int]) -> (set[int], set[int]):
+def get_bonus_regions(api_map: list[dict], api_battles: dict, region_neighbour_ids: set[int]) -> Tuple[set[int], set[int]]:
     """defender_regions are the regions that are neighbours of the regionId
         and have the same occupantId as the defenderId"""
     assert api_battles['type'] in ("RESISTANCE", "ATTACK")

@@ -222,7 +222,7 @@ class FieldPageSource(menus.ListPageSource):
 
     def __init__(
             self,
-            entries: list or tuple,
+            entries: list | tuple,
             *,
             per_page: int = 12,
             inline: bool = False,
