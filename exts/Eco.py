@@ -30,7 +30,7 @@ class Eco(Cog, command_attrs={"cooldown_after_parsing": True, "ignore_extra": Fa
     """Economy Commands."""
     options = ("iron", "grain", "oil", "stone", "wood", "diamonds")
     product_gids = {"primera": 6602346, "secura": 1142213909, "suna": 1317638633, "alpha": 1073258602,
-                    'luxia': 1542255867, "sora": 1991329220, "vexa": 1243788033}
+                    'luxia': 1542255867, "vexa": 1243788033, "vara": 1991329220}
 
     def __init__(self, bot) -> None:
         self.bot = bot
