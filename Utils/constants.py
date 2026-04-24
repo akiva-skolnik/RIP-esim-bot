@@ -173,6 +173,11 @@ countries_per_server = {
         31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58,
         59, 60, 61, 62, 63, 64, 71, 72, 80, 110, 111, 112, 115, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 130,
         131, 132, 133, 135, 137, 138, 142, 143, 144, 145, 147, 148, 149, 150, 152, 155, 156, 162, 165, 777),
+    'muna': (
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+        31, 32, 33, 34, 35, 36, 37, 39, 40, 41, 42, 43, 44, 45, 46, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60,
+        61, 62, 63, 64, 71, 72, 80, 110, 111, 112, 115, 119, 121, 122, 123, 125, 126, 127, 128, 130, 131, 132, 133, 137,
+        138, 148, 155, 165, 777),
 }
 
 config_ids = {
@@ -195,12 +200,13 @@ gids = {  # server: (sheet id, time gid, buffs gid)
     "alpha": ("1KqxbZ9LqS191wRf1VGLNl-aw6UId9kmUE0k7NfKQdI4", 1445005647, 1812695346),
     "vexa": ("1QKefrhNW3R1XKNPNZJxjyW4ag_6mxHSh3dWOe3yjw4k", 1445005647, 1812695346),
     "vara": ("1hE1oKZeRKHhxotm-hrQd5OcC8m4R0AnEH1tFU00XQw4", 1445005647, 1812695346),
+    "muna": ("1F9GZQqpNUdXq9rHrc4EqPqdYEUtMkvea2X3kld-xGhE", 1445005647, 1812695346),
 }
 
 api_url = "http://107.174.205.248:5000/"
 date_format = "%d-%m-%Y %H:%M:%S"
 
-all_servers = ('primera', 'secura', 'suna', 'alpha', 'luxia', 'vexa', 'vara')
+all_servers = ('primera', 'secura', 'suna', 'alpha', 'luxia', 'vexa', 'vara', 'muna')
 temp_servers = all_servers[5:]
 
 all_products = ("iron", "grain", "oil", "stone", "wood", "diamonds",  # raw
